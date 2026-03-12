@@ -44,7 +44,7 @@ const InboxPage = () => {
   }, [listings]);
 
   const filtered = useMemo(() => {
-    let result = listings.filter((l) => {
+    const result = listings.filter((l) => {
       if (search) {
         const s = search.toLowerCase();
         if (!l.address?.toLowerCase().includes(s) && !l.city?.toLowerCase().includes(s)) return false;

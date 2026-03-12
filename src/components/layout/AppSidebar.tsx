@@ -31,11 +31,11 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const { t } = useLanguage();
+  const { t, direction } = useLanguage();
   const { signOut } = useAuth();
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" side={direction === "rtl" ? "right" : "left"}>
       <SidebarContent>
         {!collapsed && (
           <div className="px-4 py-4">
