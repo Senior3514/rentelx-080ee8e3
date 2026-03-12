@@ -3,6 +3,58 @@
     "name": "RentelX",
     "tagline": "Your apartment search, powered by AI"
   },
+  "landing": {
+    "badge": "AI-Powered Rental Co-Pilot",
+    "hero": {
+      "title": "Stop hunting. Start finding.",
+      "subtitle": "RentelX aggregates, scores, and manages rental listings across Israel — so you can focus on choosing, not searching.",
+      "cta": "Get Started Free"
+    },
+    "stats": {
+      "stages": "Pipeline Stages",
+      "score": "Match Score",
+      "languages": "Languages"
+    },
+    "features": {
+      "title": "Everything you need to find your home",
+      "subtitle": "One tool to replace the chaos of apartment hunting",
+      "aggregate": {
+        "title": "Multi-Source Aggregation",
+        "desc": "Paste listings from Yad2, Madlan, Facebook groups, or any URL. We extract and organize everything automatically."
+      },
+      "score": {
+        "title": "Smart Scoring",
+        "desc": "Every listing is scored 0–100 against your personal preferences — price, location, rooms, and amenities."
+      },
+      "pipeline": {
+        "title": "Visual Pipeline",
+        "desc": "Track every listing through 7 stages: from New to Signed. Drag and drop on a Kanban board."
+      },
+      "alerts": {
+        "title": "Instant Alerts",
+        "desc": "Get notified via Telegram when a high-score listing matches your criteria."
+      },
+      "bilingual": {
+        "title": "Hebrew & English",
+        "desc": "Full RTL support. Switch between Hebrew and English with one click."
+      },
+      "privacy": {
+        "title": "Your Data, Private",
+        "desc": "Row-level security ensures only you see your listings, profiles, and pipeline."
+      }
+    },
+    "howItWorks": "How it works",
+    "steps": {
+      "profile": "Set up your search profile with cities, budget & must-haves",
+      "add": "Add listings via URL paste, manual entry, or Telegram bot",
+      "score": "Each listing is automatically scored against your preferences",
+      "manage": "Move listings through your pipeline until you sign"
+    },
+    "cta": {
+      "title": "Ready to find your next home?",
+      "subtitle": "Join thousands of renters using RentelX to take control of their apartment search."
+    }
+  },
   "nav": {
     "dashboard": "Dashboard",
     "inbox": "Inbox",
@@ -80,7 +132,12 @@
     "quickActions": "Quick Actions",
     "recentListings": "Recent Listings",
     "noRecent": "No listings yet. Add your first one!",
-    "timeAgo": "ago"
+    "timeAgo": "ago",
+    "analytics": "Analytics",
+    "scoreDistribution": "Score Distribution",
+    "pipelineFunnel": "Pipeline Funnel",
+    "weeklyActivity": "Weekly Activity",
+    "noData": "No data yet"
   },
   "inbox": {
     "title": "Listings Inbox",
@@ -122,7 +179,8 @@
     "price": "Price",
     "rooms": "Rooms",
     "size": "Size",
-    "noScores": "No scores yet"
+    "noScores": "No scores yet",
+    "photos": "Photos"
   },
   "pipeline": {
     "title": "Pipeline",
