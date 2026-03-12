@@ -74,6 +74,7 @@
     "hasAccount": "Already have an account?",
     "orContinueWith": "Or continue with",
     "google": "Google",
+    "invalidCredentials": "Invalid email or password",
     "or": "or",
     "guestLogin": "Continue as Guest",
     "newPassword": "New Password",

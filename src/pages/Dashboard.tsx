@@ -6,12 +6,14 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Plus, Inbox, UserSearch, Columns3, LayoutDashboard, MapPin } from "lucide-react";
+import { Plus, Inbox, UserSearch, Columns3, LayoutDashboard, MapPin, TrendingUp, Sparkles, ArrowRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { he } from "date-fns/locale";
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { AddListingModal } from "@/components/listings/AddListingModal";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
+import { AnimatedCounter } from "@/components/ui/animated-counter";
 
 const STAGE_LABELS: Record<string, Record<string, string>> = {
   new: { en: "New", he: "חדש" },
@@ -134,28 +136,50 @@ const Dashboard = () => {
   }, [listings, language]);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-display font-bold tracking-tight">
-          {t("dashboard.welcome")}, {displayName} 👋
-        </h1>
-        <p className="text-muted-foreground mt-1">{t("app.tagline")}</p>
+    <div className="max-w-4xl mx-auto space-y-8 animate-fade-up">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-display font-bold tracking-tight">
+            {t("dashboard.welcome")}, {displayName} 👋
+          </h1>
+          <p className="text-muted-foreground mt-1">{t("app.tagline")}</p>
+        </div>
+        <Button onClick={() => setShowAdd(true)} className="gap-1.5 glow-primary shrink-0">
+          <Plus className="h-4 w-4" /> {t("inbox.addListing")}
+        </Button>
       </div>
 
-      {/* Stats */}
+      {/* Animated Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {stats.map((s) => (
-          <Card key={s.label} className="p-4 flex flex-col items-center text-center gap-1">
-            <s.icon className="h-5 w-5 text-primary mb-1" />
-            <p className="text-2xl font-bold">{s.value}</p>
-            <p className="text-xs text-muted-foreground">{s.label}</p>
-          </Card>
+        {stats.map((s, i) => (
+          <motion.div
+            key={s.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.08, type: "spring", stiffness: 300, damping: 25 }}
+          >
+            <Card className="p-4 flex flex-col items-center text-center gap-1 card-hover shine-overlay border-border/60">
+              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center mb-1">
+                <s.icon className="h-4 w-4 text-primary" />
+              </div>
+              <p className="text-2xl font-bold stat-number text-gradient">
+                <AnimatedCounter value={s.value} />
+              </p>
+              <p className="text-xs text-muted-foreground">{s.label}</p>
+            </Card>
+          </motion.div>
         ))}
       </div>
 
       {/* Charts */}
       <div>
-        <h2 className="text-lg font-display font-semibold mb-3">{t("dashboard.analytics")}</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-display font-semibold flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-primary" />
+            {t("dashboard.analytics")}
+          </h2>
+        </div>
         <DashboardCharts
           listings={listings}
           pipelineData={pipelineChartData}
@@ -166,32 +190,55 @@ const Dashboard = () => {
       {/* Quick Actions */}
       <div>
         <h2 className="text-lg font-display font-semibold mb-3">{t("dashboard.quickActions")}</h2>
-        <div className="flex flex-wrap gap-3">
-          <Button onClick={() => setShowAdd(true)} className="gap-1.5">
-            <Plus className="h-4 w-4" /> {t("inbox.addListing")}
-          </Button>
-          <Button variant="outline" onClick={() => navigate("/inbox")} className="gap-1.5">
-            <Inbox className="h-4 w-4" /> {t("nav.inbox")}
-          </Button>
-          <Button variant="outline" onClick={() => navigate("/profiles")} className="gap-1.5">
-            <UserSearch className="h-4 w-4" /> {t("nav.profiles")}
-          </Button>
-          <Button variant="outline" onClick={() => navigate("/pipeline")} className="gap-1.5">
-            <Columns3 className="h-4 w-4" /> {t("nav.pipeline")}
-          </Button>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: t("nav.inbox"), icon: Inbox, action: () => navigate("/inbox"), variant: "outline" as const },
+            { label: t("nav.profiles"), icon: UserSearch, action: () => navigate("/profiles"), variant: "outline" as const },
+            { label: t("nav.pipeline"), icon: Columns3, action: () => navigate("/pipeline"), variant: "outline" as const },
+            { label: t("nav.settings"), icon: Sparkles, action: () => navigate("/settings"), variant: "outline" as const },
+          ].map((item, i) => (
+            <motion.div
+              key={item.label}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 + i * 0.05 }}
+            >
+              <Button
+                variant={item.variant}
+                onClick={item.action}
+                className="w-full gap-1.5 h-12 card-hover border-border/60"
+              >
+                <item.icon className="h-4 w-4" />
+                <span className="text-sm">{item.label}</span>
+              </Button>
+            </motion.div>
+          ))}
         </div>
       </div>
 
       {/* Recent Listings */}
       <div>
-        <h2 className="text-lg font-display font-semibold mb-3">{t("dashboard.recentListings")}</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-display font-semibold">{t("dashboard.recentListings")}</h2>
+          {recentListings.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={() => navigate("/inbox")} className="gap-1 text-primary">
+              {t("nav.inbox")} <ArrowRight className="h-3.5 w-3.5 flip-rtl" />
+            </Button>
+          )}
+        </div>
         {recentListings.length === 0 ? (
-          <Card className="p-6 text-center">
+          <Card className="p-8 text-center space-y-3 border-dashed border-border/60">
+            <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mx-auto">
+              <Inbox className="h-5 w-5 text-muted-foreground" />
+            </div>
             <p className="text-muted-foreground text-sm">{t("dashboard.noRecent")}</p>
+            <Button variant="outline" size="sm" onClick={() => setShowAdd(true)} className="gap-1.5">
+              <Plus className="h-3.5 w-3.5" /> {t("inbox.addListing")}
+            </Button>
           </Card>
         ) : (
           <div className="space-y-2">
-            {recentListings.map((l) => {
+            {recentListings.map((l, i) => {
               const topScore = l.listing_scores?.reduce((m: number, s: any) => Math.max(m, s.score), 0) ?? 0;
               const scoreColor =
                 topScore >= 80 ? "bg-score-high text-white" :
@@ -199,34 +246,42 @@ const Dashboard = () => {
                 "bg-score-low text-white";
 
               return (
-                <Card
+                <motion.div
                   key={l.id}
-                  className="p-3 cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => navigate(`/listings/${l.id}`)}
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.06 }}
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className="font-medium truncate">{l.address || l.city || "—"}</span>
-                      {l.price && (
-                        <span className="text-sm text-muted-foreground shrink-0">
-                          {t("common.shekel")}{l.price.toLocaleString()}
+                  <Card
+                    className="p-3 cursor-pointer card-hover border-border/60 group"
+                    onClick={() => navigate(`/listings/${l.id}`)}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                          <MapPin className="h-3.5 w-3.5 text-primary" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="font-medium truncate block">{l.address || l.city || "—"}</span>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            {l.price && <span>{t("common.shekel")}{l.price.toLocaleString()}</span>}
+                            <span>
+                              {formatDistanceToNow(new Date(l.created_at), {
+                                addSuffix: true,
+                                locale: language === "he" ? he : undefined,
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      {topScore > 0 && (
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${scoreColor} ${topScore >= 80 ? "animate-glow" : ""}`}>
+                          {topScore}
                         </span>
                       )}
-                      <span className="text-xs text-muted-foreground shrink-0">
-                        {formatDistanceToNow(new Date(l.created_at), {
-                          addSuffix: false,
-                          locale: language === "he" ? he : undefined,
-                        })}
-                      </span>
                     </div>
-                    {topScore > 0 && (
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold shrink-0 ${scoreColor}`}>
-                        {topScore}
-                      </span>
-                    )}
-                  </div>
-                </Card>
+                  </Card>
+                </motion.div>
               );
             })}
           </div>

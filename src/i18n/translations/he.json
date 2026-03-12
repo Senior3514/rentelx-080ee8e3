@@ -74,6 +74,7 @@
     "hasAccount": "כבר יש לך חשבון?",
     "orContinueWith": "או המשך עם",
     "google": "Google",
+    "invalidCredentials": "אימייל או סיסמה שגויים",
     "or": "או",
     "guestLogin": "המשך כאורח",
     "newPassword": "סיסמה חדשה",
