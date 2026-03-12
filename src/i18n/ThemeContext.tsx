@@ -24,7 +24,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const setTheme = useCallback((t: Theme) => {
     setThemeState(t);
-    localStorage.setItem("rental-copilot-theme", t);
+    localStorage.setItem("rentelx-theme", t);
   }, []);
 
   useEffect(() => {

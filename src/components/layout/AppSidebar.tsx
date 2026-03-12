@@ -1,4 +1,4 @@
-import { Inbox, Columns3, UserSearch, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Inbox, Columns3, UserSearch, Settings, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 
 const navItems = [
+  { titleKey: "nav.dashboard", url: "/dashboard", icon: LayoutDashboard },
   { titleKey: "nav.inbox", url: "/inbox", icon: Inbox },
   { titleKey: "nav.pipeline", url: "/pipeline", icon: Columns3 },
   { titleKey: "nav.profiles", url: "/profiles", icon: UserSearch },

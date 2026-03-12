@@ -30,7 +30,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem("rental-copilot-lang", lang);
+    localStorage.setItem("rentelx-lang", lang);
   }, []);
 
   const t = useCallback(

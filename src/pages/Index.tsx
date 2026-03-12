@@ -4,12 +4,14 @@ import { OnboardingWizard, type SearchProfileDraft } from "@/components/onboardi
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const Index = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -25,7 +27,7 @@ const Index = () => {
       .eq("id", user.id)
       .single()
       .then(({ data }) => {
-        if (data?.onboarded) navigate("/inbox");
+        if (data?.onboarded) navigate("/dashboard");
       });
   }, [user, navigate]);
 
@@ -49,8 +51,8 @@ const Index = () => {
         .update({ onboarded: true })
         .eq("id", user.id);
 
-      toast.success("Profile created! Let's find your home.");
-      navigate("/inbox");
+      toast.success(t("onboarding.profileCreated"));
+      navigate("/dashboard");
     } catch (e: any) {
       toast.error(e.message);
     }
