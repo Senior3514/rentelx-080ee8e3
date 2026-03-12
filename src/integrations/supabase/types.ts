@@ -14,7 +14,327 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      listing_notes: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          listing_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          listing_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          listing_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_notes_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listing_reminders: {
+        Row: {
+          created_at: string
+          id: string
+          is_done: boolean
+          listing_id: string
+          message: string | null
+          remind_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_done?: boolean
+          listing_id: string
+          message?: string | null
+          remind_at: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_done?: boolean
+          listing_id?: string
+          message?: string | null
+          remind_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_reminders_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listing_scores: {
+        Row: {
+          breakdown: Json
+          created_at: string
+          id: string
+          listing_id: string
+          score: number
+          search_profile_id: string
+        }
+        Insert: {
+          breakdown?: Json
+          created_at?: string
+          id?: string
+          listing_id: string
+          score?: number
+          search_profile_id: string
+        }
+        Update: {
+          breakdown?: Json
+          created_at?: string
+          id?: string
+          listing_id?: string
+          score?: number
+          search_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_scores_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_scores_search_profile_id_fkey"
+            columns: ["search_profile_id"]
+            isOneToOne: false
+            referencedRelation: "search_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listings: {
+        Row: {
+          address: string | null
+          amenities: string[]
+          city: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          description: string | null
+          fingerprint: string | null
+          floor: number | null
+          id: string
+          image_urls: string[]
+          price: number | null
+          rooms: number | null
+          source_url: string | null
+          sqm: number | null
+          status: string
+          total_floors: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          amenities?: string[]
+          city?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          description?: string | null
+          fingerprint?: string | null
+          floor?: number | null
+          id?: string
+          image_urls?: string[]
+          price?: number | null
+          rooms?: number | null
+          source_url?: string | null
+          sqm?: number | null
+          status?: string
+          total_floors?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          amenities?: string[]
+          city?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          description?: string | null
+          fingerprint?: string | null
+          floor?: number | null
+          id?: string
+          image_urls?: string[]
+          price?: number | null
+          rooms?: number | null
+          source_url?: string | null
+          sqm?: number | null
+          status?: string
+          total_floors?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          email_enabled: boolean
+          id: string
+          min_score_threshold: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_enabled?: boolean
+          id?: string
+          min_score_threshold?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_enabled?: boolean
+          id?: string
+          min_score_threshold?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pipeline_entries: {
+        Row: {
+          created_at: string
+          entered_stage_at: string
+          id: string
+          listing_id: string
+          notes: string | null
+          stage: Database["public"]["Enums"]["pipeline_stage"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entered_stage_at?: string
+          id?: string
+          listing_id: string
+          notes?: string | null
+          stage?: Database["public"]["Enums"]["pipeline_stage"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entered_stage_at?: string
+          id?: string
+          listing_id?: string
+          notes?: string | null
+          stage?: Database["public"]["Enums"]["pipeline_stage"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_entries_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          onboarded: boolean
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id: string
+          onboarded?: boolean
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          onboarded?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      search_profiles: {
+        Row: {
+          cities: string[]
+          created_at: string
+          id: string
+          is_active: boolean
+          max_price: number
+          max_rooms: number
+          min_price: number
+          min_rooms: number
+          must_haves: string[]
+          name: string
+          nice_to_haves: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cities?: string[]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_price?: number
+          max_rooms?: number
+          min_price?: number
+          min_rooms?: number
+          must_haves?: string[]
+          name?: string
+          nice_to_haves?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cities?: string[]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_price?: number
+          max_rooms?: number
+          min_price?: number
+          min_rooms?: number
+          must_haves?: string[]
+          name?: string
+          nice_to_haves?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +343,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      pipeline_stage:
+        | "new"
+        | "contacted"
+        | "viewing_scheduled"
+        | "viewed"
+        | "negotiating"
+        | "signed"
+        | "lost"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +477,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      pipeline_stage: [
+        "new",
+        "contacted",
+        "viewing_scheduled",
+        "viewed",
+        "negotiating",
+        "signed",
+        "lost",
+      ],
+    },
   },
 } as const
