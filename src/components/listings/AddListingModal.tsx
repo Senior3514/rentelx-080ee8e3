@@ -66,7 +66,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
             { city: data.city, price: data.price, rooms: data.rooms, amenities: data.amenities },
             { cities: p.cities, min_price: p.min_price, max_price: p.max_price, min_rooms: p.min_rooms, max_rooms: p.max_rooms, must_haves: p.must_haves, nice_to_haves: p.nice_to_haves }
           );
-          return { listing_id: data.id, search_profile_id: p.id, score: breakdown.total, breakdown };
+          return { listing_id: data.id, search_profile_id: p.id, score: breakdown.total, breakdown: breakdown as unknown as Record<string, unknown> };
         });
         await supabase.from("listing_scores").insert(scores);
       }
