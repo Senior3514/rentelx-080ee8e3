@@ -118,7 +118,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
     mutationFn: async (listing: Record<string, unknown>) => {
       const { data, error } = await supabase
         .from("listings")
-        .insert(listing)
+        .insert(listing as any)
         .select()
         .single();
       if (error) throw error;

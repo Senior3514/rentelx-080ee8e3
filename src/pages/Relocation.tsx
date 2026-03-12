@@ -659,7 +659,7 @@ const Relocation = () => {
                 <div key={stat.label} className="space-y-1">
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>{stat.label}</span>
-                    <span className="font-bold text-foreground">{stat.value}/{stat.total === 1 && stat.total === totalBoxes && totalBoxes === 0 ? 0 : stat.total}</span>
+                    <span className="font-bold text-foreground">{stat.value}/{stat.total}</span>
                   </div>
                   <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                     <motion.div
