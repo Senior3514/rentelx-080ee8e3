@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,9 +9,12 @@ import { useNavigate } from "react-router-dom";
 import { Plus, Inbox, UserSearch, Columns3, LayoutDashboard, MapPin } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { he } from "date-fns/locale";
-import { useState } from "react";
+import { motion } from "framer-motion";
 import { AddListingModal } from "@/components/listings/AddListingModal";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
+
+const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
+const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 
 const STAGE_LABELS: Record<string, Record<string, string>> = {
   new: { en: "New", he: "חדש" },
@@ -143,15 +146,17 @@ const Dashboard = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4" variants={container} initial="hidden" animate="show">
         {stats.map((s) => (
-          <Card key={s.label} className="p-4 flex flex-col items-center text-center gap-1">
-            <s.icon className="h-5 w-5 text-primary mb-1" />
-            <p className="text-2xl font-bold">{s.value}</p>
-            <p className="text-xs text-muted-foreground">{s.label}</p>
-          </Card>
+          <motion.div key={s.label} variants={item}>
+            <Card className="p-4 flex flex-col items-center text-center gap-1">
+              <s.icon className="h-5 w-5 text-primary mb-1" />
+              <p className="text-2xl font-bold">{s.value}</p>
+              <p className="text-xs text-muted-foreground">{s.label}</p>
+            </Card>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {/* Charts */}
       <div>

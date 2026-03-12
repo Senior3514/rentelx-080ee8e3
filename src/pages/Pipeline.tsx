@@ -5,9 +5,10 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Inbox } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const STAGES = ["new", "contacted", "viewing_scheduled", "viewed", "negotiating", "signed", "lost"] as const;
 
@@ -69,22 +70,41 @@ const Pipeline = () => {
 
   const totalCount = entries.length;
 
+  // Find stage with most cards for glow highlight
+  const maxStage = useMemo(() => {
+    let maxCount = 0;
+    let maxStageName = "";
+    STAGES.forEach((stage) => {
+      const count = entries.filter((e: any) => e.stage === stage).length;
+      if (count > maxCount) { maxCount = count; maxStageName = stage; }
+    });
+    return maxCount > 0 ? maxStageName : "";
+  }, [entries]);
+
   const renderEntryCard = (entry: any) => (
-    <Card
+    <motion.div
       key={entry.id}
-      draggable={!isMobile}
-      onDragStart={(e) => handleDragStart(e, entry.id)}
-      className={`p-3 cursor-pointer transition-opacity ${dragging === entry.id ? "opacity-50" : ""} ${!isMobile ? "cursor-grab active:cursor-grabbing" : ""}`}
-      onClick={() => navigate(`/listings/${entry.listing_id}`)}
+      layoutId={entry.id}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.2 }}
     >
-      <p className="text-sm font-medium truncate">{entry.listings?.address || entry.listings?.city || "Listing"}</p>
-      {entry.listings?.price && (
-        <p className="text-xs text-muted-foreground mt-1">₪{entry.listings.price.toLocaleString()}</p>
-      )}
-      <p className="text-xs text-muted-foreground mt-1">
-        {Math.floor((Date.now() - new Date(entry.entered_stage_at).getTime()) / 86400000)}d
-      </p>
-    </Card>
+      <Card
+        draggable={!isMobile}
+        onDragStart={(e) => handleDragStart(e, entry.id)}
+        className={`p-3 cursor-pointer transition-opacity ${dragging === entry.id ? "opacity-50" : ""} ${!isMobile ? "cursor-grab active:cursor-grabbing" : ""}`}
+        onClick={() => navigate(`/listings/${entry.listing_id}`)}
+      >
+        <p className="text-sm font-medium truncate">{entry.listings?.address || entry.listings?.city || "Listing"}</p>
+        {entry.listings?.price && (
+          <p className="text-xs text-muted-foreground mt-1">₪{entry.listings.price.toLocaleString()}</p>
+        )}
+        <p className="text-xs text-muted-foreground mt-1">
+          {Math.floor((Date.now() - new Date(entry.entered_stage_at).getTime()) / 86400000)}d
+        </p>
+      </Card>
+    </motion.div>
   );
 
   if (isLoading) {
