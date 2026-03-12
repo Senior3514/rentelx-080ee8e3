@@ -8,10 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import {
-  MapPin, BedDouble, Maximize, Building2, ArrowLeft,
-  Plus, StickyNote, Columns3,
-} from "lucide-react";
+import { MapPin, BedDouble, Maximize, Building2, ArrowLeft, Plus, StickyNote, Columns3 } from "lucide-react";
 
 const ListingDetail = () => {
   const { id } = useParams();
@@ -24,7 +21,7 @@ const ListingDetail = () => {
   const { data: listing, isLoading } = useQuery({
     queryKey: ["listing", id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("listings")
         .select("*, listing_scores(*), listing_notes(*)")
         .eq("id", id!)
@@ -37,10 +34,8 @@ const ListingDetail = () => {
 
   const addNoteMutation = useMutation({
     mutationFn: async (content: string) => {
-      const { error } = await supabase.from("listing_notes").insert({
-        listing_id: id!,
-        user_id: user!.id,
-        content,
+      const { error } = await (supabase as any).from("listing_notes").insert({
+        listing_id: id!, user_id: user!.id, content,
       });
       if (error) throw error;
     },
@@ -53,17 +48,12 @@ const ListingDetail = () => {
 
   const addToPipelineMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("pipeline_entries").insert({
-        listing_id: id!,
-        user_id: user!.id,
-        stage: "new",
+      const { error } = await (supabase as any).from("pipeline_entries").insert({
+        listing_id: id!, user_id: user!.id, stage: "new",
       });
       if (error) throw error;
     },
-    onSuccess: () => {
-      toast.success("Added to pipeline!");
-      navigate("/pipeline");
-    },
+    onSuccess: () => { toast.success("Added to pipeline!"); navigate("/pipeline"); },
     onError: (e: any) => {
       if (e.message?.includes("duplicate")) toast.info("Already in pipeline");
       else toast.error(e.message);
@@ -101,16 +91,13 @@ const ListingDetail = () => {
         </div>
         {topScore > 0 && (
           <div className={`px-3 py-1.5 rounded-full text-sm font-bold ${
-            topScore >= 80 ? "bg-score-high text-white" :
-            topScore >= 50 ? "bg-score-medium text-white" :
-            "bg-score-low text-white"
+            topScore >= 80 ? "bg-score-high text-white" : topScore >= 50 ? "bg-score-medium text-white" : "bg-score-low text-white"
           }`}>
             {t("inbox.score")}: {topScore}
           </div>
         )}
       </div>
 
-      {/* Stats grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {listing.price && (
           <Card className="p-3 text-center">
@@ -120,38 +107,34 @@ const ListingDetail = () => {
         )}
         {listing.rooms && (
           <Card className="p-3 text-center">
-            <p className="text-xs text-muted-foreground"><BedDouble className="h-3.5 w-3.5 inline" /> {t("common.rooms")}</p>
+            <p className="text-xs text-muted-foreground">{t("common.rooms")}</p>
             <p className="font-bold text-lg">{listing.rooms}</p>
           </Card>
         )}
         {listing.sqm && (
           <Card className="p-3 text-center">
-            <p className="text-xs text-muted-foreground"><Maximize className="h-3.5 w-3.5 inline" /> {t("common.sqm")}</p>
+            <p className="text-xs text-muted-foreground">{t("common.sqm")}</p>
             <p className="font-bold text-lg">{listing.sqm}</p>
           </Card>
         )}
         {listing.floor != null && (
           <Card className="p-3 text-center">
-            <p className="text-xs text-muted-foreground"><Building2 className="h-3.5 w-3.5 inline" /> {t("common.floor")}</p>
+            <p className="text-xs text-muted-foreground">{t("common.floor")}</p>
             <p className="font-bold text-lg">{listing.floor}</p>
           </Card>
         )}
       </div>
 
       {listing.description && (
-        <Card className="p-4">
-          <p className="text-sm whitespace-pre-wrap">{listing.description}</p>
-        </Card>
+        <Card className="p-4"><p className="text-sm whitespace-pre-wrap">{listing.description}</p></Card>
       )}
 
-      {/* Actions */}
       <div className="flex gap-2">
         <Button onClick={() => addToPipelineMutation.mutate()} className="gap-1.5">
           <Columns3 className="h-4 w-4" /> Move to Pipeline
         </Button>
       </div>
 
-      {/* Notes */}
       <div>
         <h3 className="font-semibold mb-3 flex items-center gap-1.5">
           <StickyNote className="h-4 w-4" /> Notes
@@ -160,25 +143,13 @@ const ListingDetail = () => {
           {listing.listing_notes?.map((note: any) => (
             <Card key={note.id} className="p-3">
               <p className="text-sm">{note.content}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {new Date(note.created_at).toLocaleDateString()}
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">{new Date(note.created_at).toLocaleDateString()}</p>
             </Card>
           ))}
         </div>
         <div className="flex gap-2">
-          <Textarea
-            value={noteText}
-            onChange={(e) => setNoteText(e.target.value)}
-            placeholder="Add a note..."
-            rows={2}
-            className="flex-1"
-          />
-          <Button
-            size="sm"
-            onClick={() => noteText.trim() && addNoteMutation.mutate(noteText)}
-            disabled={!noteText.trim()}
-          >
+          <Textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Add a note..." rows={2} className="flex-1" />
+          <Button size="sm" onClick={() => noteText.trim() && addNoteMutation.mutate(noteText)} disabled={!noteText.trim()}>
             <Plus className="h-4 w-4" />
           </Button>
         </div>

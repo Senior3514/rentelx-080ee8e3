@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { OnboardingWizard, SearchProfileDraft } from "@/components/onboarding/OnboardingWizard";
-import { Plus, Trash2, Edit, MapPin } from "lucide-react";
+import { Plus, Trash2, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -24,31 +24,28 @@ const Profiles = () => {
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["search_profiles", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("search_profiles")
         .select("*")
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data ?? [];
     },
     enabled: !!user,
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("search_profiles").delete().eq("id", id);
+      const { error } = await (supabase as any).from("search_profiles").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["search_profiles"] });
-      toast.success("Profile deleted");
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["search_profiles"] }); toast.success("Profile deleted"); },
   });
 
   const createMutation = useMutation({
     mutationFn: async (draft: SearchProfileDraft) => {
-      const { error } = await supabase.from("search_profiles").insert({
+      const { error } = await (supabase as any).from("search_profiles").insert({
         user_id: user!.id,
         name: draft.name || "Untitled",
         cities: draft.cities,
@@ -103,27 +100,23 @@ const Profiles = () => {
                     ₪{p.min_price?.toLocaleString()}–₪{p.max_price?.toLocaleString()} · {p.min_rooms}–{p.max_rooms} {t("common.rooms")}
                   </p>
                 </div>
-                <div className="flex gap-1">
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>{t("common.delete")}?</AlertDialogTitle>
-                        <AlertDialogDescription>This will permanently delete this search profile.</AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => deleteMutation.mutate(p.id)}>
-                          {t("common.delete")}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>{t("common.delete")}?</AlertDialogTitle>
+                      <AlertDialogDescription>This will permanently delete this search profile.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => deleteMutation.mutate(p.id)}>{t("common.delete")}</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </Card>
           ))}
@@ -132,9 +125,7 @@ const Profiles = () => {
 
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>New Search Profile</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>New Search Profile</DialogTitle></DialogHeader>
           <OnboardingWizard onComplete={(draft) => createMutation.mutate(draft)} />
         </DialogContent>
       </Dialog>

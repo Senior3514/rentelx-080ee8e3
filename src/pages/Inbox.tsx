@@ -18,14 +18,14 @@ const InboxPage = () => {
   const { data: listings = [], isLoading } = useQuery({
     queryKey: ["listings", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("listings")
         .select("*, listing_scores(*)")
         .eq("user_id", user!.id)
         .eq("status", "active")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data ?? [];
     },
     enabled: !!user,
   });
@@ -33,10 +33,7 @@ const InboxPage = () => {
   const filtered = listings.filter((l: any) => {
     if (!search) return true;
     const s = search.toLowerCase();
-    return (
-      l.address?.toLowerCase().includes(s) ||
-      l.city?.toLowerCase().includes(s)
-    );
+    return l.address?.toLowerCase().includes(s) || l.city?.toLowerCase().includes(s);
   });
 
   return (
@@ -51,12 +48,7 @@ const InboxPage = () => {
 
       <div className="relative mb-4">
         <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t("inbox.filter") + "..."}
-          className="ps-9"
-        />
+        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("inbox.filter") + "..."} className="ps-9" />
       </div>
 
       {isLoading ? (
@@ -69,8 +61,7 @@ const InboxPage = () => {
           <h3 className="text-lg font-medium">{t("inbox.empty")}</h3>
           <p className="text-sm text-muted-foreground">{t("inbox.emptySubtitle")}</p>
           <Button variant="outline" onClick={() => setShowAdd(true)} className="gap-1.5 mt-2">
-            <Plus className="h-4 w-4" />
-            {t("inbox.addListing")}
+            <Plus className="h-4 w-4" /> {t("inbox.addListing")}
           </Button>
         </div>
       ) : (

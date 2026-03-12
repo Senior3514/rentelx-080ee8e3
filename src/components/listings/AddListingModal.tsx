@@ -29,30 +29,29 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
 
   const insertMutation = useMutation({
     mutationFn: async (listing: any) => {
-      const { data, error } = await supabase.from("listings").insert(listing).select().single();
+      const { data, error } = await (supabase as any)
+        .from("listings")
+        .insert(listing)
+        .select()
+        .single();
       if (error) throw error;
 
       // Score against all active profiles
-      const { data: profiles } = await supabase
+      const { data: profiles } = await (supabase as any)
         .from("search_profiles")
         .select("*")
         .eq("user_id", user!.id)
         .eq("is_active", true);
 
-      if (profiles && profiles.length > 0) {
+      if (profiles && profiles.length > 0 && data) {
         const scores = profiles.map((p: any) => {
           const breakdown = scoreListing(
             { city: data.city, price: data.price, rooms: data.rooms, amenities: data.amenities },
             { cities: p.cities, min_price: p.min_price, max_price: p.max_price, min_rooms: p.min_rooms, max_rooms: p.max_rooms, must_haves: p.must_haves, nice_to_haves: p.nice_to_haves }
           );
-          return {
-            listing_id: data.id,
-            search_profile_id: p.id,
-            score: breakdown.total,
-            breakdown,
-          };
+          return { listing_id: data.id, search_profile_id: p.id, score: breakdown.total, breakdown };
         });
-        await supabase.from("listing_scores").insert(scores);
+        await (supabase as any).from("listing_scores").insert(scores);
       }
       return data;
     },
@@ -74,8 +73,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
     e.preventDefault();
     insertMutation.mutate({
       user_id: user!.id,
-      address: form.address || null,
-      city: form.city || null,
+      address: form.address || null, city: form.city || null,
       price: form.price ? Number(form.price) : null,
       rooms: form.rooms ? Number(form.rooms) : null,
       sqm: form.sqm ? Number(form.sqm) : null,
@@ -88,16 +86,13 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
 
   const handleUrlSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    insertMutation.mutate({
-      user_id: user!.id,
-      source_url: url,
-    });
+    insertMutation.mutate({ user_id: user!.id, source_url: url });
   };
 
   const f = (key: keyof typeof form) => ({
     value: form[key],
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-      setForm((f) => ({ ...f, [key]: e.target.value })),
+      setForm((prev) => ({ ...prev, [key]: e.target.value })),
   });
 
   return (
@@ -106,22 +101,17 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
         <DialogHeader>
           <DialogTitle>{t("inbox.addListing")}</DialogTitle>
         </DialogHeader>
-
         <Tabs defaultValue="manual">
           <TabsList className="w-full">
             <TabsTrigger value="url" className="flex-1">Paste URL</TabsTrigger>
             <TabsTrigger value="manual" className="flex-1">Manual Entry</TabsTrigger>
           </TabsList>
-
           <TabsContent value="url">
             <form onSubmit={handleUrlSubmit} className="space-y-4 pt-2">
               <Input placeholder="https://yad2.co.il/..." value={url} onChange={(e) => setUrl(e.target.value)} required />
-              <Button type="submit" className="w-full" disabled={insertMutation.isPending}>
-                {t("common.save")}
-              </Button>
+              <Button type="submit" className="w-full" disabled={insertMutation.isPending}>{t("common.save")}</Button>
             </form>
           </TabsContent>
-
           <TabsContent value="manual">
             <form onSubmit={handleManualSubmit} className="space-y-3 pt-2">
               <Input placeholder="Address" {...f("address")} />
@@ -137,9 +127,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
               </div>
               <Input placeholder="Contact name" {...f("contact_name")} />
               <Textarea placeholder="Description..." {...f("description")} rows={3} />
-              <Button type="submit" className="w-full" disabled={insertMutation.isPending}>
-                {t("common.save")}
-              </Button>
+              <Button type="submit" className="w-full" disabled={insertMutation.isPending}>{t("common.save")}</Button>
             </form>
           </TabsContent>
         </Tabs>
