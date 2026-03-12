@@ -21,6 +21,7 @@ import Profiles from "./pages/Profiles";
 import Settings from "./pages/Settings";
 import Watchlist from "./pages/Watchlist";
 import Compare from "./pages/Compare";
+import Relocation from "./pages/Relocation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ const App = () => (
                   <Route path="/pipeline" element={<Pipeline />} />
                   <Route path="/watchlist" element={<Watchlist />} />
                   <Route path="/compare" element={<Compare />} />
+                  <Route path="/relocation" element={<Relocation />} />
                   <Route path="/profiles" element={<Profiles />} />
                   <Route path="/settings" element={<Settings />} />
                 </Route>
