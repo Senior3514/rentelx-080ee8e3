@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import React, { useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Inbox } from "lucide-react";
 
 const STAGES = ["new", "contacted", "viewing_scheduled", "viewed", "negotiating", "signed", "lost"] as const;
 
@@ -21,15 +23,16 @@ const STAGE_LABELS: Record<string, Record<string, string>> = {
 
 const Pipeline = () => {
   const { user } = useAuth();
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [dragging, setDragging] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
-  const { data: entries = [] } = useQuery({
+  const { data: entries = [], isLoading } = useQuery({
     queryKey: ["pipeline", user?.id],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("pipeline_entries")
         .select("*, listings(*)")
         .eq("user_id", user!.id)
@@ -42,9 +45,9 @@ const Pipeline = () => {
 
   const moveMutation = useMutation({
     mutationFn: async ({ entryId, stage }: { entryId: string; stage: string }) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("pipeline_entries")
-        .update({ stage, entered_stage_at: new Date().toISOString() })
+        .update({ stage: stage as any, entered_stage_at: new Date().toISOString() })
         .eq("id", entryId);
       if (error) throw error;
     },
@@ -64,46 +67,97 @@ const Pipeline = () => {
     setDragging(null);
   };
 
+  const totalCount = entries.length;
+
+  const renderEntryCard = (entry: any) => (
+    <Card
+      key={entry.id}
+      draggable={!isMobile}
+      onDragStart={(e) => handleDragStart(e, entry.id)}
+      className={`p-3 cursor-pointer transition-opacity ${dragging === entry.id ? "opacity-50" : ""} ${!isMobile ? "cursor-grab active:cursor-grabbing" : ""}`}
+      onClick={() => navigate(`/listings/${entry.listing_id}`)}
+    >
+      <p className="text-sm font-medium truncate">{entry.listings?.address || entry.listings?.city || "Listing"}</p>
+      {entry.listings?.price && (
+        <p className="text-xs text-muted-foreground mt-1">₪{entry.listings.price.toLocaleString()}</p>
+      )}
+      <p className="text-xs text-muted-foreground mt-1">
+        {Math.floor((Date.now() - new Date(entry.entered_stage_at).getTime()) / 86400000)}d
+      </p>
+    </Card>
+  );
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-display font-bold">Pipeline</h1>
-      <div className="flex gap-3 overflow-x-auto pb-4">
-        {STAGES.map((stage) => {
-          const stageEntries = entries.filter((e: any) => e.stage === stage);
-          return (
-            <div
-              key={stage}
-              className="flex-shrink-0 w-56 bg-muted/50 rounded-xl p-3 min-h-[300px]"
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => handleDrop(e, stage)}
-            >
-              <h3 className="text-sm font-semibold mb-3 text-muted-foreground">
-                {STAGE_LABELS[stage]?.[language] || stage}
-                <span className="ms-1.5 text-xs bg-muted rounded-full px-1.5 py-0.5">{stageEntries.length}</span>
-              </h3>
-              <div className="space-y-2">
-                {stageEntries.map((entry: any) => (
-                  <Card
-                    key={entry.id}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, entry.id)}
-                    className={`p-3 cursor-grab active:cursor-grabbing transition-opacity ${dragging === entry.id ? "opacity-50" : ""}`}
-                    onClick={() => navigate(`/listings/${entry.listing_id}`)}
-                  >
-                    <p className="text-sm font-medium truncate">{entry.listings?.address || entry.listings?.city || "Listing"}</p>
-                    {entry.listings?.price && (
-                      <p className="text-xs text-muted-foreground mt-1">₪{entry.listings.price.toLocaleString()}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {Math.floor((Date.now() - new Date(entry.entered_stage_at).getTime()) / 86400000)}d
-                    </p>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          );
-        })}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-display font-bold">{t("pipeline.title")}</h1>
+        <span className="text-sm text-muted-foreground">{t("pipeline.totalListings")}: {totalCount}</span>
       </div>
+
+      {isMobile ? (
+        // Mobile: grouped list view
+        <div className="space-y-4">
+          {STAGES.map((stage) => {
+            const stageEntries = entries.filter((e: any) => e.stage === stage);
+            return (
+              <div key={stage}>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+                  {STAGE_LABELS[stage]?.[language] || stage}
+                  <span className="text-xs bg-muted rounded-full px-1.5 py-0.5">{stageEntries.length}</span>
+                </h3>
+                {stageEntries.length === 0 ? (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground/60 py-3 px-3 bg-muted/30 rounded-lg">
+                    <Inbox className="h-3.5 w-3.5" />
+                    {t("pipeline.empty")}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {stageEntries.map(renderEntryCard)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        // Desktop: kanban board
+        <div className="flex gap-3 overflow-x-auto pb-4">
+          {STAGES.map((stage) => {
+            const stageEntries = entries.filter((e: any) => e.stage === stage);
+            return (
+              <div
+                key={stage}
+                className="flex-shrink-0 w-56 bg-muted/50 rounded-xl p-3 min-h-[300px]"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => handleDrop(e, stage)}
+              >
+                <h3 className="text-sm font-semibold mb-3 text-muted-foreground">
+                  {STAGE_LABELS[stage]?.[language] || stage}
+                  <span className="ms-1.5 text-xs bg-muted rounded-full px-1.5 py-0.5">{stageEntries.length}</span>
+                </h3>
+                <div className="space-y-2">
+                  {stageEntries.length === 0 ? (
+                    <div className="flex flex-col items-center gap-1 text-xs text-muted-foreground/50 py-6">
+                      <Inbox className="h-4 w-4" />
+                      <span>{t("pipeline.empty")}</span>
+                    </div>
+                  ) : (
+                    stageEntries.map(renderEntryCard)
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
