@@ -19,13 +19,12 @@ const Index = () => {
 
   useEffect(() => {
     if (!user) return;
-    // Check if already onboarded
-    (supabase as any)
+    supabase
       .from("profiles")
       .select("onboarded")
       .eq("id", user.id)
       .single()
-      .then(({ data }: any) => {
+      .then(({ data }) => {
         if (data?.onboarded) navigate("/inbox");
       });
   }, [user, navigate]);
@@ -33,8 +32,7 @@ const Index = () => {
   const handleComplete = async (profile: SearchProfileDraft) => {
     if (!user) return;
     try {
-      // Create search profile
-      await (supabase as any).from("search_profiles").insert({
+      await supabase.from("search_profiles").insert({
         user_id: user.id,
         name: profile.name || "My First Profile",
         cities: profile.cities,
@@ -46,8 +44,7 @@ const Index = () => {
         nice_to_haves: profile.niceToHaves,
       });
 
-      // Mark as onboarded
-      await (supabase as any)
+      await supabase
         .from("profiles")
         .update({ onboarded: true })
         .eq("id", user.id);

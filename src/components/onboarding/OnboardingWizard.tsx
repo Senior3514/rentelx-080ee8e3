@@ -29,14 +29,15 @@ const initialProfile: SearchProfileDraft = {
   niceToHaves: [],
 };
 
-interface OnboardingWizardProps {
+export interface OnboardingWizardProps {
   onComplete: (profile: SearchProfileDraft) => void;
+  initialData?: Partial<SearchProfileDraft>;
 }
 
-export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
+export const OnboardingWizard = ({ onComplete, initialData }: OnboardingWizardProps) => {
   const { t, direction } = useLanguage();
   const [step, setStep] = useState(0);
-  const [profile, setProfile] = useState<SearchProfileDraft>(initialProfile);
+  const [profile, setProfile] = useState<SearchProfileDraft>({ ...initialProfile, ...initialData });
 
   const isRtl = direction === "rtl";
   const BackIcon = isRtl ? ArrowRight : ArrowLeft;

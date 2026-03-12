@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { OnboardingWizard, SearchProfileDraft } from "@/components/onboarding/OnboardingWizard";
-import { Plus, Trash2, MapPin } from "lucide-react";
+import { Plus, Trash2, MapPin, Pencil, Search } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -20,11 +20,12 @@ const Profiles = () => {
   const { t } = useLanguage();
   const qc = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
+  const [editingProfile, setEditingProfile] = useState<any>(null);
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["search_profiles", user?.id],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("search_profiles")
         .select("*")
         .eq("user_id", user!.id)
@@ -37,15 +38,15 @@ const Profiles = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any).from("search_profiles").delete().eq("id", id);
+      const { error } = await supabase.from("search_profiles").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["search_profiles"] }); toast.success("Profile deleted"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["search_profiles"] }); toast.success(t("profiles.profileDeleted")); },
   });
 
   const createMutation = useMutation({
     mutationFn: async (draft: SearchProfileDraft) => {
-      const { error } = await (supabase as any).from("search_profiles").insert({
+      const { error } = await supabase.from("search_profiles").insert({
         user_id: user!.id,
         name: draft.name || "Untitled",
         cities: draft.cities,
@@ -61,16 +62,37 @@ const Profiles = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["search_profiles"] });
       setShowCreate(false);
-      toast.success("Profile created!");
+      toast.success(t("profiles.profileCreated"));
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, draft }: { id: string; draft: SearchProfileDraft }) => {
+      const { error } = await supabase.from("search_profiles").update({
+        name: draft.name || "Untitled",
+        cities: draft.cities,
+        min_price: draft.minPrice,
+        max_price: draft.maxPrice,
+        min_rooms: draft.minRooms,
+        max_rooms: draft.maxRooms,
+        must_haves: draft.mustHaves,
+        nice_to_haves: draft.niceToHaves,
+      }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["search_profiles"] });
+      setEditingProfile(null);
+      toast.success(t("profiles.profileUpdated"));
     },
   });
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-display font-bold">{t("nav.profiles")}</h1>
+        <h1 className="text-2xl font-display font-bold">{t("profiles.title")}</h1>
         <Button onClick={() => setShowCreate(true)} className="gap-1.5">
-          <Plus className="h-4 w-4" /> New Profile
+          <Plus className="h-4 w-4" /> {t("profiles.create")}
         </Button>
       </div>
 
@@ -79,54 +101,91 @@ const Profiles = () => {
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
         </div>
       ) : profiles.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-muted-foreground">No search profiles yet</p>
+        <div className="text-center py-16 space-y-3">
+          <Search className="h-12 w-12 mx-auto text-muted-foreground/50" />
+          <p className="text-muted-foreground">{t("profiles.empty")}</p>
+          <p className="text-sm text-muted-foreground">{t("profiles.emptySubtitle")}</p>
           <Button variant="outline" onClick={() => setShowCreate(true)} className="mt-3 gap-1.5">
-            <Plus className="h-4 w-4" /> Create your first profile
+            <Plus className="h-4 w-4" /> {t("profiles.create")}
           </Button>
         </div>
       ) : (
         <div className="space-y-3">
-          {profiles.map((p: any) => (
+          {profiles.map((p) => (
             <Card key={p.id} className="p-4">
               <div className="flex items-start justify-between">
-                <div>
+                <div className="flex-1 min-w-0">
                   <h3 className="font-semibold">{p.name || "Untitled"}</h3>
                   <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                    <MapPin className="h-3.5 w-3.5" />
-                    {p.cities?.join(", ") || "No cities"}
+                    <MapPin className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{p.cities?.join(", ") || "—"}</span>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
                     ₪{p.min_price?.toLocaleString()}–₪{p.max_price?.toLocaleString()} · {p.min_rooms}–{p.max_rooms} {t("common.rooms")}
                   </p>
+                  {p.must_haves?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {p.must_haves.map((mh: string) => (
+                        <span key={mh} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{mh}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-destructive">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>{t("common.delete")}?</AlertDialogTitle>
-                      <AlertDialogDescription>This will permanently delete this search profile.</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => deleteMutation.mutate(p.id)}>{t("common.delete")}</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button variant="ghost" size="icon" onClick={() => setEditingProfile(p)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="text-destructive">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{t("profiles.confirmDelete")}</AlertDialogTitle>
+                        <AlertDialogDescription>{t("profiles.delete")}?</AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteMutation.mutate(p.id)}>{t("common.delete")}</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </div>
             </Card>
           ))}
         </div>
       )}
 
+      {/* Create dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>New Search Profile</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("profiles.create")}</DialogTitle></DialogHeader>
           <OnboardingWizard onComplete={(draft) => createMutation.mutate(draft)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit dialog */}
+      <Dialog open={!!editingProfile} onOpenChange={(v) => { if (!v) setEditingProfile(null); }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>{t("profiles.edit")}</DialogTitle></DialogHeader>
+          {editingProfile && (
+            <OnboardingWizard
+              onComplete={(draft) => updateMutation.mutate({ id: editingProfile.id, draft })}
+              initialData={{
+                name: editingProfile.name,
+                cities: editingProfile.cities,
+                minPrice: editingProfile.min_price,
+                maxPrice: editingProfile.max_price,
+                minRooms: editingProfile.min_rooms,
+                maxRooms: editingProfile.max_rooms,
+                mustHaves: editingProfile.must_haves,
+                niceToHaves: editingProfile.nice_to_haves,
+              }}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>

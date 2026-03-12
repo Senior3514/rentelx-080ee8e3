@@ -29,7 +29,7 @@ const ResetPassword = () => {
     });
     setLoading(false);
     if (error) toast.error(error.message);
-    else toast.success("Check your email for the reset link!");
+    else toast.success(t("auth.resetEmailSent"));
   };
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
@@ -39,7 +39,7 @@ const ResetPassword = () => {
     setLoading(false);
     if (error) toast.error(error.message);
     else {
-      toast.success("Password updated!");
+      toast.success(t("auth.passwordUpdated"));
       navigate("/inbox");
     }
   };
@@ -52,10 +52,10 @@ const ResetPassword = () => {
         {isRecovery ? (
           <form onSubmit={handleUpdatePassword} className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-1.5 block">New Password</label>
-              <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} />
+              <label className="text-sm font-medium mb-1.5 block">{t("auth.newPassword")}</label>
+              <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={8} />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>Update Password</Button>
+            <Button type="submit" className="w-full" disabled={loading}>{t("auth.updatePassword")}</Button>
           </form>
         ) : (
           <form onSubmit={handleRequestReset} className="space-y-4">
@@ -63,7 +63,7 @@ const ResetPassword = () => {
               <label className="text-sm font-medium mb-1.5 block">{t("auth.email")}</label>
               <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>Send Reset Link</Button>
+            <Button type="submit" className="w-full" disabled={loading}>{t("auth.sendResetLink")}</Button>
           </form>
         )}
       </div>

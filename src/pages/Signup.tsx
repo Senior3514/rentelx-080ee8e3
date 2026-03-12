@@ -8,6 +8,9 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { UserPlus } from "lucide-react";
+import { z } from "zod";
+
+const passwordSchema = z.string().min(8, "Min 8 characters").regex(/\d/, "Must contain at least one number");
 
 const Signup = () => {
   const { t } = useLanguage();
@@ -16,11 +19,20 @@ const Signup = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const result = passwordSchema.safeParse(password);
+    if (!result.success) {
+      setPasswordError(result.error.errors[0].message);
+      return;
+    }
+    setPasswordError("");
+
     if (password !== confirmPassword) {
-      toast.error("Passwords don't match");
+      toast.error(t("auth.passwordsMismatch"));
       return;
     }
     setLoading(true);
@@ -33,7 +45,7 @@ const Signup = () => {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success("Check your email to confirm your account!");
+      toast.success(t("auth.checkEmail"));
       navigate("/login");
     }
   };
@@ -58,11 +70,13 @@ const Signup = () => {
           </div>
           <div>
             <label className="text-sm font-medium mb-1.5 block">{t("auth.password")}</label>
-            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+            <Input type="password" value={password} onChange={(e) => { setPassword(e.target.value); setPasswordError(""); }} required minLength={8} />
+            {passwordError && <p className="text-xs text-destructive mt-1">{passwordError}</p>}
+            <p className="text-xs text-muted-foreground mt-1">{t("auth.passwordRequirements")}</p>
           </div>
           <div>
             <label className="text-sm font-medium mb-1.5 block">{t("auth.confirmPassword")}</label>
-            <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} />
+            <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={8} />
           </div>
 
           <Button type="submit" className="w-full gap-2" disabled={loading}>
