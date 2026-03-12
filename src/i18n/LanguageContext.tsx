@@ -22,7 +22,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>(() => {
-    const stored = localStorage.getItem("rental-copilot-lang");
+    const stored = localStorage.getItem("rentelx-lang");
     return (stored === "he" || stored === "en") ? stored : "en";
   });
 
