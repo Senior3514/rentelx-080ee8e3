@@ -14,6 +14,7 @@ import { AddListingModal } from "@/components/listings/AddListingModal";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
 import { NeighborhoodInsights } from "@/components/dashboard/NeighborhoodInsights";
+import { RemindersWidget } from "@/components/dashboard/RemindersWidget";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
 const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
@@ -285,6 +286,9 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Reminders */}
+      <RemindersWidget />
 
       {/* Neighborhood Market Intelligence */}
       <NeighborhoodInsights />

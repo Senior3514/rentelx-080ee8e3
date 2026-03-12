@@ -1,4 +1,4 @@
-import { LayoutDashboard, Inbox, Columns3, UserSearch, Settings, LogOut, Sparkles, BookHeart, Scale } from "lucide-react";
+import { LayoutDashboard, Inbox, Columns3, UserSearch, Settings, LogOut, Sparkles, BookHeart, Scale, Truck } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -26,6 +26,7 @@ const navItems = [
   { titleKey: "nav.pipeline", url: "/pipeline", icon: Columns3 },
   { titleKey: "nav.watchlist", url: "/watchlist", icon: BookHeart },
   { titleKey: "nav.compare", url: "/compare", icon: Scale },
+  { titleKey: "nav.relocation", url: "/relocation", icon: Truck },
   { titleKey: "nav.profiles", url: "/profiles", icon: UserSearch },
   { titleKey: "nav.settings", url: "/settings", icon: Settings },
 ];

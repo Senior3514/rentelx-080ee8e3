@@ -62,6 +62,7 @@
     "pipeline": "Pipeline",
     "watchlist": "Watchlist",
     "compare": "Compare",
+    "relocation": "Relocation",
     "profiles": "Profiles",
     "settings": "Settings",
     "logout": "Log Out"
