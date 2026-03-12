@@ -7,9 +7,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import React, { useState, useMemo } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Inbox } from "lucide-react";
+import { Inbox, MapPin, BedDouble } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AnimatedCard } from "@/components/ui/AnimatedCard";
 
 const STAGES = ["new", "contacted", "viewing_scheduled", "viewed", "negotiating", "signed", "lost"] as const;
 
@@ -18,9 +17,19 @@ const STAGE_LABELS: Record<string, Record<string, string>> = {
   contacted: { en: "Contacted", he: "נוצר קשר" },
   viewing_scheduled: { en: "Viewing", he: "ביקור" },
   viewed: { en: "Viewed", he: "נצפה" },
-  negotiating: { en: "Negotiating", he: "מו\"מ" },
+  negotiating: { en: "Negotiating", he: 'מו"מ' },
   signed: { en: "Signed", he: "חתום" },
   lost: { en: "Lost", he: "אבוד" },
+};
+
+const STAGE_COLORS: Record<string, string> = {
+  new: "bg-blue-500",
+  contacted: "bg-violet-500",
+  viewing_scheduled: "bg-amber-500",
+  viewed: "bg-orange-500",
+  negotiating: "bg-primary",
+  signed: "bg-score-high",
+  lost: "bg-muted-foreground",
 };
 
 const Pipeline = () => {
@@ -82,29 +91,46 @@ const Pipeline = () => {
     return maxCount > 0 ? maxStageName : "";
   }, [entries]);
 
-  const renderEntryCard = (entry: any) => (
-    <AnimatedCard
-      key={entry.id}
-      layoutId={entry.id}
-      exit={{ opacity: 0, scale: 0.95 }}
-      className={`transition-opacity ${dragging === entry.id ? "opacity-50" : ""}`}
-    >
-      <Card
-        draggable={!isMobile}
-        onDragStart={(e) => handleDragStart(e, entry.id)}
-        className={`p-3 cursor-pointer ${!isMobile ? "cursor-grab active:cursor-grabbing" : ""}`}
-        onClick={() => navigate(`/listings/${entry.listing_id}`)}
+  const renderEntryCard = (entry: any) => {
+    const daysInStage = Math.floor((Date.now() - new Date(entry.entered_stage_at).getTime()) / 86400000);
+    return (
+      <motion.div
+        key={entry.id}
+        layout
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
       >
-        <p className="text-sm font-medium truncate">{entry.listings?.address || entry.listings?.city || "Listing"}</p>
-        {entry.listings?.price && (
-          <p className="text-xs text-muted-foreground mt-1">₪{entry.listings.price.toLocaleString()}</p>
-        )}
-        <p className="text-xs text-muted-foreground mt-1">
-          {Math.floor((Date.now() - new Date(entry.entered_stage_at).getTime()) / 86400000)}d
-        </p>
-      </Card>
-    </AnimatedCard>
-  );
+        <Card
+          draggable={!isMobile}
+          onDragStart={(e) => handleDragStart(e, entry.id)}
+          className={`p-3 cursor-pointer card-hover shine-overlay border-border/60 ${
+            dragging === entry.id ? "opacity-40 scale-95" : ""
+          } ${!isMobile ? "cursor-grab active:cursor-grabbing" : ""}`}
+          onClick={() => navigate(`/listings/${entry.listing_id}`)}
+        >
+          <p className="text-sm font-semibold truncate mb-1">
+            {entry.listings?.address || entry.listings?.city || "Listing"}
+          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            {entry.listings?.price && (
+              <span className="text-xs font-medium text-primary">
+                <MapPin className="inline h-3 w-3 me-0.5" />
+                ₪{entry.listings.price.toLocaleString()}
+              </span>
+            )}
+            {entry.listings?.rooms && (
+              <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+                <BedDouble className="h-3 w-3" /> {entry.listings.rooms}
+              </span>
+            )}
+            <span className="text-xs text-muted-foreground ms-auto">{daysInStage}d</span>
+          </div>
+        </Card>
+      </motion.div>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -114,11 +140,27 @@ const Pipeline = () => {
     );
   }
 
+  // Stage progress indicator
+  const totalWithEntries = STAGES.filter((s) => entries.some((e: any) => e.stage === s)).length;
+  const progressPercent = STAGES.length > 0 ? (totalWithEntries / STAGES.length) * 100 : 0;
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 animate-fade-up">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-display font-bold">{t("pipeline.title")}</h1>
-        <span className="text-sm text-muted-foreground">{t("pipeline.totalListings")}: {totalCount}</span>
+        <div>
+          <h1 className="text-2xl font-display font-bold">{t("pipeline.title")}</h1>
+          <div className="flex items-center gap-2 mt-1">
+            <div className="stage-indicator w-32">
+              <motion.div
+                className="stage-indicator-fill"
+                initial={{ width: 0 }}
+                animate={{ width: `${progressPercent}%` }}
+                transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
+              />
+            </div>
+            <span className="text-xs text-muted-foreground">{totalCount} {t("pipeline.totalListings")}</span>
+          </div>
+        </div>
       </div>
 
       {isMobile ? (
@@ -129,6 +171,7 @@ const Pipeline = () => {
             return (
               <div key={stage}>
                 <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${STAGE_COLORS[stage]}`} />
                   {STAGE_LABELS[stage]?.[language] || stage}
                   <span className="text-xs bg-muted rounded-full px-1.5 py-0.5">{stageEntries.length}</span>
                 </h3>
@@ -139,7 +182,7 @@ const Pipeline = () => {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {stageEntries.map(renderEntryCard)}
+                    <AnimatePresence>{stageEntries.map(renderEntryCard)}</AnimatePresence>
                   </div>
                 )}
               </div>
@@ -148,22 +191,26 @@ const Pipeline = () => {
         </div>
       ) : (
         // Desktop: kanban board
-        <div className="flex gap-3 overflow-x-auto pb-4">
-          {STAGES.map((stage) => {
+        <div className="flex gap-3 overflow-x-auto pb-4 -mx-1 px-1">
+          {STAGES.map((stage, stageIdx) => {
             const stageEntries = entries.filter((e: any) => e.stage === stage);
             const isMax = stage === maxStage;
             return (
-              <div
+              <motion.div
                 key={stage}
-                className={`flex-shrink-0 w-56 bg-muted/50 rounded-xl p-3 min-h-[300px] transition-all duration-300 ${
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: stageIdx * 0.06, type: "spring", stiffness: 260, damping: 22 }}
+                className={`flex-shrink-0 w-56 bg-muted/50 rounded-xl p-3 min-h-[300px] border border-border/40 transition-all duration-300 ${
                   isMax ? "ring-2 ring-primary/40 shadow-[0_0_16px_hsl(var(--primary)/0.15)]" : ""
                 }`}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => handleDrop(e, stage)}
               >
-                <h3 className="text-sm font-semibold mb-3 text-muted-foreground">
-                  {STAGE_LABELS[stage]?.[language] || stage}
-                  <span className="ms-1.5 text-xs bg-muted rounded-full px-1.5 py-0.5">{stageEntries.length}</span>
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${STAGE_COLORS[stage]}`} />
+                  <span className="text-muted-foreground">{STAGE_LABELS[stage]?.[language] || stage}</span>
+                  <span className="ms-auto text-xs bg-muted rounded-full px-1.5 py-0.5">{stageEntries.length}</span>
                 </h3>
                 <div className="space-y-2">
                   <AnimatePresence>
@@ -183,7 +230,7 @@ const Pipeline = () => {
                     )}
                   </AnimatePresence>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>

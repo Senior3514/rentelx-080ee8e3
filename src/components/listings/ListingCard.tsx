@@ -1,8 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { MapPin, BedDouble, Maximize, Building2, Clock } from "lucide-react";
+import { MapPin, BedDouble, Maximize, Building2, Clock, ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
+import { motion } from "framer-motion";
 import { he } from "date-fns/locale";
 
 interface ListingCardProps {
@@ -29,42 +30,57 @@ export const ListingCard = ({ listing }: ListingCardProps) => {
   });
 
   return (
+    <motion.div
+      whileHover={{ y: -2 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+    >
     <Card
-      className="p-4 cursor-pointer hover:shadow-md transition-shadow"
+      className="p-4 cursor-pointer card-hover shine-overlay border-border/60 group"
       onClick={() => navigate(`/listings/${listing.id}`)}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="font-medium truncate">{listing.address || listing.city || "Unknown"}</span>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+              <MapPin className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="font-semibold truncate block">{listing.address || listing.city || "Unknown"}</span>
+              {listing.city && listing.address && (
+                <span className="text-xs text-muted-foreground">{listing.city}</span>
+              )}
+            </div>
+            {listing.source_url && (
+              <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
           </div>
 
-          <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
             {listing.price && (
-              <span className="font-semibold text-foreground">
-                {t("common.shekel")}{listing.price.toLocaleString()}{t("common.perMonth")}
+              <span className="font-bold text-primary text-base">
+                {t("common.shekel")}{listing.price.toLocaleString()}
+                <span className="text-xs font-normal text-muted-foreground">{t("common.perMonth")}</span>
               </span>
             )}
             {listing.rooms && (
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1 text-xs">
                 <BedDouble className="h-3.5 w-3.5" />
                 {listing.rooms} {t("common.rooms")}
               </span>
             )}
             {listing.sqm && (
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1 text-xs">
                 <Maximize className="h-3.5 w-3.5" />
                 {listing.sqm} {t("common.sqm")}
               </span>
             )}
             {listing.floor != null && (
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1 text-xs">
                 <Building2 className="h-3.5 w-3.5" />
                 {t("common.floor")} {listing.floor}
               </span>
             )}
-            <span className="flex items-center gap-1 text-xs">
+            <span className="flex items-center gap-1 text-xs ms-auto">
               <Clock className="h-3 w-3" />
               {timeAgo}
             </span>
@@ -86,7 +102,7 @@ export const ListingCard = ({ listing }: ListingCardProps) => {
 
         <div className="flex flex-col items-end gap-1.5 shrink-0">
           {topScore > 0 && (
-            <div className={`px-2.5 py-1 rounded-full text-xs font-bold ${scoreColor}`}>
+            <div className={`px-2.5 py-1.5 rounded-full text-xs font-bold ${scoreColor} ${topScore >= 80 ? "animate-glow" : ""} stat-number`}>
               {topScore}
             </div>
           )}
@@ -111,5 +127,6 @@ export const ListingCard = ({ listing }: ListingCardProps) => {
         </div>
       </div>
     </Card>
+    </motion.div>
   );
 };

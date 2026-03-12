@@ -30,9 +30,9 @@
         "title": "Visual Pipeline",
         "desc": "Track every listing through 7 stages: from New to Signed. Drag and drop on a Kanban board."
       },
-      "alerts": {
-        "title": "Instant Alerts",
-        "desc": "Get notified via Telegram when a high-score listing matches your criteria."
+      "watchlist": {
+        "title": "Auto-Scan Watchlist",
+        "desc": "Set filters for Tel Aviv, Givatayim and Ramat Gan — we scan Yad2 every 5 minutes and surface new matches instantly."
       },
       "bilingual": {
         "title": "Hebrew & English",
@@ -53,12 +53,14 @@
     "cta": {
       "title": "Ready to find your next home?",
       "subtitle": "Join thousands of renters using RentelX to take control of their apartment search."
-    }
+    },
+    "scanning": "Processing listing..."
   },
   "nav": {
     "dashboard": "Dashboard",
     "inbox": "Inbox",
     "pipeline": "Pipeline",
+    "watchlist": "Watchlist",
     "profiles": "Profiles",
     "settings": "Settings",
     "logout": "Log Out"
@@ -74,6 +76,7 @@
     "hasAccount": "Already have an account?",
     "orContinueWith": "Or continue with",
     "google": "Google",
+    "invalidCredentials": "Invalid email or password",
     "or": "or",
     "guestLogin": "Continue as Guest",
     "newPassword": "New Password",
@@ -244,6 +247,20 @@
     "floorRange": "Floor must be -5 to 100",
     "textTooLong": "Text too long (max 500 chars)",
     "phoneInvalid": "Invalid phone format"
+  },
+  "watchlist": {
+    "title": "Watchlist",
+    "subtitle": "Auto-scan Yad2 for new listings in Tel Aviv, Givatayim & Ramat Gan",
+    "scan": "Scan Now",
+    "scanning": "Scanning...",
+    "autoOn": "Auto-Scan ON",
+    "autoOff": "Auto-Scan",
+    "cities": "Cities to scan",
+    "empty": "No listings yet",
+    "emptyHint": "Click 'Scan Now' to fetch real-time listings from Yad2",
+    "results": "listings found",
+    "lastScan": "Last scan",
+    "scoringBy": "Scoring by profile"
   },
   "notFound": {
     "title": "404",

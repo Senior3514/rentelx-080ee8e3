@@ -166,9 +166,9 @@ const ListingDetail = () => {
   const breakdown = bestScoreEntry?.breakdown as Record<string, number> | null;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6 animate-fade-up">
       <Button variant="ghost" onClick={() => navigate(-1)} className="gap-1.5">
-        <ArrowLeft className="h-4 w-4" /> {t("common.back")}
+        <ArrowLeft className="h-4 w-4 flip-rtl" /> {t("common.back")}
       </Button>
 
       <div className="flex items-start justify-between">
