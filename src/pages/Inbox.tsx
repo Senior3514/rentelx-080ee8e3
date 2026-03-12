@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Plus, Search, Inbox as InboxIcon } from "lucide-react";
+import { Plus, Search, Inbox as InboxIcon, Download, Scale } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { ListingCard } from "@/components/listings/ListingCard";
 import { AddListingModal } from "@/components/listings/AddListingModal";
 import { motion } from "framer-motion";
@@ -16,7 +17,8 @@ type SortOption = "newest" | "score_desc" | "price_asc" | "price_desc";
 
 const InboxPage = () => {
   const { user } = useAuth();
-  const { t, direction } = useLanguage();
+  const { t, language, direction } = useLanguage();
+  const navigate = useNavigate();
   const [showAdd, setShowAdd] = useState(false);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
@@ -72,14 +74,51 @@ const InboxPage = () => {
     return result;
   }, [listings, search, sortBy, minScore, cityFilter]);
 
+  const exportCSV = () => {
+    const header = ["Address", "City", "Price", "Rooms", "SQM", "Floor", "Score", "Created"];
+    const rows = filtered.map((l) => {
+      const score = l.listing_scores?.length ? Math.max(...l.listing_scores.map((s: any) => s.score)) : "";
+      return [
+        l.address ?? "",
+        l.city ?? "",
+        l.price ?? "",
+        l.rooms ?? "",
+        l.sqm ?? "",
+        l.floor ?? "",
+        score,
+        new Date(l.created_at).toLocaleDateString(),
+      ];
+    });
+    const csv = [header, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `rentelx-listings-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-display font-bold">{t("inbox.title")}</h1>
-        <Button onClick={() => setShowAdd(true)} className="gap-1.5">
-          <Plus className="h-4 w-4" />
-          {t("inbox.addListing")}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => navigate("/compare")} className="gap-1.5 hidden sm:flex">
+            <Scale className="h-4 w-4" />
+            {language === "he" ? "השוואה" : "Compare"}
+          </Button>
+          {filtered.length > 0 && (
+            <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5">
+              <Download className="h-4 w-4" />
+              CSV
+            </Button>
+          )}
+          <Button onClick={() => setShowAdd(true)} className="gap-1.5">
+            <Plus className="h-4 w-4" />
+            {t("inbox.addListing")}
+          </Button>
+        </div>
       </div>
 
       {/* Search + Sort + Filter controls */}

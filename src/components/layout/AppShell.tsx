@@ -3,6 +3,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { AIChatBubble } from "@/components/AIChatBubble";
 
 export const AppShell = () => {
   const location = useLocation();
@@ -31,6 +32,7 @@ export const AppShell = () => {
           </main>
         </div>
       </div>
+      <AIChatBubble />
     </SidebarProvider>
   );
 };

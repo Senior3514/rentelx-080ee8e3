@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Bell, BellOff, RefreshCw, MapPin, BedDouble, Maximize,
-  Clock, ExternalLink, Sparkles, BookHeart, Zap
+  Clock, ExternalLink, Sparkles, BookHeart, Zap, PlusCircle, Check
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -37,6 +37,7 @@ const Watchlist = () => {
   const [results, setResults] = useState<ScannedListing[]>([]);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState<Set<string>>(new Set());
 
   // Load active search profile for scoring
   const { data: activeProfile } = useQuery({
@@ -116,6 +117,35 @@ const Watchlist = () => {
     setSelectedCities((prev) =>
       prev.includes(city) ? prev.filter((c) => c !== city) : [...prev, city]
     );
+  };
+
+  const saveToInbox = async (listing: ScannedListing) => {
+    if (!user) return;
+    if (saved.has(listing.source_id)) return;
+    try {
+      const { error: insertErr } = await supabase.from("listings").insert({
+        user_id: user.id,
+        address: listing.address,
+        city: listing.city,
+        price: listing.price,
+        rooms: listing.rooms,
+        sqm: listing.sqm,
+        floor: listing.floor,
+        total_floors: listing.total_floors,
+        description: listing.description,
+        amenities: listing.amenities,
+        contact_name: listing.contact_name,
+        contact_phone: listing.contact_phone,
+        image_urls: listing.cover_image ? [listing.cover_image] : [],
+        status: "active",
+      });
+      if (insertErr) throw insertErr;
+      setSaved((prev) => new Set([...prev, listing.source_id]));
+      toast.success(language === "he" ? "הדירה נשמרה לתיבה" : "Saved to Inbox!");
+      qc.invalidateQueries({ queryKey: ["listings"] });
+    } catch (e: any) {
+      toast.error(e.message ?? "Save failed");
+    }
   };
 
   const cityLabel = (city: typeof CITIES[number]) =>
@@ -351,6 +381,18 @@ const Watchlist = () => {
                             {s}
                           </div>
                         )}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className={`h-7 w-7 ${saved.has(listing.source_id) ? "text-score-high" : "text-muted-foreground opacity-0 group-hover:opacity-100"} transition-all`}
+                          onClick={(e) => { e.stopPropagation(); saveToInbox(listing); }}
+                          title={language === "he" ? "שמור לתיבה" : "Save to Inbox"}
+                        >
+                          {saved.has(listing.source_id)
+                            ? <Check className="h-4 w-4" />
+                            : <PlusCircle className="h-4 w-4" />
+                          }
+                        </Button>
                         <ExternalLink className="h-4 w-4 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" />
                       </div>
                     </div>
