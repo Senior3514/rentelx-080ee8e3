@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,15 @@ import { LogIn } from "lucide-react";
 const Login = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Redirect back to the page the user was trying to access, or fall back to /dashboard
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || "/dashboard";
+  // Guard against open-redirect: only allow relative paths within the app
+  const safeFrom = from.startsWith("/") && !from.startsWith("//") ? from : "/dashboard";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +30,7 @@ const Login = () => {
     if (error) {
       toast.error(error.message);
     } else {
-      navigate("/dashboard");
+      navigate(safeFrom, { replace: true });
     }
   };
 

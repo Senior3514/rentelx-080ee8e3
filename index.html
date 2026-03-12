@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="ltr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,12 +10,35 @@
     <meta property="og:title" content="RentelX — AI-Powered Apartment Search in Israel" />
     <meta property="og:description" content="RentelX: Smart AI-powered apartment search assistant for renters in Israel." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta name="twitter:site" content="@RentelX" />
+
+    <!-- Preload font connections -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!--
+      Prevent RTL/LTR flash and dark-mode flicker:
+      read stored preferences before React mounts and apply immediately.
+    -->
+    <script>
+      (function () {
+        try {
+          var lang = localStorage.getItem('rentelx-lang');
+          if (lang === 'he') {
+            document.documentElement.lang = 'he';
+            document.documentElement.dir = 'rtl';
+          }
+          var theme = localStorage.getItem('rentelx-theme');
+          var isDark =
+            theme === 'dark' ||
+            ((!theme || theme === 'system') &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (isDark) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
   </head>
 
   <body>

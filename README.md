@@ -1,73 +1,120 @@
-# Welcome to your Lovable project
+# RentelX — Rental Co-Pilot for Israeli Apartment Renters
 
-## Project info
+An autonomous apartment-search assistant built for renters in Israel. RentelX lets you define search profiles, ingest listings, score them against your preferences, and track your rental pipeline — all in Hebrew or English, with light and dark mode.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Tech Stack
 
-## How can I edit this code?
+| Layer | Technology |
+|---|---|
+| Frontend | React 18 + Vite + TypeScript |
+| UI | shadcn/ui + Tailwind CSS + Radix UI |
+| Routing | React Router v6 |
+| State / Data | TanStack Query v5 |
+| Backend / DB | Supabase (Postgres + Auth + Edge Functions) |
+| Charts | Recharts |
+| Animations | Framer Motion |
+| i18n | Custom LanguageContext (EN / HE, RTL support) |
+| Testing | Vitest + Testing Library |
+| E2E | Playwright |
+| Linting | ESLint + TypeScript-ESLint |
 
-There are several ways of editing your application.
+## Features (MVP)
 
-**Use Lovable**
+- **Auth** — email/password sign-up, login, password reset via Supabase Auth
+- **Search Profiles** — create multiple profiles with city, price range, rooms, must-haves, and nice-to-haves
+- **Listings Inbox** — manually add listings (URL or JSON paste); auto-scored on insert
+- **Scoring Engine** — heuristic scoring (0–100) matching city, price, rooms, and amenities against all active search profiles
+- **Pipeline** — Kanban board to track listing status: New → Contacted → Viewing → Viewed → Negotiating → Signed/Lost
+- **Dashboard** — stats cards, Score Distribution chart, Pipeline Funnel, Weekly Activity chart
+- **Image Gallery** — thumbnail grid + lightbox with keyboard navigation
+- **Settings** — display name, language (EN/HE), theme (light/dark/system), notification preferences
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Monorepo Structure
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+/
+├── src/
+│   ├── components/         # React components
+│   │   ├── dashboard/      # DashboardCharts
+│   │   ├── layout/         # AppShell, AppSidebar, ProtectedRoute
+│   │   ├── listings/       # AddListingModal, ListingCard, ImageGallery
+│   │   ├── onboarding/     # OnboardingWizard steps
+│   │   └── ui/             # shadcn/ui primitives
+│   ├── contexts/           # AuthContext
+│   ├── data/               # Static data (Israeli cities)
+│   ├── hooks/              # Custom React hooks
+│   ├── i18n/               # LanguageContext, ThemeContext, translations/
+│   ├── integrations/       # Supabase client + generated types
+│   ├── lib/                # Utility functions (scoring, utils)
+│   ├── pages/              # Route-level page components
+│   └── test/               # Unit test setup and suites
+├── supabase/
+│   ├── config.toml         # Supabase project config
+│   └── functions/          # Edge Functions (ai-assist stub)
+├── .github/
+│   └── workflows/
+│       └── ci.yml          # CI: lint + test on every PR
+├── NOTES.md                # Architecture decisions & assumptions
+└── CONTRIBUTING.md         # How to run the dev environment
 ```
 
-**Edit a file directly in GitHub**
+## Quick Start
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Prerequisites
 
-**Use GitHub Codespaces**
+- Node.js ≥ 18 (use [nvm](https://github.com/nvm-sh/nvm))
+- A [Supabase](https://supabase.com) project
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Environment Variables
 
-## What technologies are used for this project?
+Copy `.env.example` to `.env` and fill in your Supabase credentials:
 
-This project is built with:
+```sh
+cp .env.example .env
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon-key>
+```
 
-## How can I deploy this project?
+### Install & Run
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+```sh
+npm install
+npm run dev        # start dev server on http://localhost:8080
+```
 
-## Can I connect a custom domain to my Lovable project?
+### Other Scripts
 
-Yes, you can!
+```sh
+npm run build      # production build
+npm run lint       # ESLint
+npm run test       # Vitest unit tests (run once)
+npm run test:watch # Vitest in watch mode
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Database
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+The schema is managed through Supabase. Key tables:
+
+| Table | Description |
+|---|---|
+| `profiles` | User profile (display name, onboarding flag) |
+| `search_profiles` | Renter search criteria (cities, price range, rooms, amenities) |
+| `listings` | Apartment listings with metadata |
+| `listing_scores` | Score of a listing against each search profile |
+| `pipeline_entries` | Kanban stage per listing per user |
+| `listing_notes` | Free-text notes on a listing |
+| `listing_reminders` | Time-based reminders for a listing |
+| `notification_preferences` | Per-user notification settings |
+
+See `src/integrations/supabase/types.ts` for the full auto-generated TypeScript types.
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+## Architecture Notes & Assumptions
+
+See [NOTES.md](./NOTES.md).
