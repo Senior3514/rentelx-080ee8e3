@@ -1,9 +1,10 @@
 {
   "app": {
-    "name": "Rental Co-Pilot",
-    "tagline": "חיפוש הדירה שלך, על אוטומט"
+    "name": "RentelX",
+    "tagline": "חיפוש הדירה שלך, מונע בינה מלאכותית"
   },
   "nav": {
+    "dashboard": "לוח בקרה",
     "inbox": "תיבת דואר",
     "pipeline": "תהליך",
     "profiles": "פרופילים",
@@ -35,6 +36,7 @@
   "onboarding": {
     "welcome": "בואו נמצא את הבית הבא שלך",
     "subtitle": "הגדר את פרופיל החיפוש שלך ב-3 צעדים",
+    "profileCreated": "הפרופיל נוצר! בואו נמצא לך דירה.",
     "step1": {
       "title": "איפה אתה מחפש?",
       "subtitle": "בחר עיר אחת או יותר",
@@ -68,6 +70,17 @@
     "back": "חזרה",
     "finish": "בואו נתחיל לחפש",
     "skip": "דלג"
+  },
+  "dashboard": {
+    "welcome": "ברוך שובך",
+    "totalListings": "סך דירות",
+    "avgScore": "ציון ממוצע",
+    "inPipeline": "בתהליך",
+    "activeProfiles": "פרופילים פעילים",
+    "quickActions": "פעולות מהירות",
+    "recentListings": "דירות אחרונות",
+    "noRecent": "אין דירות עדיין. הוסף את הראשונה!",
+    "timeAgo": "לפני"
   },
   "inbox": {
     "title": "תיבת דירות",
@@ -173,6 +186,11 @@
     "floorRange": "קומה חייבת להיות -5 עד 100",
     "textTooLong": "טקסט ארוך מדי (מקסימום 500 תווים)",
     "phoneInvalid": "פורמט טלפון לא תקין"
+  },
+  "notFound": {
+    "title": "404",
+    "message": "אופס! הדף לא נמצא",
+    "backHome": "חזרה לדף הבית"
   },
   "common": {
     "rooms": "חדרים",

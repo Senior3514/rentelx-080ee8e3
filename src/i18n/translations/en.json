@@ -1,9 +1,10 @@
 {
   "app": {
-    "name": "Rental Co-Pilot",
-    "tagline": "Your apartment search, on autopilot"
+    "name": "RentelX",
+    "tagline": "Your apartment search, powered by AI"
   },
   "nav": {
+    "dashboard": "Dashboard",
     "inbox": "Inbox",
     "pipeline": "Pipeline",
     "profiles": "Profiles",
@@ -35,6 +36,7 @@
   "onboarding": {
     "welcome": "Let's find your next home",
     "subtitle": "Set up your search profile in 3 quick steps",
+    "profileCreated": "Profile created! Let's find your home.",
     "step1": {
       "title": "Where are you looking?",
       "subtitle": "Select one or more cities",
@@ -68,6 +70,17 @@
     "back": "Back",
     "finish": "Start Finding Apartments",
     "skip": "Skip for now"
+  },
+  "dashboard": {
+    "welcome": "Welcome back",
+    "totalListings": "Total Listings",
+    "avgScore": "Avg Score",
+    "inPipeline": "In Pipeline",
+    "activeProfiles": "Active Profiles",
+    "quickActions": "Quick Actions",
+    "recentListings": "Recent Listings",
+    "noRecent": "No listings yet. Add your first one!",
+    "timeAgo": "ago"
   },
   "inbox": {
     "title": "Listings Inbox",
@@ -173,6 +186,11 @@
     "floorRange": "Floor must be -5 to 100",
     "textTooLong": "Text too long (max 500 chars)",
     "phoneInvalid": "Invalid phone format"
+  },
+  "notFound": {
+    "title": "404",
+    "message": "Oops! Page not found",
+    "backHome": "Return to Home"
   },
   "common": {
     "rooms": "rooms",

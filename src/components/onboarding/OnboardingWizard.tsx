@@ -5,6 +5,7 @@ import { StepCities } from "./StepCities";
 import { StepBudget } from "./StepBudget";
 import { StepMustHaves } from "./StepMustHaves";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 
 export interface SearchProfileDraft {
@@ -65,6 +66,17 @@ export const OnboardingWizard = ({ onComplete, initialData }: OnboardingWizardPr
           </h1>
           <p className="text-muted-foreground">{t("onboarding.subtitle")}</p>
         </motion.div>
+
+        {/* Profile Name */}
+        <div className="mb-6">
+          <label className="text-sm font-medium mb-1.5 block">{t("onboarding.profileName")}</label>
+          <Input
+            value={profile.name}
+            onChange={(e) => setProfile((p) => ({ ...p, name: e.target.value }))}
+            placeholder={t("onboarding.profileNamePlaceholder")}
+            maxLength={100}
+          />
+        </div>
 
         {/* Progress */}
         <div className="flex gap-2 mb-8">

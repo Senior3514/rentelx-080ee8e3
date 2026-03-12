@@ -16,7 +16,7 @@ function getSystemTheme(): "light" | "dark" {
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<Theme>(() => {
-    const stored = localStorage.getItem("rental-copilot-theme");
+    const stored = localStorage.getItem("rentelx-theme");
     return (stored === "light" || stored === "dark" || stored === "system") ? stored : "system";
   });
 
@@ -24,7 +24,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const setTheme = useCallback((t: Theme) => {
     setThemeState(t);
-    localStorage.setItem("rental-copilot-theme", t);
+    localStorage.setItem("rentelx-theme", t);
   }, []);
 
   useEffect(() => {

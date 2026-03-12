@@ -137,7 +137,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
       setForm((prev) => ({ ...prev, [key]: e.target.value })),
   });
 
-  const FieldError = ({ field }: { field: string }) => 
+  const renderFieldError = (field: string) => 
     formErrors[field] ? <p className="text-xs text-destructive mt-0.5">{formErrors[field]}</p> : null;
 
   return (
@@ -164,43 +164,43 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
             <form onSubmit={handleManualSubmit} className="space-y-3 pt-2">
               <div>
                 <Input placeholder={t("addListing.address")} {...f("address")} maxLength={500} />
-                <FieldError field="address" />
+                {renderFieldError("address")}
               </div>
               <div>
                 <Input placeholder={t("addListing.city")} {...f("city")} maxLength={500} />
-                <FieldError field="city" />
+                {renderFieldError("city")}
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <Input placeholder={t("addListing.price")} type="number" {...f("price")} min={1} />
-                  <FieldError field="price" />
+                  {renderFieldError("price")}
                 </div>
                 <div>
                   <Input placeholder={t("addListing.rooms")} type="number" step="0.5" {...f("rooms")} min={0.5} max={20} />
-                  <FieldError field="rooms" />
+                  {renderFieldError("rooms")}
                 </div>
                 <div>
                   <Input placeholder={t("addListing.sqm")} type="number" {...f("sqm")} min={1} max={1000} />
-                  <FieldError field="sqm" />
+                  {renderFieldError("sqm")}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Input placeholder={t("addListing.floor")} type="number" {...f("floor")} min={-5} max={100} />
-                  <FieldError field="floor" />
+                  {renderFieldError("floor")}
                 </div>
                 <div>
                   <Input placeholder={t("addListing.contactPhone")} {...f("contact_phone")} maxLength={20} />
-                  <FieldError field="contact_phone" />
+                  {renderFieldError("contact_phone")}
                 </div>
               </div>
               <div>
                 <Input placeholder={t("addListing.contactName")} {...f("contact_name")} maxLength={500} />
-                <FieldError field="contact_name" />
+                {renderFieldError("contact_name")}
               </div>
               <div>
                 <Textarea placeholder={t("addListing.description")} {...f("description")} rows={3} maxLength={500} />
-                <FieldError field="description" />
+                {renderFieldError("description")}
               </div>
               <Button type="submit" className="w-full" disabled={insertMutation.isPending}>{t("addListing.submit")}</Button>
             </form>

@@ -12,6 +12,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ResetPassword from "./pages/ResetPassword";
+import Dashboard from "./pages/Dashboard";
 import Inbox from "./pages/Inbox";
 import ListingDetail from "./pages/ListingDetail";
 import Pipeline from "./pages/Pipeline";
@@ -38,6 +39,7 @@ const App = () => (
 
                 {/* Protected app routes */}
                 <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
+                  <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/inbox" element={<Inbox />} />
                   <Route path="/listings/:id" element={<ListingDetail />} />
                   <Route path="/pipeline" element={<Pipeline />} />
