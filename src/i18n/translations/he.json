@@ -1,0 +1,86 @@
+{
+  "app": {
+    "name": "Rental Co-Pilot",
+    "tagline": "חיפוש הדירה שלך, על אוטומט"
+  },
+  "nav": {
+    "inbox": "תיבת דואר",
+    "pipeline": "תהליך",
+    "profiles": "פרופילים",
+    "settings": "הגדרות",
+    "logout": "התנתק"
+  },
+  "auth": {
+    "login": "התחברות",
+    "signup": "הרשמה",
+    "email": "אימייל",
+    "password": "סיסמה",
+    "confirmPassword": "אישור סיסמה",
+    "forgotPassword": "שכחת סיסמה?",
+    "noAccount": "אין לך חשבון?",
+    "hasAccount": "כבר יש לך חשבון?",
+    "orContinueWith": "או המשך עם",
+    "google": "Google"
+  },
+  "onboarding": {
+    "welcome": "בואו נמצא את הבית הבא שלך",
+    "subtitle": "הגדר את פרופיל החיפוש שלך ב-3 צעדים",
+    "step1": {
+      "title": "איפה אתה מחפש?",
+      "subtitle": "בחר עיר אחת או יותר",
+      "searchPlaceholder": "חפש ערים..."
+    },
+    "step2": {
+      "title": "תקציב וגודל",
+      "subtitle": "הגדר טווח מחירים ומספר חדרים",
+      "priceRange": "שכירות חודשית (₪)",
+      "rooms": "חדרים",
+      "minPrice": "מינימום",
+      "maxPrice": "מקסימום"
+    },
+    "step3": {
+      "title": "דרישות חובה",
+      "subtitle": "מה הכי חשוב לך?",
+      "mustHave": "חובה",
+      "niceToHave": "יתרון",
+      "parking": "חנייה",
+      "elevator": "מעלית",
+      "balcony": "מרפסת",
+      "petsAllowed": "חיות מחמד",
+      "airConditioning": "מיזוג",
+      "storage": "מחסן",
+      "furnished": "מרוהטת",
+      "accessible": "נגישות"
+    },
+    "profileName": "שם הפרופיל",
+    "profileNamePlaceholder": "לדוגמה: תל אביב סולו, גוש דן...",
+    "next": "הבא",
+    "back": "חזרה",
+    "finish": "בואו נתחיל לחפש",
+    "skip": "דלג"
+  },
+  "inbox": {
+    "title": "תיבת דירות",
+    "empty": "אין דירות עדיין",
+    "emptySubtitle": "הוסף את הדירה הראשונה שלך",
+    "addListing": "הוסף דירה",
+    "filter": "סינון",
+    "sort": "מיון",
+    "score": "ציון",
+    "dismiss": "דחה",
+    "save": "שמור",
+    "contact": "צור קשר"
+  },
+  "common": {
+    "rooms": "חדרים",
+    "sqm": "מ״ר",
+    "floor": "קומה",
+    "perMonth": "/חודש",
+    "shekel": "₪",
+    "cancel": "ביטול",
+    "save": "שמור",
+    "delete": "מחק",
+    "edit": "ערוך",
+    "loading": "טוען..."
+  }
+}

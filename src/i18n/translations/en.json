@@ -1,0 +1,86 @@
+{
+  "app": {
+    "name": "Rental Co-Pilot",
+    "tagline": "Your apartment search, on autopilot"
+  },
+  "nav": {
+    "inbox": "Inbox",
+    "pipeline": "Pipeline",
+    "profiles": "Profiles",
+    "settings": "Settings",
+    "logout": "Log Out"
+  },
+  "auth": {
+    "login": "Log In",
+    "signup": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "forgotPassword": "Forgot password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "orContinueWith": "Or continue with",
+    "google": "Google"
+  },
+  "onboarding": {
+    "welcome": "Let's find your next home",
+    "subtitle": "Set up your search profile in 3 quick steps",
+    "step1": {
+      "title": "Where are you looking?",
+      "subtitle": "Select one or more cities",
+      "searchPlaceholder": "Search cities..."
+    },
+    "step2": {
+      "title": "Budget & size",
+      "subtitle": "Set your price range and room count",
+      "priceRange": "Monthly rent (₪)",
+      "rooms": "Rooms",
+      "minPrice": "Min",
+      "maxPrice": "Max"
+    },
+    "step3": {
+      "title": "Must-haves",
+      "subtitle": "What matters most to you?",
+      "mustHave": "Must have",
+      "niceToHave": "Nice to have",
+      "parking": "Parking",
+      "elevator": "Elevator",
+      "balcony": "Balcony",
+      "petsAllowed": "Pets allowed",
+      "airConditioning": "A/C",
+      "storage": "Storage",
+      "furnished": "Furnished",
+      "accessible": "Accessible"
+    },
+    "profileName": "Profile name",
+    "profileNamePlaceholder": "e.g. TLV Solo, Gush Dan...",
+    "next": "Next",
+    "back": "Back",
+    "finish": "Start Finding Apartments",
+    "skip": "Skip for now"
+  },
+  "inbox": {
+    "title": "Listings Inbox",
+    "empty": "No listings yet",
+    "emptySubtitle": "Add your first listing to get started",
+    "addListing": "Add Listing",
+    "filter": "Filter",
+    "sort": "Sort",
+    "score": "Score",
+    "dismiss": "Dismiss",
+    "save": "Save",
+    "contact": "Contact"
+  },
+  "common": {
+    "rooms": "rooms",
+    "sqm": "sqm",
+    "floor": "floor",
+    "perMonth": "/mo",
+    "shekel": "₪",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading..."
+  }
+}
