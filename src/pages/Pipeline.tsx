@@ -5,7 +5,7 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Inbox, MapPin, BedDouble } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,9 +17,19 @@ const STAGE_LABELS: Record<string, Record<string, string>> = {
   contacted: { en: "Contacted", he: "נוצר קשר" },
   viewing_scheduled: { en: "Viewing", he: "ביקור" },
   viewed: { en: "Viewed", he: "נצפה" },
-  negotiating: { en: "Negotiating", he: "מו\"מ" },
+  negotiating: { en: "Negotiating", he: 'מו"מ' },
   signed: { en: "Signed", he: "חתום" },
   lost: { en: "Lost", he: "אבוד" },
+};
+
+const STAGE_COLORS: Record<string, string> = {
+  new: "bg-blue-500",
+  contacted: "bg-violet-500",
+  viewing_scheduled: "bg-amber-500",
+  viewed: "bg-orange-500",
+  negotiating: "bg-primary",
+  signed: "bg-score-high",
+  lost: "bg-muted-foreground",
 };
 
 const Pipeline = () => {
@@ -70,15 +80,16 @@ const Pipeline = () => {
 
   const totalCount = entries.length;
 
-  const STAGE_COLORS: Record<string, string> = {
-    new: "bg-blue-500",
-    contacted: "bg-violet-500",
-    viewing_scheduled: "bg-amber-500",
-    viewed: "bg-orange-500",
-    negotiating: "bg-primary",
-    signed: "bg-score-high",
-    lost: "bg-muted-foreground",
-  };
+  // Find stage with most cards for glow highlight
+  const maxStage = useMemo(() => {
+    let maxCount = 0;
+    let maxStageName = "";
+    STAGES.forEach((stage) => {
+      const count = entries.filter((e: any) => e.stage === stage).length;
+      if (count > maxCount) { maxCount = count; maxStageName = stage; }
+    });
+    return maxCount > 0 ? maxStageName : "";
+  }, [entries]);
 
   const renderEntryCard = (entry: any) => {
     const daysInStage = Math.floor((Date.now() - new Date(entry.entered_stage_at).getTime()) / 86400000);
@@ -104,7 +115,10 @@ const Pipeline = () => {
           </p>
           <div className="flex items-center gap-2 flex-wrap">
             {entry.listings?.price && (
-              <span className="text-xs font-medium text-primary">₪{entry.listings.price.toLocaleString()}</span>
+              <span className="text-xs font-medium text-primary">
+                <MapPin className="inline h-3 w-3 me-0.5" />
+                ₪{entry.listings.price.toLocaleString()}
+              </span>
             )}
             {entry.listings?.rooms && (
               <span className="text-xs text-muted-foreground flex items-center gap-0.5">
@@ -180,13 +194,16 @@ const Pipeline = () => {
         <div className="flex gap-3 overflow-x-auto pb-4 -mx-1 px-1">
           {STAGES.map((stage, stageIdx) => {
             const stageEntries = entries.filter((e: any) => e.stage === stage);
+            const isMax = stage === maxStage;
             return (
               <motion.div
                 key={stage}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: stageIdx * 0.06, type: "spring", stiffness: 260, damping: 22 }}
-                className="flex-shrink-0 w-56 bg-muted/50 rounded-xl p-3 min-h-[300px] border border-border/40"
+                className={`flex-shrink-0 w-56 bg-muted/50 rounded-xl p-3 min-h-[300px] border border-border/40 transition-all duration-300 ${
+                  isMax ? "ring-2 ring-primary/40 shadow-[0_0_16px_hsl(var(--primary)/0.15)]" : ""
+                }`}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => handleDrop(e, stage)}
               >
@@ -196,14 +213,22 @@ const Pipeline = () => {
                   <span className="ms-auto text-xs bg-muted rounded-full px-1.5 py-0.5">{stageEntries.length}</span>
                 </h3>
                 <div className="space-y-2">
-                  {stageEntries.length === 0 ? (
-                    <div className="flex flex-col items-center gap-1 text-xs text-muted-foreground/50 py-6">
-                      <Inbox className="h-4 w-4" />
-                      <span>{t("pipeline.empty")}</span>
-                    </div>
-                  ) : (
-                    <AnimatePresence>{stageEntries.map(renderEntryCard)}</AnimatePresence>
-                  )}
+                  <AnimatePresence>
+                    {stageEntries.length === 0 ? (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="flex flex-col items-center gap-1 text-xs text-muted-foreground/50 py-6"
+                      >
+                        <Inbox className="h-4 w-4" />
+                        <span>{t("pipeline.empty")}</span>
+                      </motion.div>
+                    ) : (
+                      stageEntries.map(renderEntryCard)
+                    )}
+                  </AnimatePresence>
                 </div>
               </motion.div>
             );

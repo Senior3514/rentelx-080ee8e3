@@ -8,9 +8,9 @@ import { Card } from "@/components/ui/card";
 import { motion, useInView, useMotionValue, useSpring, AnimatePresence } from "framer-motion";
 import {
   Search, Zap, Columns3, Brain, Shield, Globe,
-  ArrowRight, Star, MapPin, Sparkles, TrendingUp,
-  BedDouble, Maximize, CheckCircle2, ChevronRight,
-  BarChart3, Cpu, Database, Network
+  ArrowRight, MapPin, Sparkles,
+  BedDouble, Maximize, ChevronRight,
+  BarChart3, Cpu, Database, Network, Bell
 } from "lucide-react";
 
 /* ─── Animated Counter ─── */
@@ -71,11 +71,12 @@ function FlowDot({ delay = 0, color = "hsl(var(--primary))" }: { delay?: number;
   );
 }
 
-/* ─── Mock Listing Card ─── */
-const MOCK_LISTINGS = [
-  { address: "Rothschild Blvd 45", city: "Tel Aviv", price: 6800, rooms: 3, sqm: 85, score: 94 },
-  { address: "Ben Yehuda St 12", city: "Tel Aviv", price: 5400, rooms: 2.5, sqm: 72, score: 87 },
-  { address: "Dizengoff St 88", city: "Tel Aviv", price: 7200, rooms: 3.5, sqm: 95, score: 78 },
+/* ─── Demo listings for Tel Aviv / Givatayim / Ramat Gan ─── */
+const DEMO_LISTINGS = [
+  { address: "רוטשילד 45", city: "תל אביב", price: 6800, rooms: 3, sqm: 85, score: 94, neighborhood: "לב העיר" },
+  { address: "הרצל 12", city: "גבעתיים", price: 4800, rooms: 2.5, sqm: 68, score: 89, neighborhood: "גבעת רמב\"ם" },
+  { address: "ביאליק 7", city: "רמת גן", price: 5200, rooms: 3, sqm: 78, score: 82, neighborhood: "גבעת עליה" },
+  { address: "דיזנגוף 88", city: "תל אביב", price: 7400, rooms: 3.5, sqm: 95, score: 77, neighborhood: "דיזנגוף" },
 ];
 
 const Landing = () => {
@@ -83,7 +84,7 @@ const Landing = () => {
   const [activeListingIdx, setActiveListingIdx] = useState(0);
 
   useEffect(() => {
-    const timer = setInterval(() => setActiveListingIdx((i) => (i + 1) % MOCK_LISTINGS.length), 2500);
+    const timer = setInterval(() => setActiveListingIdx((i) => (i + 1) % DEMO_LISTINGS.length), 2500);
     return () => clearInterval(timer);
   }, []);
 
@@ -91,8 +92,8 @@ const Landing = () => {
     { icon: Search, titleKey: "landing.features.aggregate.title", descKey: "landing.features.aggregate.desc", color: "from-blue-500 to-blue-600" },
     { icon: Brain, titleKey: "landing.features.score.title", descKey: "landing.features.score.desc", color: "from-violet-500 to-violet-600" },
     { icon: Columns3, titleKey: "landing.features.pipeline.title", descKey: "landing.features.pipeline.desc", color: "from-primary to-orange-400" },
-    { icon: Zap, titleKey: "landing.features.alerts.title", descKey: "landing.features.alerts.desc", color: "from-amber-500 to-yellow-400" },
-    { icon: Globe, titleKey: "landing.features.bilingual.title", descKey: "landing.features.bilingual.desc", color: "from-teal-500 to-cyan-500" },
+    { icon: Bell, titleKey: "landing.features.watchlist.title", descKey: "landing.features.watchlist.desc", color: "from-teal-500 to-cyan-400" },
+    { icon: Globe, titleKey: "landing.features.bilingual.title", descKey: "landing.features.bilingual.desc", color: "from-pink-500 to-rose-400" },
     { icon: Shield, titleKey: "landing.features.privacy.title", descKey: "landing.features.privacy.desc", color: "from-green-500 to-emerald-500" },
   ];
 
@@ -129,9 +130,17 @@ const Landing = () => {
 
       {/* ─── Hero ─── */}
       <section className="relative pt-28 pb-16 px-4 overflow-hidden">
-        {/* Gradient orbs */}
-        <div className="absolute top-16 start-1/4 w-80 h-80 rounded-full bg-primary/10 blur-3xl pointer-events-none animate-pulse-soft" />
-        <div className="absolute top-24 end-1/4 w-64 h-64 rounded-full bg-accent/10 blur-3xl pointer-events-none animate-float-delayed" />
+        {/* Animated gradient orbs */}
+        <motion.div
+          className="absolute top-16 start-1/4 w-96 h-96 rounded-full bg-primary/10 blur-3xl pointer-events-none"
+          animate={{ scale: [1, 1.15, 1], x: [0, 20, 0] }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute top-32 end-1/4 w-72 h-72 rounded-full bg-accent/10 blur-3xl pointer-events-none"
+          animate={{ scale: [1, 1.2, 1], y: [0, -20, 0] }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+        />
 
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
@@ -176,7 +185,6 @@ const Landing = () => {
               {/* Nodes row */}
               <div className="flex items-start justify-between gap-2 mb-6">
                 <WorkflowNode icon={Database} label="Yad2 / URL" color="hsl(220, 65%, 55%)" delay={0} />
-                {/* Connector 1 */}
                 <div className="flex-1 relative h-14 flex items-center mt-0">
                   <div className="w-full h-0.5 bg-border/60 rounded relative overflow-hidden">
                     <FlowDot delay={0} color="hsl(var(--primary))" />
@@ -184,7 +192,6 @@ const Landing = () => {
                   </div>
                 </div>
                 <WorkflowNode icon={Cpu} label="AI Parse" color="hsl(260, 60%, 55%)" delay={0.15} active />
-                {/* Connector 2 */}
                 <div className="flex-1 relative h-14 flex items-center mt-0">
                   <div className="w-full h-0.5 bg-border/60 rounded relative overflow-hidden">
                     <FlowDot delay={0.4} color="hsl(var(--primary))" />
@@ -192,7 +199,6 @@ const Landing = () => {
                   </div>
                 </div>
                 <WorkflowNode icon={BarChart3} label="Score" color="hsl(16, 65%, 52%)" delay={0.3} />
-                {/* Connector 3 */}
                 <div className="flex-1 relative h-14 flex items-center mt-0">
                   <div className="w-full h-0.5 bg-border/60 rounded relative overflow-hidden">
                     <FlowDot delay={0.6} color="hsl(142, 60%, 45%)" />
@@ -205,7 +211,7 @@ const Landing = () => {
               <div className="bg-muted/50 rounded-2xl p-4 ai-scan">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-bounce-subtle" />
-                  <span className="text-xs text-muted-foreground font-medium">Processing listing...</span>
+                  <span className="text-xs text-muted-foreground font-medium">{t("landing.scanning")}</span>
                 </div>
                 <AnimatePresence mode="wait">
                   <motion.div
@@ -221,24 +227,27 @@ const Landing = () => {
                         <MapPin className="h-5 w-5 text-primary" />
                       </div>
                       <div className="min-w-0">
-                        <p className="font-semibold text-sm truncate">{MOCK_LISTINGS[activeListingIdx].address}</p>
+                        <p className="font-semibold text-sm truncate">
+                          {DEMO_LISTINGS[activeListingIdx].address}
+                          <span className="text-muted-foreground font-normal"> · {DEMO_LISTINGS[activeListingIdx].city}</span>
+                        </p>
                         <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                           <span className="flex items-center gap-1">
-                            <BedDouble className="h-3 w-3" /> {MOCK_LISTINGS[activeListingIdx].rooms}
+                            <BedDouble className="h-3 w-3" /> {DEMO_LISTINGS[activeListingIdx].rooms}
                           </span>
                           <span className="flex items-center gap-1">
-                            <Maximize className="h-3 w-3" /> {MOCK_LISTINGS[activeListingIdx].sqm}m²
+                            <Maximize className="h-3 w-3" /> {DEMO_LISTINGS[activeListingIdx].sqm}m²
                           </span>
                           <span className="font-semibold text-foreground">
-                            ₪{MOCK_LISTINGS[activeListingIdx].price.toLocaleString()}
+                            ₪{DEMO_LISTINGS[activeListingIdx].price.toLocaleString()}
                           </span>
                         </div>
                       </div>
                     </div>
                     <div className={`px-3 py-1.5 rounded-full text-xs font-bold shrink-0 text-white ${
-                      MOCK_LISTINGS[activeListingIdx].score >= 90 ? "bg-score-high animate-glow" : "bg-score-medium"
+                      DEMO_LISTINGS[activeListingIdx].score >= 90 ? "bg-score-high animate-glow" : "bg-score-medium"
                     }`}>
-                      {MOCK_LISTINGS[activeListingIdx].score}
+                      {DEMO_LISTINGS[activeListingIdx].score}
                     </div>
                   </motion.div>
                 </AnimatePresence>

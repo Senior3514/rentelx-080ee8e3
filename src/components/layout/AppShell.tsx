@@ -2,13 +2,15 @@ import { Outlet, useLocation } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { AnimatePresence, motion } from "framer-motion";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 export const AppShell = () => {
   const location = useLocation();
+  const { direction } = useLanguage();
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className={`min-h-screen flex w-full bg-background ${direction === "rtl" ? "flex-row-reverse" : "flex-row"}`}>
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <header className="h-12 flex items-center border-b border-border/60 px-2 shrink-0 glass">

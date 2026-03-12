@@ -100,11 +100,31 @@ export const ListingCard = ({ listing }: ListingCardProps) => {
           )}
         </div>
 
-        {topScore > 0 && (
-          <div className={`px-2.5 py-1.5 rounded-full text-xs font-bold shrink-0 ${scoreColor} ${topScore >= 80 ? "animate-glow" : ""} stat-number`}>
-            {topScore}
-          </div>
-        )}
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          {topScore > 0 && (
+            <div className={`px-2.5 py-1.5 rounded-full text-xs font-bold ${scoreColor} ${topScore >= 80 ? "animate-glow" : ""} stat-number`}>
+              {topScore}
+            </div>
+          )}
+          {listing.listing_scores?.length > 0 && (() => {
+            const best = listing.listing_scores.reduce((b: any, s: any) => s.score > (b?.score ?? 0) ? s : b, null);
+            const bd = best?.breakdown as Record<string, number> | null;
+            if (!bd) return null;
+            const dims = Object.entries(bd).filter(([k]) => k !== "total").slice(0, 4);
+            if (dims.length === 0) return null;
+            return (
+              <div className="flex gap-0.5 w-16">
+                {dims.map(([k, v]) => {
+                  const val = typeof v === "number" ? v : 0;
+                  const segColor = val >= 80 ? "bg-score-high" : val >= 50 ? "bg-score-medium" : "bg-score-low";
+                  return (
+                    <div key={k} className={`flex-1 h-1.5 rounded-sm ${segColor} opacity-80`} title={`${k}: ${val}`} />
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
       </div>
     </Card>
     </motion.div>

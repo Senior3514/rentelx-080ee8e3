@@ -318,3 +318,12 @@
     100% { top: calc(100% + 2px); opacity: 0; }
   }
 }
+
+/* Custom scrollbar matching brand */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: hsl(var(--muted)); }
+::-webkit-scrollbar-thumb { background: hsl(var(--primary) / 0.4); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary) / 0.7); }
+
+/* Selection color */
+::selection { background: hsl(var(--primary) / 0.2); color: hsl(var(--foreground)); }

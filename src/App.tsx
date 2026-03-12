@@ -19,6 +19,7 @@ import ListingDetail from "./pages/ListingDetail";
 import Pipeline from "./pages/Pipeline";
 import Profiles from "./pages/Profiles";
 import Settings from "./pages/Settings";
+import Watchlist from "./pages/Watchlist";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
                   <Route path="/inbox" element={<Inbox />} />
                   <Route path="/listings/:id" element={<ListingDetail />} />
                   <Route path="/pipeline" element={<Pipeline />} />
+                  <Route path="/watchlist" element={<Watchlist />} />
                   <Route path="/profiles" element={<Profiles />} />
                   <Route path="/settings" element={<Settings />} />
                 </Route>

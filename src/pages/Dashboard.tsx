@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,11 +9,13 @@ import { useNavigate } from "react-router-dom";
 import { Plus, Inbox, UserSearch, Columns3, LayoutDashboard, MapPin, TrendingUp, Sparkles, ArrowRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { he } from "date-fns/locale";
-import { useState } from "react";
 import { motion } from "framer-motion";
 import { AddListingModal } from "@/components/listings/AddListingModal";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
+
+const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
+const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 
 const STAGE_LABELS: Record<string, Record<string, string>> = {
   new: { en: "New", he: "חדש" },
@@ -115,11 +117,11 @@ const Dashboard = () => {
 
   // Weekly activity data
   const weeklyActivity = useMemo(() => {
-    const days = [];
     const dayNames = language === "he"
       ? ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"]
       : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const now = new Date();
+    const days = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
@@ -151,14 +153,9 @@ const Dashboard = () => {
       </div>
 
       {/* Animated Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {stats.map((s, i) => (
-          <motion.div
-            key={s.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.08, type: "spring", stiffness: 300, damping: 25 }}
-          >
+      <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4" variants={container} initial="hidden" animate="show">
+        {stats.map((s) => (
+          <motion.div key={s.label} variants={item}>
             <Card className="p-4 flex flex-col items-center text-center gap-1 card-hover shine-overlay border-border/60">
               <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center mb-1">
                 <s.icon className="h-4 w-4 text-primary" />
@@ -170,7 +167,7 @@ const Dashboard = () => {
             </Card>
           </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {/* Charts */}
       <div>
@@ -196,20 +193,20 @@ const Dashboard = () => {
             { label: t("nav.profiles"), icon: UserSearch, action: () => navigate("/profiles"), variant: "outline" as const },
             { label: t("nav.pipeline"), icon: Columns3, action: () => navigate("/pipeline"), variant: "outline" as const },
             { label: t("nav.settings"), icon: Sparkles, action: () => navigate("/settings"), variant: "outline" as const },
-          ].map((item, i) => (
+          ].map((qItem, i) => (
             <motion.div
-              key={item.label}
+              key={qItem.label}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2 + i * 0.05 }}
             >
               <Button
-                variant={item.variant}
-                onClick={item.action}
+                variant={qItem.variant}
+                onClick={qItem.action}
                 className="w-full gap-1.5 h-12 card-hover border-border/60"
               >
-                <item.icon className="h-4 w-4" />
-                <span className="text-sm">{item.label}</span>
+                <qItem.icon className="h-4 w-4" />
+                <span className="text-sm">{qItem.label}</span>
               </Button>
             </motion.div>
           ))}

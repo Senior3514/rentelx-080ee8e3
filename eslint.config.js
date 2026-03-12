@@ -21,6 +21,13 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
+      // Supabase query results and callback signatures make `any` hard to avoid
+      // without extensive wrapper types — treat as warning, not error.
+      "@typescript-eslint/no-explicit-any": "warn",
+      // shadcn/ui generates empty interface extensions as a pattern; allow them.
+      "@typescript-eslint/no-empty-object-type": "off",
+      // CommonJS require() is used in tailwind.config.ts for plugins; allow it.
+      "@typescript-eslint/no-require-imports": "off",
     },
   },
 );

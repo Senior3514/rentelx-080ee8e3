@@ -7,10 +7,10 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { MapPin, BedDouble, Maximize, Building2, ArrowLeft, Plus, StickyNote, Columns3, Sparkles, X, Ban, ExternalLink, Phone, User } from "lucide-react";
 import { ImageGallery } from "@/components/listings/ImageGallery";
+import { motion } from "framer-motion";
 
 const ListingDetail = () => {
   const { id } = useParams();
@@ -241,15 +241,25 @@ const ListingDetail = () => {
       {breakdown && Object.keys(breakdown).length > 0 && (
         <Card className="p-4 space-y-3">
           <h3 className="font-semibold text-sm">{t("listing.scoreBreakdown")}</h3>
-          {Object.entries(breakdown).filter(([k]) => k !== "total").map(([key, value]) => (
-            <div key={key} className="space-y-1">
-              <div className="flex justify-between text-xs">
-                <span className="capitalize text-muted-foreground">{key.replace(/_/g, " ")}</span>
-                <span className="font-medium">{typeof value === "number" ? value : 0}</span>
+          {Object.entries(breakdown).filter(([k]) => k !== "total").map(([key, value], idx) => {
+            const numVal = typeof value === "number" ? value : 0;
+            return (
+              <div key={key} className="space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span className="capitalize text-muted-foreground">{key.replace(/_/g, " ")}</span>
+                  <span className="font-medium">{numVal}</span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-primary rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${numVal}%` }}
+                    transition={{ duration: 0.8, delay: 0.2 + idx * 0.1, ease: "easeOut" }}
+                  />
+                </div>
               </div>
-              <Progress value={typeof value === "number" ? value : 0} className="h-2" />
-            </div>
-          ))}
+            );
+          })}
         </Card>
       )}
 
