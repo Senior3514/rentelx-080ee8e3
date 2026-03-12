@@ -13,6 +13,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ["Inter", "sans-serif"],
+        display: ["Space Grotesk", "sans-serif"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -57,6 +61,12 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        score: {
+          high: "hsl(var(--score-high))",
+          medium: "hsl(var(--score-medium))",
+          low: "hsl(var(--score-low))",
+        },
+        "surface-warm": "hsl(var(--surface-warm))",
       },
       borderRadius: {
         lg: "var(--radius)",
