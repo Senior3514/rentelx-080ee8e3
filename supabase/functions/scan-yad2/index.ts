@@ -1,10 +1,19 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+const ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") ?? "").split(",").filter(Boolean);
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("origin") ?? "";
+  const allowedOrigin =
+    ALLOWED_ORIGINS.length > 0 && ALLOWED_ORIGINS.includes(origin)
+      ? origin
+      : ALLOWED_ORIGINS[0] || "*";
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+  };
+}
 
 // Yad2 city codes for Gush Dan area
 const CITY_CODES: Record<string, { id: number; label: string }> = {
@@ -124,23 +133,19 @@ async function fetchYad2(cityId: number, cityLabel: string, params: Record<strin
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
   try {
     const body = await req.json().catch(() => ({}));
-    const {
-      cities = ["tel-aviv", "givatayim", "ramat-gan"],
-      minPrice,
-      maxPrice,
-      minRooms,
-      maxRooms,
-    } = body as {
-      cities?: string[];
-      minPrice?: number;
-      maxPrice?: number;
-      minRooms?: number;
-      maxRooms?: number;
-    };
+    const raw = body as Record<string, unknown>;
+    const VALID_CITIES = Object.keys(CITY_CODES);
+    const cities = (Array.isArray(raw.cities) ? raw.cities : ["tel-aviv", "givatayim", "ramat-gan"])
+      .filter((c: unknown): c is string => typeof c === "string" && VALID_CITIES.includes(c))
+      .slice(0, 5);
+    const minPrice = typeof raw.minPrice === "number" && raw.minPrice >= 0 && raw.minPrice <= 100000 ? raw.minPrice : undefined;
+    const maxPrice = typeof raw.maxPrice === "number" && raw.maxPrice >= 0 && raw.maxPrice <= 100000 ? raw.maxPrice : undefined;
+    const minRooms = typeof raw.minRooms === "number" && raw.minRooms >= 0.5 && raw.minRooms <= 20 ? raw.minRooms : undefined;
+    const maxRooms = typeof raw.maxRooms === "number" && raw.maxRooms >= 0.5 && raw.maxRooms <= 20 ? raw.maxRooms : undefined;
 
     const params: Record<string, string> = {};
     if (minPrice != null || maxPrice != null) {
@@ -159,13 +164,13 @@ serve(async (req) => {
     const listings = results.flat().slice(0, 60); // cap at 60
 
     return new Response(JSON.stringify({ listings, fetchedAt: new Date().toISOString() }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (err) {
     console.error("scan-yad2 error:", err);
     return new Response(
       JSON.stringify({ error: String(err), listings: [] }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

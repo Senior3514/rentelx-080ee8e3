@@ -2,16 +2,18 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-// Prefer environment variables; fall back to project defaults.
 // The anon key is a publishable key — safe to expose in client-side code.
 // Row-level security (RLS) policies in Supabase enforce per-user data isolation.
-const SUPABASE_URL =
-  (import.meta.env.VITE_SUPABASE_URL as string | undefined) ||
-  "https://zatwwawpyjyqtdpatvla.supabase.co";
-
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_PUBLISHABLE_KEY =
-  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphdHd3YXdweWp5cXRkcGF0dmxhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMTgxMDEsImV4cCI6MjA4ODg5NDEwMX0.7ZbQtlyb31E6NElwpJ_SIAkVDfNjMdEFY-Fybd-necg";
+  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ??
+  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string);
+
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  throw new Error(
+    "Missing Supabase configuration. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (or VITE_SUPABASE_PUBLISHABLE_KEY) environment variables."
+  );
+}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";

@@ -51,13 +51,13 @@ const MenubarSubTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       "flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
-      inset && "pl-8",
+      inset && "ps-8",
       className,
     )}
     {...props}
   >
     {children}
-    <ChevronRight className="ml-auto h-4 w-4" />
+    <ChevronRight className="ms-auto h-4 w-4 flip-rtl" />
   </MenubarPrimitive.SubTrigger>
 ));
 MenubarSubTrigger.displayName = MenubarPrimitive.SubTrigger.displayName;

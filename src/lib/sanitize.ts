@@ -44,8 +44,17 @@ export function isSafeUrl(url: string): boolean {
 
 /** Guard against open-redirect: only allow relative paths */
 export function safeRedirectPath(path: string, fallback = '/dashboard'): string {
-  if (!path || !path.startsWith('/') || path.startsWith('//')) return fallback;
-  // Prevent protocol-relative and encoded redirects
-  if (/^[/][/\\]/.test(path)) return fallback;
+  if (!path || typeof path !== 'string') return fallback;
+  // Decode first to catch encoded bypasses like /%2F%2Fevil.com
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(path);
+  } catch {
+    return fallback;
+  }
+  // Must start with single slash, not protocol-relative (//) or backslash
+  if (!decoded.startsWith('/') || decoded.startsWith('//') || /^[/][\\]/.test(decoded)) return fallback;
+  // Block any colon (protocol schemes)
+  if (decoded.includes(':')) return fallback;
   return path;
 }

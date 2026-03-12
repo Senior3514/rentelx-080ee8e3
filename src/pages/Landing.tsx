@@ -155,6 +155,23 @@ const Landing = () => {
               <p className="text-lg sm:text-xl text-muted-foreground mt-6 max-w-2xl mx-auto leading-relaxed">
                 {t("landing.hero.subtitle")}
               </p>
+              <motion.div
+                className="flex items-center justify-center gap-2 mt-4 flex-wrap"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+              >
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-score-high/10 text-score-high border border-score-high/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-score-high animate-bounce-subtle" />
+                  Yad2 Live
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-accent/10 text-accent border border-accent/20">
+                  AI Scoring
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20">
+                  Auto-Scan
+                </span>
+              </motion.div>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
                 <Link to="/signup">
                   <Button size="lg" className="gap-2 text-base px-8 glow-primary animate-bounce-subtle">

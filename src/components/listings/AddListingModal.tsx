@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,12 +10,21 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { scoreListing } from "@/lib/scoring";
+import { motion, AnimatePresence } from "framer-motion";
 import { z } from "zod";
+import {
+  Upload, X, ImagePlus, Link2, Loader2, Camera, FileText,
+  MapPin, DollarSign, BedDouble, Maximize, Building2, Phone, User
+} from "lucide-react";
 
 interface AddListingModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+const MAX_IMAGES = 6;
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 
 const urlSchema = z.string().url();
 
@@ -29,29 +38,102 @@ const manualSchema = z.object({
   description: z.string().max(500).optional(),
   contact_name: z.string().max(500).optional(),
   contact_phone: z.string().max(20).regex(/^[\d\s+\-()]*$/, "Invalid phone").optional().or(z.literal("")),
+  source_url: z.string().url().optional().or(z.literal("")),
 });
 
 export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) => {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const qc = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [url, setUrl] = useState("");
   const [urlError, setUrlError] = useState("");
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     address: "", city: "", price: "", rooms: "", sqm: "", floor: "",
-    description: "", contact_name: "", contact_phone: "",
+    description: "", contact_name: "", contact_phone: "", source_url: "",
   });
 
+  // Image upload state
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+
+  const handleImageSelect = useCallback((files: FileList | null) => {
+    if (!files) return;
+    const newFiles: File[] = [];
+    const newPreviews: string[] = [];
+
+    for (let i = 0; i < files.length && imageFiles.length + newFiles.length < MAX_IMAGES; i++) {
+      const file = files[i];
+      if (!ACCEPTED_TYPES.includes(file.type)) {
+        toast.error(language === "he" ? "רק תמונות JPG, PNG, WebP" : "Only JPG, PNG, WebP images");
+        continue;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(language === "he" ? "תמונה גדולה מדי (מקס 5MB)" : "Image too large (max 5MB)");
+        continue;
+      }
+      newFiles.push(file);
+      newPreviews.push(URL.createObjectURL(file));
+    }
+
+    setImageFiles((prev) => [...prev, ...newFiles]);
+    setImagePreviews((prev) => [...prev, ...newPreviews]);
+  }, [imageFiles.length, language]);
+
+  const removeImage = (index: number) => {
+    URL.revokeObjectURL(imagePreviews[index]);
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadImages = async (listingId: string): Promise<string[]> => {
+    if (imageFiles.length === 0) return [];
+    setUploading(true);
+    const urls: string[] = [];
+
+    for (const file of imageFiles) {
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `${user!.id}/${listingId}/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage
+        .from("listing-images")
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (error) {
+        console.error("Upload error:", error.message);
+        continue;
+      }
+      const { data: urlData } = supabase.storage
+        .from("listing-images")
+        .getPublicUrl(path);
+      if (urlData?.publicUrl) urls.push(urlData.publicUrl);
+    }
+
+    setUploading(false);
+    return urls;
+  };
+
   const insertMutation = useMutation({
-    mutationFn: async (listing: any) => {
+    mutationFn: async (listing: Record<string, unknown>) => {
       const { data, error } = await supabase
         .from("listings")
         .insert(listing)
         .select()
         .single();
       if (error) throw error;
+
+      // Upload images if any
+      if (imageFiles.length > 0 && data) {
+        const uploadedUrls = await uploadImages(data.id);
+        if (uploadedUrls.length > 0) {
+          const existingUrls = (data.image_urls as string[]) ?? [];
+          await supabase
+            .from("listings")
+            .update({ image_urls: [...existingUrls, ...uploadedUrls] })
+            .eq("id", data.id);
+        }
+      }
 
       // Score against all active profiles
       const { data: profiles } = await supabase
@@ -78,14 +160,17 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
       resetForm();
       toast.success(t("addListing.added"));
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const resetForm = () => {
     setUrl("");
     setUrlError("");
     setFormErrors({});
-    setForm({ address: "", city: "", price: "", rooms: "", sqm: "", floor: "", description: "", contact_name: "", contact_phone: "" });
+    setForm({ address: "", city: "", price: "", rooms: "", sqm: "", floor: "", description: "", contact_name: "", contact_phone: "", source_url: "" });
+    imagePreviews.forEach((p) => URL.revokeObjectURL(p));
+    setImageFiles([]);
+    setImagePreviews([]);
   };
 
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -100,6 +185,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
         else if (key === "sqm") errs[key] = t("addListing.sqmRange");
         else if (key === "floor") errs[key] = t("addListing.floorRange");
         else if (key === "contact_phone") errs[key] = t("addListing.phoneInvalid");
+        else if (key === "source_url") errs[key] = language === "he" ? "כתובת URL לא תקינה" : "Invalid URL";
         else errs[key] = t("addListing.textTooLong");
       });
       setFormErrors(errs);
@@ -118,6 +204,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
       description: d.description || null,
       contact_name: d.contact_name || null,
       contact_phone: d.contact_phone || null,
+      source_url: d.source_url || null,
     });
   };
 
@@ -137,72 +224,232 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
       setForm((prev) => ({ ...prev, [key]: e.target.value })),
   });
 
-  const renderFieldError = (field: string) => 
+  const renderFieldError = (field: string) =>
     formErrors[field] ? <p className="text-xs text-destructive mt-0.5">{formErrors[field]}</p> : null;
+
+  const isLoading = insertMutation.isPending || uploading;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) resetForm(); }}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t("addListing.title")}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
+              <FileText className="h-4 w-4 text-primary" />
+            </div>
+            {t("addListing.title")}
+          </DialogTitle>
         </DialogHeader>
+
         <Tabs defaultValue="manual">
-          <TabsList className="w-full">
-            <TabsTrigger value="url" className="flex-1">{t("addListing.pasteUrl")}</TabsTrigger>
-            <TabsTrigger value="manual" className="flex-1">{t("addListing.manual")}</TabsTrigger>
+          <TabsList className="w-full grid grid-cols-2">
+            <TabsTrigger value="manual" className="gap-1.5">
+              <Camera className="h-3.5 w-3.5" />
+              {t("addListing.manual")}
+            </TabsTrigger>
+            <TabsTrigger value="url" className="gap-1.5">
+              <Link2 className="h-3.5 w-3.5" />
+              {t("addListing.pasteUrl")}
+            </TabsTrigger>
           </TabsList>
+
+          {/* ─── URL Tab ─── */}
           <TabsContent value="url">
             <form onSubmit={handleUrlSubmit} className="space-y-4 pt-2">
               <div>
-                <Input placeholder={t("addListing.urlPlaceholder")} value={url} onChange={(e) => { setUrl(e.target.value); setUrlError(""); }} required />
+                <div className="relative">
+                  <Link2 className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder={t("addListing.urlPlaceholder")}
+                    value={url}
+                    onChange={(e) => { setUrl(e.target.value); setUrlError(""); }}
+                    className="ps-10"
+                    required
+                  />
+                </div>
                 {urlError && <p className="text-xs text-destructive mt-0.5">{urlError}</p>}
               </div>
-              <Button type="submit" className="w-full" disabled={insertMutation.isPending}>{t("addListing.fetch")}</Button>
+              <p className="text-xs text-muted-foreground">
+                {language === "he" ? "הדבקו קישור מיד2, פייסבוק, או כל אתר נדל\"ן" : "Paste a link from Yad2, Facebook, or any real estate site"}
+              </p>
+              <Button type="submit" className="w-full gap-2 glow-primary" disabled={isLoading}>
+                {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                {t("addListing.fetch")}
+              </Button>
             </form>
           </TabsContent>
+
+          {/* ─── Manual Tab ─── */}
           <TabsContent value="manual">
             <form onSubmit={handleManualSubmit} className="space-y-3 pt-2">
+
+              {/* Image Upload Area */}
               <div>
-                <Input placeholder={t("addListing.address")} {...f("address")} maxLength={500} />
-                {renderFieldError("address")}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={ACCEPTED_TYPES.join(",")}
+                  multiple
+                  className="hidden"
+                  onChange={(e) => handleImageSelect(e.target.files)}
+                />
+
+                {imagePreviews.length > 0 ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-3 gap-2">
+                      <AnimatePresence>
+                        {imagePreviews.map((preview, i) => (
+                          <motion.div
+                            key={preview}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            className="relative group aspect-square rounded-xl overflow-hidden ring-1 ring-border/40"
+                          >
+                            <img src={preview} alt="" className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => removeImage(i)}
+                              className="absolute top-1 end-1 w-6 h-6 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+
+                      {imagePreviews.length < MAX_IMAGES && (
+                        <motion.button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="aspect-square rounded-xl border-2 border-dashed border-border/60 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <ImagePlus className="h-5 w-5" />
+                          <span className="text-[10px] font-medium">{imagePreviews.length}/{MAX_IMAGES}</span>
+                        </motion.button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <motion.button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full py-6 rounded-xl border-2 border-dashed border-border/60 flex flex-col items-center gap-2 text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-all"
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Upload className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-foreground">
+                        {language === "he" ? "העלו תמונות" : "Upload Photos"}
+                      </p>
+                      <p className="text-xs">
+                        {language === "he" ? `עד ${MAX_IMAGES} תמונות · JPG, PNG, WebP` : `Up to ${MAX_IMAGES} images · JPG, PNG, WebP`}
+                      </p>
+                    </div>
+                  </motion.button>
+                )}
               </div>
-              <div>
-                <Input placeholder={t("addListing.city")} {...f("city")} maxLength={500} />
-                {renderFieldError("city")}
+
+              {/* Address + City */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <div className="relative">
+                    <MapPin className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input placeholder={t("addListing.address")} {...f("address")} maxLength={500} className="ps-8 text-sm" />
+                  </div>
+                  {renderFieldError("address")}
+                </div>
+                <div>
+                  <div className="relative">
+                    <Building2 className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input placeholder={t("addListing.city")} {...f("city")} maxLength={500} className="ps-8 text-sm" />
+                  </div>
+                  {renderFieldError("city")}
+                </div>
               </div>
+
+              {/* Price / Rooms / Sqm */}
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <Input placeholder={t("addListing.price")} type="number" {...f("price")} min={1} />
+                  <div className="relative">
+                    <DollarSign className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input placeholder={t("addListing.price")} type="number" {...f("price")} min={1} className="ps-8 text-sm" />
+                  </div>
                   {renderFieldError("price")}
                 </div>
                 <div>
-                  <Input placeholder={t("addListing.rooms")} type="number" step="0.5" {...f("rooms")} min={0.5} max={20} />
+                  <div className="relative">
+                    <BedDouble className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input placeholder={t("addListing.rooms")} type="number" step="0.5" {...f("rooms")} min={0.5} max={20} className="ps-8 text-sm" />
+                  </div>
                   {renderFieldError("rooms")}
                 </div>
                 <div>
-                  <Input placeholder={t("addListing.sqm")} type="number" {...f("sqm")} min={1} max={1000} />
+                  <div className="relative">
+                    <Maximize className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input placeholder={t("addListing.sqm")} type="number" {...f("sqm")} min={1} max={1000} className="ps-8 text-sm" />
+                  </div>
                   {renderFieldError("sqm")}
                 </div>
               </div>
+
+              {/* Floor + Phone */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Input placeholder={t("addListing.floor")} type="number" {...f("floor")} min={-5} max={100} />
+                  <Input placeholder={t("addListing.floor")} type="number" {...f("floor")} min={-5} max={100} className="text-sm" />
                   {renderFieldError("floor")}
                 </div>
                 <div>
-                  <Input placeholder={t("addListing.contactPhone")} {...f("contact_phone")} maxLength={20} />
+                  <div className="relative">
+                    <Phone className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input placeholder={t("addListing.contactPhone")} {...f("contact_phone")} maxLength={20} className="ps-8 text-sm" />
+                  </div>
                   {renderFieldError("contact_phone")}
                 </div>
               </div>
-              <div>
-                <Input placeholder={t("addListing.contactName")} {...f("contact_name")} maxLength={500} />
-                {renderFieldError("contact_name")}
+
+              {/* Contact Name */}
+              <div className="relative">
+                <User className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input placeholder={t("addListing.contactName")} {...f("contact_name")} maxLength={500} className="ps-8 text-sm" />
               </div>
+              {renderFieldError("contact_name")}
+
+              {/* Listing URL (optional on manual too) */}
+              <div className="relative">
+                <Link2 className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder={language === "he" ? "קישור לדירה (אופציונלי)" : "Listing URL (optional)"}
+                  {...f("source_url")}
+                  className="ps-8 text-sm"
+                />
+              </div>
+              {renderFieldError("source_url")}
+
+              {/* Description */}
               <div>
-                <Textarea placeholder={t("addListing.description")} {...f("description")} rows={3} maxLength={500} />
+                <Textarea placeholder={t("addListing.description")} {...f("description")} rows={2} maxLength={500} className="text-sm resize-none" />
                 {renderFieldError("description")}
               </div>
-              <Button type="submit" className="w-full" disabled={insertMutation.isPending}>{t("addListing.submit")}</Button>
+
+              {/* Submit */}
+              <Button type="submit" className="w-full gap-2 glow-primary" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {uploading
+                      ? (language === "he" ? "מעלה תמונות..." : "Uploading images...")
+                      : (language === "he" ? "שומר..." : "Saving...")}
+                  </>
+                ) : (
+                  t("addListing.submit")
+                )}
+              </Button>
             </form>
           </TabsContent>
         </Tabs>
