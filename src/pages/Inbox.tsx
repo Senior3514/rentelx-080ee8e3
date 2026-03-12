@@ -10,12 +10,13 @@ import { Slider } from "@/components/ui/slider";
 import { Plus, Search, Inbox as InboxIcon } from "lucide-react";
 import { ListingCard } from "@/components/listings/ListingCard";
 import { AddListingModal } from "@/components/listings/AddListingModal";
+import { motion } from "framer-motion";
 
 type SortOption = "newest" | "score_desc" | "price_asc" | "price_desc";
 
 const InboxPage = () => {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, direction } = useLanguage();
   const [showAdd, setShowAdd] = useState(false);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
@@ -44,7 +45,7 @@ const InboxPage = () => {
   }, [listings]);
 
   const filtered = useMemo(() => {
-    let result = listings.filter((l) => {
+    const result = listings.filter((l) => {
       if (search) {
         const s = search.toLowerCase();
         if (!l.address?.toLowerCase().includes(s) && !l.city?.toLowerCase().includes(s)) return false;
@@ -137,8 +138,15 @@ const InboxPage = () => {
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} />
+          {filtered.map((listing, index) => (
+            <motion.div
+              key={listing.id}
+              initial={{ opacity: 0, x: direction === "rtl" ? 16 : -16 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.05, ease: "easeOut" }}
+            >
+              <ListingCard listing={listing} />
+            </motion.div>
           ))}
         </div>
       )}

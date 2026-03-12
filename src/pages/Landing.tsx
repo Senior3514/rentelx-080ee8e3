@@ -51,7 +51,24 @@ const Landing = () => {
       </header>
 
       {/* Hero */}
-      <section className="pt-28 pb-20 px-4">
+      <section className="relative pt-28 pb-20 px-4">
+        <motion.div
+          className="absolute inset-0 -z-10 overflow-hidden"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1 }}
+        >
+          <motion.div
+            className="absolute top-20 start-1/4 w-96 h-96 rounded-full bg-primary/10 blur-3xl"
+            animate={{ scale: [1, 1.15, 1], x: [0, 20, 0] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="absolute top-40 end-1/4 w-72 h-72 rounded-full bg-accent/10 blur-3xl"
+            animate={{ scale: [1, 1.2, 1], y: [0, -20, 0] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          />
+        </motion.div>
         <div className="max-w-4xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -103,6 +120,7 @@ const Landing = () => {
       </section>
 
       {/* Features */}
+
       <section className="py-20 px-4 bg-muted/30">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">

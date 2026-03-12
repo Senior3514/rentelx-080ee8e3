@@ -5,9 +5,11 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Inbox } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { AnimatedCard } from "@/components/ui/AnimatedCard";
 
 const STAGES = ["new", "contacted", "viewing_scheduled", "viewed", "negotiating", "signed", "lost"] as const;
 
@@ -69,22 +71,39 @@ const Pipeline = () => {
 
   const totalCount = entries.length;
 
+  // Find stage with most cards for glow highlight
+  const maxStage = useMemo(() => {
+    let maxCount = 0;
+    let maxStageName = "";
+    STAGES.forEach((stage) => {
+      const count = entries.filter((e: any) => e.stage === stage).length;
+      if (count > maxCount) { maxCount = count; maxStageName = stage; }
+    });
+    return maxCount > 0 ? maxStageName : "";
+  }, [entries]);
+
   const renderEntryCard = (entry: any) => (
-    <Card
+    <AnimatedCard
       key={entry.id}
-      draggable={!isMobile}
-      onDragStart={(e) => handleDragStart(e, entry.id)}
-      className={`p-3 cursor-pointer transition-opacity ${dragging === entry.id ? "opacity-50" : ""} ${!isMobile ? "cursor-grab active:cursor-grabbing" : ""}`}
-      onClick={() => navigate(`/listings/${entry.listing_id}`)}
+      layoutId={entry.id}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className={`transition-opacity ${dragging === entry.id ? "opacity-50" : ""}`}
     >
-      <p className="text-sm font-medium truncate">{entry.listings?.address || entry.listings?.city || "Listing"}</p>
-      {entry.listings?.price && (
-        <p className="text-xs text-muted-foreground mt-1">₪{entry.listings.price.toLocaleString()}</p>
-      )}
-      <p className="text-xs text-muted-foreground mt-1">
-        {Math.floor((Date.now() - new Date(entry.entered_stage_at).getTime()) / 86400000)}d
-      </p>
-    </Card>
+      <Card
+        draggable={!isMobile}
+        onDragStart={(e) => handleDragStart(e, entry.id)}
+        className={`p-3 cursor-pointer ${!isMobile ? "cursor-grab active:cursor-grabbing" : ""}`}
+        onClick={() => navigate(`/listings/${entry.listing_id}`)}
+      >
+        <p className="text-sm font-medium truncate">{entry.listings?.address || entry.listings?.city || "Listing"}</p>
+        {entry.listings?.price && (
+          <p className="text-xs text-muted-foreground mt-1">₪{entry.listings.price.toLocaleString()}</p>
+        )}
+        <p className="text-xs text-muted-foreground mt-1">
+          {Math.floor((Date.now() - new Date(entry.entered_stage_at).getTime()) / 86400000)}d
+        </p>
+      </Card>
+    </AnimatedCard>
   );
 
   if (isLoading) {
@@ -132,10 +151,13 @@ const Pipeline = () => {
         <div className="flex gap-3 overflow-x-auto pb-4">
           {STAGES.map((stage) => {
             const stageEntries = entries.filter((e: any) => e.stage === stage);
+            const isMax = stage === maxStage;
             return (
               <div
                 key={stage}
-                className="flex-shrink-0 w-56 bg-muted/50 rounded-xl p-3 min-h-[300px]"
+                className={`flex-shrink-0 w-56 bg-muted/50 rounded-xl p-3 min-h-[300px] transition-all duration-300 ${
+                  isMax ? "ring-2 ring-primary/40 shadow-[0_0_16px_hsl(var(--primary)/0.15)]" : ""
+                }`}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => handleDrop(e, stage)}
               >
@@ -144,14 +166,22 @@ const Pipeline = () => {
                   <span className="ms-1.5 text-xs bg-muted rounded-full px-1.5 py-0.5">{stageEntries.length}</span>
                 </h3>
                 <div className="space-y-2">
-                  {stageEntries.length === 0 ? (
-                    <div className="flex flex-col items-center gap-1 text-xs text-muted-foreground/50 py-6">
-                      <Inbox className="h-4 w-4" />
-                      <span>{t("pipeline.empty")}</span>
-                    </div>
-                  ) : (
-                    stageEntries.map(renderEntryCard)
-                  )}
+                  <AnimatePresence>
+                    {stageEntries.length === 0 ? (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="flex flex-col items-center gap-1 text-xs text-muted-foreground/50 py-6"
+                      >
+                        <Inbox className="h-4 w-4" />
+                        <span>{t("pipeline.empty")}</span>
+                      </motion.div>
+                    ) : (
+                      stageEntries.map(renderEntryCard)
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
             );
