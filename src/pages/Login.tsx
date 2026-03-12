@@ -57,6 +57,29 @@ const Login = () => {
           </Button>
         </form>
 
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+          <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground">or</span></div>
+        </div>
+
+        <Button
+          variant="outline"
+          className="w-full"
+          disabled={loading}
+          onClick={async () => {
+            setLoading(true);
+            const { error } = await supabase.auth.signInAnonymously();
+            setLoading(false);
+            if (error) {
+              toast.error(error.message);
+            } else {
+              navigate("/");
+            }
+          }}
+        >
+          Continue as Guest
+        </Button>
+
         <div className="text-center text-sm space-y-2">
           <Link to="/reset-password" className="text-primary hover:underline block">
             {t("auth.forgotPassword")}
