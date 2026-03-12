@@ -137,7 +137,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
       setForm((prev) => ({ ...prev, [key]: e.target.value })),
   });
 
-  const FieldError = ({ field }: { field: string }) => 
+  const renderFieldError = (field: string) => 
     formErrors[field] ? <p className="text-xs text-destructive mt-0.5">{formErrors[field]}</p> : null;
 
   return (
