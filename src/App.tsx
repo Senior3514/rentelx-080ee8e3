@@ -20,6 +20,7 @@ import Pipeline from "./pages/Pipeline";
 import Profiles from "./pages/Profiles";
 import Settings from "./pages/Settings";
 import Watchlist from "./pages/Watchlist";
+import Compare from "./pages/Compare";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
                   <Route path="/listings/:id" element={<ListingDetail />} />
                   <Route path="/pipeline" element={<Pipeline />} />
                   <Route path="/watchlist" element={<Watchlist />} />
+                  <Route path="/compare" element={<Compare />} />
                   <Route path="/profiles" element={<Profiles />} />
                   <Route path="/settings" element={<Settings />} />
                 </Route>
