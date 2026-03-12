@@ -45,7 +45,7 @@ export function AppSidebar() {
           <div className="px-4 py-4">
             <motion.div
               className="flex items-center gap-2"
-              initial={{ opacity: 0, x: -10 }}
+              initial={{ opacity: 0, x: direction === "rtl" ? 10 : -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.4 }}
             >

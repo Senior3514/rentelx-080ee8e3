@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, X, Send, Sparkles, Loader2 } from "lucide-react";
+import { MessageSquare, X, Send, Sparkles, Loader2, Minimize2, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -24,6 +24,7 @@ const SUGGESTIONS_HE = [
 export function AIChatBubble() {
   const { t, language, direction } = useLanguage();
   const [open, setOpen] = useState(false);
+  const [minimized, setMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -48,13 +49,14 @@ export function AIChatBubble() {
   }, [messages, loading]);
 
   useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 300);
-  }, [open]);
+    if (open && !minimized) setTimeout(() => inputRef.current?.focus(), 300);
+  }, [open, minimized]);
 
   const send = async (text?: string) => {
     const content = (text ?? input).trim();
     if (!content || loading) return;
     setInput("");
+    setMinimized(false);
 
     const updated: Message[] = [...messages, { role: "user", content }];
     setMessages(updated);
@@ -87,7 +89,7 @@ export function AIChatBubble() {
         className="fixed bottom-5 end-5 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-2xl glow-primary flex items-center justify-center"
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.95 }}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => { setOpen((v) => !v); setMinimized(false); }}
         aria-label="AI Assistant"
       >
         <AnimatePresence mode="wait" initial={false}>
@@ -114,85 +116,102 @@ export function AIChatBubble() {
             exit={{ opacity: 0, scale: 0.92, y: 24 }}
             transition={{ type: "spring", stiffness: 300, damping: 28 }}
             className="fixed bottom-24 end-5 z-50 w-80 sm:w-96 rounded-2xl glass border border-border/60 shadow-2xl flex flex-col overflow-hidden"
-            style={{ maxHeight: "65vh" }}
+            style={{ maxHeight: minimized ? "auto" : "65vh" }}
           >
-            {/* Header */}
-            <div className="flex items-center gap-2 px-4 py-3 bg-primary/10 border-b border-border/40 shrink-0">
+            {/* Header — click to toggle minimized */}
+            <button
+              onClick={() => setMinimized((v) => !v)}
+              className="flex items-center gap-2 px-4 py-3 bg-primary/10 border-b border-border/40 shrink-0 cursor-pointer hover:bg-primary/15 transition-colors w-full text-start"
+            >
               <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
                 <Sparkles className="h-3.5 w-3.5 text-primary-foreground animate-sparkle" />
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold">{t("app.name")} AI</p>
-                <p className="text-xs text-muted-foreground">{language === "he" ? "מונע על ידי AI" : "Powered by AI"}</p>
+                {!minimized && <p className="text-xs text-muted-foreground">{language === "he" ? "מונע על ידי AI" : "Powered by AI"}</p>}
               </div>
               <div className="w-2 h-2 rounded-full bg-green-500 animate-bounce-subtle" />
-            </div>
+              {minimized ? <Maximize2 className="h-3.5 w-3.5 text-muted-foreground" /> : <Minimize2 className="h-3.5 w-3.5 text-muted-foreground" />}
+            </button>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
-              {messages.map((m, i) => (
+            {/* Collapsible body */}
+            <AnimatePresence>
+              {!minimized && (
                 <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="flex flex-col overflow-hidden"
                 >
-                  <div className={`max-w-[82%] px-3 py-2 rounded-2xl text-sm leading-relaxed ${
-                    m.role === "user"
-                      ? "bg-primary text-primary-foreground rounded-se-sm"
-                      : "bg-muted text-foreground rounded-ss-sm"
-                  }`}>
-                    {m.content}
+                  {/* Messages */}
+                  <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3" style={{ maxHeight: "45vh" }}>
+                    {messages.map((m, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                      >
+                        <div className={`max-w-[82%] px-3 py-2 rounded-2xl text-sm leading-relaxed ${
+                          m.role === "user"
+                            ? "bg-primary text-primary-foreground rounded-se-sm"
+                            : "bg-muted text-foreground rounded-ss-sm"
+                        }`}>
+                          {m.content}
+                        </div>
+                      </motion.div>
+                    ))}
+                    {loading && (
+                      <div className="flex justify-start">
+                        <div className="bg-muted rounded-2xl rounded-ss-sm px-3 py-2">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        </div>
+                      </div>
+                    )}
+                    <div ref={bottomRef} />
+                  </div>
+
+                  {/* Suggestions */}
+                  {messages.length <= 1 && (
+                    <div className="px-3 pb-1 flex flex-wrap gap-1.5 shrink-0">
+                      {suggestions.map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => send(s)}
+                          className="text-xs px-2.5 py-1 rounded-full border border-border/60 bg-muted/50 hover:bg-primary/10 hover:border-primary/40 transition-colors"
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Input */}
+                  <div className="flex items-center gap-2 px-3 py-2 border-t border-border/40 shrink-0">
+                    <input
+                      ref={inputRef}
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && send()}
+                      placeholder={language === "he" ? "שאל שאלה..." : "Ask anything..."}
+                      className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground outline-none py-1"
+                      maxLength={500}
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => send()}
+                      disabled={!input.trim() || loading}
+                      className="h-8 w-8 shrink-0 hover:bg-primary/10"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
                   </div>
                 </motion.div>
-              ))}
-              {loading && (
-                <div className="flex justify-start">
-                  <div className="bg-muted rounded-2xl rounded-ss-sm px-3 py-2">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  </div>
-                </div>
               )}
-              <div ref={bottomRef} />
-            </div>
-
-            {/* Suggestions */}
-            {messages.length <= 1 && (
-              <div className="px-3 pb-1 flex flex-wrap gap-1.5 shrink-0">
-                {suggestions.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => send(s)}
-                    className="text-xs px-2.5 py-1 rounded-full border border-border/60 bg-muted/50 hover:bg-primary/10 hover:border-primary/40 transition-colors"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Input */}
-            <div className="flex items-center gap-2 px-3 py-2 border-t border-border/40 shrink-0">
-              <input
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && send()}
-                placeholder={language === "he" ? "שאל שאלה..." : "Ask anything..."}
-                className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground outline-none py-1"
-                maxLength={500}
-              />
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => send()}
-                disabled={!input.trim() || loading}
-                className="h-8 w-8 shrink-0 hover:bg-primary/10"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
