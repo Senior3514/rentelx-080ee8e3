@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+/* Latin + Hebrew font stack: Inter/Space Grotesk for Latin, Rubik for Hebrew */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Rubik:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -107,10 +108,108 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', sans-serif;
+    /* Rubik renders Hebrew beautifully and also works for Latin */
+    font-family: 'Rubik', 'Inter', sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Space Grotesk', sans-serif;
+    /* Space Grotesk for Latin headings; Rubik as fallback for Hebrew */
+    font-family: 'Space Grotesk', 'Rubik', sans-serif;
+  }
+
+  /* Smooth text rendering for all scripts */
+  :lang(he) {
+    font-family: 'Rubik', sans-serif;
+    letter-spacing: 0;
+  }
+}
+
+@layer utilities {
+  /* RTL-aware logical property utilities (supplement Tailwind's ms/me/ps/pe) */
+  .flip-rtl {
+    /* Mirror icon direction in RTL (e.g., arrows) */
+  }
+  [dir='rtl'] .flip-rtl {
+    transform: scaleX(-1);
+  }
+
+  /* Gradient text utility */
+  .text-gradient {
+    background: var(--gradient-hero);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Glowing primary button effect */
+  .glow-primary {
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.35), 0 4px 12px hsl(var(--primary) / 0.2);
+  }
+
+  /* Smooth card hover lift */
+  .card-hover {
+    @apply transition-all duration-200;
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px hsl(var(--foreground) / 0.08);
+  }
+
+  /* Animated underline for links */
+  .link-underline {
+    @apply relative;
+  }
+  .link-underline::after {
+    content: '';
+    @apply absolute bottom-0 inset-x-0 h-0.5 bg-primary scale-x-0 transition-transform duration-200 origin-left;
+  }
+  [dir='rtl'] .link-underline::after {
+    @apply origin-right;
+  }
+  .link-underline:hover::after {
+    @apply scale-x-100;
+  }
+
+  /* Score badge pulse for high scores */
+  .score-pulse {
+    animation: score-pulse 2s ease-in-out infinite;
+  }
+  @keyframes score-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.75; }
+  }
+
+  /* Page fade-in */
+  .page-enter {
+    animation: page-fade-in 0.3s ease-out both;
+  }
+  @keyframes page-fade-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Shimmer loading skeleton */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--muted-foreground) / 0.1) 50%,
+      hsl(var(--muted)) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position:  200% 0; }
+  }
+
+  /* Floating animation for hero elements */
+  .float {
+    animation: float 4s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(-6px); }
   }
 }
