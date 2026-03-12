@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/i18n/LanguageContext";
 import {
   CheckCircle2, Circle, Clock, AlertTriangle, Package,
   Phone, Mail, Plus, Trash2, Search, Zap, Shield,
@@ -141,6 +142,7 @@ function useCountdown(targetDate: string) {
 
 /* ─── Main Component ─── */
 const Relocation = () => {
+  const { direction } = useLanguage();
   const [tasks, setTasks] = useState<Task[]>(() => loadState("tasks", DEFAULT_TASKS));
   const [boxes, setBoxes] = useState<Box[]>(() => loadState("boxes", [] as Box[]));
   const [providers, setProviders] = useState<Provider[]>(() => loadState("providers", [] as Provider[]));
@@ -235,7 +237,7 @@ const Relocation = () => {
   const WEEKS: Week[] = ["4_weeks", "2_weeks", "moving_day", "after_move"];
 
   return (
-    <div dir="rtl" className="max-w-6xl mx-auto space-y-6 animate-fade-up">
+    <div className="max-w-6xl mx-auto space-y-6 animate-fade-up">
 
       {/* ─── Header / Mission Control ─── */}
       <div className="glass rounded-2xl p-5 border border-border/60 relative overflow-hidden">
@@ -348,7 +350,7 @@ const Relocation = () => {
                             transition={{ duration: 0.5 }}
                           />
                         </div>
-                        {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                        {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground flip-rtl" />}
                       </div>
                     </button>
 

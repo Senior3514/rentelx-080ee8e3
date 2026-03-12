@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Bell, BellOff, RefreshCw, MapPin, BedDouble, Maximize,
-  Clock, ExternalLink, Sparkles, BookHeart, Zap, PlusCircle, Check
+  Clock, ExternalLink, Sparkles, BookHeart, Zap, PlusCircle, Check,
+  Radio, Filter
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -230,35 +231,48 @@ const Watchlist = () => {
         )}
       </Card>
 
-      {/* Status bar */}
-      {(fetchedAt || scanning || error) && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {scanning && (
-            <>
-              <Zap className="h-3.5 w-3.5 text-primary animate-sparkle" />
-              <span>{t("watchlist.scanning")}...</span>
-            </>
-          )}
-          {!scanning && fetchedAt && (
-            <>
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              <span>
-                {t("watchlist.lastScan")}:{" "}
-                {formatDistanceToNow(new Date(fetchedAt), {
-                  addSuffix: true,
-                  locale: language === "he" ? he : undefined,
-                })}
-              </span>
-              {autoScan && (
-                <span className="ms-2 px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                  {t("watchlist.autoOn")}
-                </span>
-              )}
-            </>
-          )}
-          {error && <span className="text-destructive">{error}</span>}
-        </div>
-      )}
+      {/* Live Status Bar */}
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center gap-3 text-xs text-muted-foreground"
+      >
+        {scanning && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+            <Radio className="h-3.5 w-3.5 text-primary animate-sparkle" />
+            <span className="text-primary font-medium">{t("watchlist.scanning")}...</span>
+          </div>
+        )}
+        {!scanning && fetchedAt && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/60 border border-border/60">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-bounce-subtle" />
+            <span>
+              {t("watchlist.lastScan")}:{" "}
+              {formatDistanceToNow(new Date(fetchedAt), {
+                addSuffix: true,
+                locale: language === "he" ? he : undefined,
+              })}
+            </span>
+          </div>
+        )}
+        {autoScan && !scanning && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+            <Radio className="h-3 w-3 text-primary" />
+            <span className="text-primary font-medium">{t("watchlist.autoOn")}</span>
+          </div>
+        )}
+        {error && (
+          <div className="px-3 py-1.5 rounded-full bg-destructive/10 border border-destructive/20">
+            <span className="text-destructive font-medium">{error}</span>
+          </div>
+        )}
+        {results.length > 0 && !scanning && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/60 border border-border/60 ms-auto">
+            <Filter className="h-3 w-3" />
+            <span>{results.length} {t("watchlist.results")}</span>
+          </div>
+        )}
+      </motion.div>
 
       {/* Results */}
       {results.length === 0 && !scanning ? (
@@ -284,9 +298,6 @@ const Watchlist = () => {
         </Card>
       ) : (
         <div className="space-y-2">
-          <p className="text-sm text-muted-foreground font-medium">
-            {results.length} {t("watchlist.results")}
-          </p>
           <AnimatePresence>
             {results.map((listing, i) => {
               const s = scoreOf(listing);
