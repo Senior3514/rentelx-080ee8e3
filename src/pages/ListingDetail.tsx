@@ -9,7 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { MapPin, BedDouble, Maximize, Building2, ArrowLeft, Plus, StickyNote, Columns3, Sparkles, X, Ban } from "lucide-react";
+import { MapPin, BedDouble, Maximize, Building2, ArrowLeft, Plus, StickyNote, Columns3, Sparkles, X, Ban, ExternalLink, Phone, User } from "lucide-react";
+import { ImageGallery } from "@/components/listings/ImageGallery";
 
 const ListingDetail = () => {
   const { id } = useParams();
@@ -101,7 +102,6 @@ const ListingDetail = () => {
 
       if (res.error) throw res.error;
 
-      // Parse SSE stream
       const reader = res.data instanceof ReadableStream
         ? res.data.getReader()
         : null;
@@ -160,7 +160,6 @@ const ListingDetail = () => {
     (max: number, s: any) => Math.max(max, s.score), 0
   ) ?? 0;
 
-  // Extract breakdown from the highest-scoring score entry
   const bestScoreEntry = listing.listing_scores?.length
     ? listing.listing_scores.reduce((best: any, s: any) => s.score > (best?.score ?? 0) ? s : best, null)
     : null;
@@ -190,6 +189,14 @@ const ListingDetail = () => {
         )}
       </div>
 
+      {/* Image Gallery */}
+      {listing.image_urls && listing.image_urls.length > 0 && (
+        <div>
+          <h3 className="font-semibold text-sm mb-2">{t("listing.photos")}</h3>
+          <ImageGallery images={listing.image_urls} />
+        </div>
+      )}
+
       {/* Stats grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {listing.price && (
@@ -217,6 +224,18 @@ const ListingDetail = () => {
           </Card>
         )}
       </div>
+
+      {/* Source URL */}
+      {listing.source_url && (
+        <a
+          href={listing.source_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+        >
+          <ExternalLink className="h-3.5 w-3.5" /> {t("addListing.pasteUrl")}
+        </a>
+      )}
 
       {/* Score Breakdown */}
       {breakdown && Object.keys(breakdown).length > 0 && (
@@ -255,8 +274,18 @@ const ListingDetail = () => {
       {(listing.contact_name || listing.contact_phone) && (
         <Card className="p-4">
           <h3 className="font-semibold text-sm mb-2">{t("listing.contact")}</h3>
-          {listing.contact_name && <p className="text-sm">{listing.contact_name}</p>}
-          {listing.contact_phone && <p className="text-sm text-muted-foreground">{listing.contact_phone}</p>}
+          <div className="space-y-1">
+            {listing.contact_name && (
+              <p className="text-sm flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5 text-muted-foreground" /> {listing.contact_name}
+              </p>
+            )}
+            {listing.contact_phone && (
+              <a href={`tel:${listing.contact_phone}`} className="text-sm flex items-center gap-1.5 text-primary hover:underline">
+                <Phone className="h-3.5 w-3.5" /> {listing.contact_phone}
+              </a>
+            )}
+          </div>
         </Card>
       )}
 
@@ -277,11 +306,11 @@ const ListingDetail = () => {
       </Card>
 
       {/* Actions */}
-      <div className="flex gap-2">
-        <Button onClick={() => addToPipelineMutation.mutate()} className="gap-1.5">
+      <div className="flex flex-col sm:flex-row gap-2">
+        <Button onClick={() => addToPipelineMutation.mutate()} className="gap-1.5 flex-1">
           <Columns3 className="h-4 w-4" /> {t("listing.moveToPipeline")}
         </Button>
-        <Button variant="destructive" onClick={() => dismissMutation.mutate()} className="gap-1.5">
+        <Button variant="destructive" onClick={() => dismissMutation.mutate()} className="gap-1.5 flex-1">
           <Ban className="h-4 w-4" /> {t("listing.dismiss")}
         </Button>
       </div>

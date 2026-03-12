@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,6 +11,17 @@ import { formatDistanceToNow } from "date-fns";
 import { he } from "date-fns/locale";
 import { useState } from "react";
 import { AddListingModal } from "@/components/listings/AddListingModal";
+import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
+
+const STAGE_LABELS: Record<string, Record<string, string>> = {
+  new: { en: "New", he: "חדש" },
+  contacted: { en: "Contacted", he: "נוצר קשר" },
+  viewing_scheduled: { en: "Viewing", he: "ביקור" },
+  viewed: { en: "Viewed", he: "נצפה" },
+  negotiating: { en: "Negotiating", he: 'מו"מ' },
+  signed: { en: "Signed", he: "חתום" },
+  lost: { en: "Lost", he: "אבוד" },
+};
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -34,24 +46,27 @@ const Dashboard = () => {
         .select("*, listing_scores(*)")
         .eq("user_id", user!.id)
         .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(5);
+        .order("created_at", { ascending: false });
       return data ?? [];
     },
     enabled: !!user,
   });
 
-  const { data: pipelineCount = 0 } = useQuery({
-    queryKey: ["pipeline_count", user?.id],
+  const recentListings = listings.slice(0, 5);
+
+  const { data: pipelineEntries = [] } = useQuery({
+    queryKey: ["pipeline", user?.id],
     queryFn: async () => {
-      const { count } = await supabase
+      const { data } = await supabase
         .from("pipeline_entries")
-        .select("*", { count: "exact", head: true })
+        .select("stage, entered_stage_at")
         .eq("user_id", user!.id);
-      return count ?? 0;
+      return data ?? [];
     },
     enabled: !!user,
   });
+
+  const pipelineCount = pipelineEntries.length;
 
   const { data: profileCount = 0 } = useQuery({
     queryKey: ["profile_count", user?.id],
@@ -66,18 +81,7 @@ const Dashboard = () => {
     enabled: !!user,
   });
 
-  const { data: totalListings = 0 } = useQuery({
-    queryKey: ["total_listings", user?.id],
-    queryFn: async () => {
-      const { count } = await supabase
-        .from("listings")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user!.id)
-        .eq("status", "active");
-      return count ?? 0;
-    },
-    enabled: !!user,
-  });
+  const totalListings = listings.length;
 
   const avgScore = listings.length
     ? Math.round(
@@ -97,6 +101,38 @@ const Dashboard = () => {
     { label: t("dashboard.activeProfiles"), value: profileCount, icon: UserSearch },
   ];
 
+  // Pipeline funnel data for charts
+  const pipelineChartData = useMemo(() => {
+    const stages = ["new", "contacted", "viewing_scheduled", "viewed", "negotiating", "signed", "lost"];
+    return stages.map((stage) => ({
+      stage,
+      count: pipelineEntries.filter((e: any) => e.stage === stage).length,
+      label: STAGE_LABELS[stage]?.[language] || stage,
+    }));
+  }, [pipelineEntries, language]);
+
+  // Weekly activity data
+  const weeklyActivity = useMemo(() => {
+    const days = [];
+    const dayNames = language === "he"
+      ? ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"]
+      : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const dayEnd = new Date(dayStart);
+      dayEnd.setDate(dayEnd.getDate() + 1);
+      const count = listings.filter((l) => {
+        const created = new Date(l.created_at);
+        return created >= dayStart && created < dayEnd;
+      }).length;
+      days.push({ day: dayNames[d.getDay()], count });
+    }
+    return days;
+  }, [listings, language]);
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
@@ -115,6 +151,16 @@ const Dashboard = () => {
             <p className="text-xs text-muted-foreground">{s.label}</p>
           </Card>
         ))}
+      </div>
+
+      {/* Charts */}
+      <div>
+        <h2 className="text-lg font-display font-semibold mb-3">{t("dashboard.analytics")}</h2>
+        <DashboardCharts
+          listings={listings}
+          pipelineData={pipelineChartData}
+          weeklyActivity={weeklyActivity}
+        />
       </div>
 
       {/* Quick Actions */}
@@ -139,13 +185,13 @@ const Dashboard = () => {
       {/* Recent Listings */}
       <div>
         <h2 className="text-lg font-display font-semibold mb-3">{t("dashboard.recentListings")}</h2>
-        {listings.length === 0 ? (
+        {recentListings.length === 0 ? (
           <Card className="p-6 text-center">
             <p className="text-muted-foreground text-sm">{t("dashboard.noRecent")}</p>
           </Card>
         ) : (
           <div className="space-y-2">
-            {listings.map((l) => {
+            {recentListings.map((l) => {
               const topScore = l.listing_scores?.reduce((m: number, s: any) => Math.max(m, s.score), 0) ?? 0;
               const scoreColor =
                 topScore >= 80 ? "bg-score-high text-white" :
