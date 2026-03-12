@@ -9,6 +9,7 @@ import React, { useState, useMemo } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Inbox } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { AnimatedCard } from "@/components/ui/AnimatedCard";
 
 const STAGES = ["new", "contacted", "viewing_scheduled", "viewed", "negotiating", "signed", "lost"] as const;
 
@@ -82,18 +83,16 @@ const Pipeline = () => {
   }, [entries]);
 
   const renderEntryCard = (entry: any) => (
-    <motion.div
+    <AnimatedCard
       key={entry.id}
       layoutId={entry.id}
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.2 }}
+      className={`transition-opacity ${dragging === entry.id ? "opacity-50" : ""}`}
     >
       <Card
         draggable={!isMobile}
         onDragStart={(e) => handleDragStart(e, entry.id)}
-        className={`p-3 cursor-pointer transition-opacity ${dragging === entry.id ? "opacity-50" : ""} ${!isMobile ? "cursor-grab active:cursor-grabbing" : ""}`}
+        className={`p-3 cursor-pointer ${!isMobile ? "cursor-grab active:cursor-grabbing" : ""}`}
         onClick={() => navigate(`/listings/${entry.listing_id}`)}
       >
         <p className="text-sm font-medium truncate">{entry.listings?.address || entry.listings?.city || "Listing"}</p>
@@ -104,7 +103,7 @@ const Pipeline = () => {
           {Math.floor((Date.now() - new Date(entry.entered_stage_at).getTime()) / 86400000)}d
         </p>
       </Card>
-    </motion.div>
+    </AnimatedCard>
   );
 
   if (isLoading) {
@@ -152,10 +151,13 @@ const Pipeline = () => {
         <div className="flex gap-3 overflow-x-auto pb-4">
           {STAGES.map((stage) => {
             const stageEntries = entries.filter((e: any) => e.stage === stage);
+            const isMax = stage === maxStage;
             return (
               <div
                 key={stage}
-                className="flex-shrink-0 w-56 bg-muted/50 rounded-xl p-3 min-h-[300px]"
+                className={`flex-shrink-0 w-56 bg-muted/50 rounded-xl p-3 min-h-[300px] transition-all duration-300 ${
+                  isMax ? "ring-2 ring-primary/40 shadow-[0_0_16px_hsl(var(--primary)/0.15)]" : ""
+                }`}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => handleDrop(e, stage)}
               >
@@ -164,14 +166,22 @@ const Pipeline = () => {
                   <span className="ms-1.5 text-xs bg-muted rounded-full px-1.5 py-0.5">{stageEntries.length}</span>
                 </h3>
                 <div className="space-y-2">
-                  {stageEntries.length === 0 ? (
-                    <div className="flex flex-col items-center gap-1 text-xs text-muted-foreground/50 py-6">
-                      <Inbox className="h-4 w-4" />
-                      <span>{t("pipeline.empty")}</span>
-                    </div>
-                  ) : (
-                    stageEntries.map(renderEntryCard)
-                  )}
+                  <AnimatePresence>
+                    {stageEntries.length === 0 ? (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="flex flex-col items-center gap-1 text-xs text-muted-foreground/50 py-6"
+                      >
+                        <Inbox className="h-4 w-4" />
+                        <span>{t("pipeline.empty")}</span>
+                      </motion.div>
+                    ) : (
+                      stageEntries.map(renderEntryCard)
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
             );

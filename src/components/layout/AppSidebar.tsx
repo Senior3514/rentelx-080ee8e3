@@ -3,6 +3,7 @@ import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { motion } from "framer-motion";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
@@ -47,21 +48,31 @@ export function AppSidebar() {
           <SidebarGroupLabel>{collapsed ? "" : t("app.name")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end
-                      className="hover:bg-sidebar-accent/50"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                    >
-                      <item.icon className="me-2 h-4 w-4" />
-                      {!collapsed && <span>{t(item.titleKey)}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {navItems.map((item) => {
+                const isActive = location.pathname === item.url || location.pathname.startsWith(item.url + "/");
+                return (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.url}
+                        end
+                        className="relative hover:bg-sidebar-accent/50"
+                        activeClassName="text-sidebar-primary font-medium"
+                      >
+                        {isActive && (
+                          <motion.div
+                            layoutId="active-nav"
+                            className="absolute inset-0 bg-sidebar-accent rounded-md"
+                            transition={{ type: "spring", bounce: 0.2, duration: 0.35 }}
+                          />
+                        )}
+                        <item.icon className="relative z-10 me-2 h-4 w-4" />
+                        {!collapsed && <span className="relative z-10">{t(item.titleKey)}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

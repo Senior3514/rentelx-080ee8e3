@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { LogOut, Globe, Sun, Moon, Monitor } from "lucide-react";
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 
 const Settings = () => {
   const { user, signOut } = useAuth();
@@ -120,8 +121,26 @@ const Settings = () => {
       <Card className="p-4 space-y-3">
         <h3 className="font-semibold flex items-center gap-1.5"><Globe className="h-4 w-4" /> {t("settings.language")}</h3>
         <div className="flex gap-2">
-          <Button variant={language === "en" ? "default" : "outline"} size="sm" onClick={() => setLanguage("en")}>English</Button>
-          <Button variant={language === "he" ? "default" : "outline"} size="sm" onClick={() => setLanguage("he")}>עברית</Button>
+          {(["en", "he"] as const).map((lang) => (
+            <button
+              key={lang}
+              onClick={() => setLanguage(lang)}
+              className={`relative px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                language === lang
+                  ? "border-primary text-foreground font-medium"
+                  : "border-border text-muted-foreground hover:border-primary/40"
+              }`}
+            >
+              {language === lang && (
+                <motion.div
+                  layoutId="lang-indicator"
+                  className="absolute inset-0 bg-primary/10 rounded-md"
+                  transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
+                />
+              )}
+              <span className="relative z-10">{lang === "en" ? "English" : "עברית"}</span>
+            </button>
+          ))}
         </div>
       </Card>
 
@@ -129,9 +148,25 @@ const Settings = () => {
         <h3 className="font-semibold">{t("settings.theme")}</h3>
         <div className="flex gap-2">
           {themeOptions.map(({ value, icon: Icon, label }) => (
-            <Button key={value} variant={theme === value ? "default" : "outline"} size="sm" onClick={() => setTheme(value)} className="gap-1.5">
-              <Icon className="h-4 w-4" /> {label}
-            </Button>
+            <button
+              key={value}
+              onClick={() => setTheme(value)}
+              className={`relative flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                theme === value
+                  ? "border-primary text-foreground font-medium"
+                  : "border-border text-muted-foreground hover:border-primary/40"
+              }`}
+            >
+              {theme === value && (
+                <motion.div
+                  layoutId="theme-indicator"
+                  className="absolute inset-0 bg-primary/10 rounded-md"
+                  transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
+                />
+              )}
+              <Icon className="relative z-10 h-4 w-4" />
+              <span className="relative z-10">{label}</span>
+            </button>
           ))}
         </div>
       </Card>
