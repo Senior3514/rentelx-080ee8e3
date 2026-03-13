@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { NotificationBell } from "./NotificationBell";
@@ -7,6 +7,8 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { AIChatBubble } from "@/components/AIChatBubble";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { Home } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 /* Map pathnames to page title keys */
 const PAGE_TITLES: Record<string, string> = {
@@ -23,6 +25,7 @@ const PAGE_TITLES: Record<string, string> = {
 
 export const AppShell = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { direction, t } = useLanguage();
 
   const titleKey = Object.entries(PAGE_TITLES).find(([path]) =>
@@ -54,6 +57,15 @@ export const AppShell = () => {
               )}
             </div>
             <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/")}
+                className="h-8 w-8 text-muted-foreground hover:text-primary"
+                title={t("nav.home")}
+              >
+                <Home className="h-4 w-4" />
+              </Button>
               <LanguageToggle />
               <ThemeToggle />
               <NotificationBell />

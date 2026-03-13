@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { AiSectionHelper } from "@/components/ui/ai-section-helper";
 import {
   CheckCircle2, Circle, Clock, AlertTriangle, Package,
   Phone, Mail, Plus, Trash2, Search, Zap, Shield,
   Building2, Wifi, Bolt, Droplets, Truck, BookMarked,
-  ChevronDown, ChevronRight, Target, Activity
+  ChevronDown, ChevronRight, Target, Activity, FileDown
 } from "lucide-react";
 
 /* ─── Types ─── */
@@ -156,9 +157,25 @@ function useCountdown(targetDate: string) {
   return timeLeft;
 }
 
+/* ─── Export helper ─── */
+function exportTasksCsv(tasks: Task[], filename: string) {
+  const header = "Week,Title,Priority,Status";
+  const rows = tasks.map(t =>
+    `"${t.week}","${t.title}","${t.priority}","${t.status}"`
+  );
+  const csv = [header, ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 /* ─── Main Component ─── */
 const Relocation = () => {
-  const { direction } = useLanguage();
+  const { direction, t, language } = useLanguage();
   const [tasks, setTasks] = useState<Task[]>(() => loadState("tasks", DEFAULT_TASKS));
   const [boxes, setBoxes] = useState<Box[]>(() => loadState("boxes", [] as Box[]));
   const [providers, setProviders] = useState<Provider[]>(() => loadState("providers", [] as Provider[]));
@@ -263,13 +280,13 @@ const Relocation = () => {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-bounce-subtle" />
-                <span className="text-xs font-mono text-green-500 uppercase tracking-widest">SYSTEM OPERATIONAL</span>
+                <span className="text-xs font-mono text-green-500 uppercase tracking-widest">{t("relocation.operational")}</span>
               </div>
               <h1 className="text-2xl font-display font-bold flex items-center gap-2">
                 <Shield className="h-6 w-6 text-primary" />
-                מרכז פיקוד — מעבר דירה
+                {t("relocation.title")}
               </h1>
-              <p className="text-sm text-muted-foreground mt-1">ניהול מבצעי · תכנון ב-30 יום · ביצוע מושלם</p>
+              <p className="text-sm text-muted-foreground mt-1">{t("relocation.subtitle")}</p>
             </div>
 
             {/* Countdown + date input */}
@@ -307,7 +324,7 @@ const Relocation = () => {
           {/* Overall readiness bar */}
           <div className="mt-4 space-y-1.5">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground font-mono">OPERATIONAL READINESS</span>
+              <span className="text-muted-foreground font-mono">{t("relocation.readiness")}</span>
               <span className="font-bold text-primary">{readiness}%</span>
             </div>
             <div className="h-3 bg-muted/60 rounded-full overflow-hidden relative">
@@ -321,8 +338,8 @@ const Relocation = () => {
               </motion.div>
             </div>
             <div className="flex justify-between text-xs text-muted-foreground font-mono">
-              <span>{completedTasks}/{totalTasks} משימות</span>
-              <span>{scannedBoxes}/{totalBoxes} קופסאות</span>
+              <span>{completedTasks}/{totalTasks} {t("relocation.tasks")}</span>
+              <span>{scannedBoxes}/{totalBoxes} {t("relocation.boxes")}</span>
             </div>
           </div>
         </div>
@@ -689,6 +706,17 @@ const Relocation = () => {
             </Card>
 
             {/* Alert for overdue P0 */}
+            {/* Export button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => exportTasksCsv(tasks, `rentelx-relocation-tasks-${new Date().toISOString().slice(0, 10)}.csv`)}
+              className="w-full gap-1.5"
+            >
+              <FileDown className="h-3.5 w-3.5" />
+              {t("common.export")} CSV
+            </Button>
+
             {tasks.some((t) => t.priority === "P0" && t.status === "pending" && t.week === "moving_day") && (
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
                 <Card className="p-3 border-destructive/40 bg-destructive/5">
@@ -702,6 +730,18 @@ const Relocation = () => {
           </div>
         </div>
       </div>
+
+      {/* AI Assistant for Relocation */}
+      <AiSectionHelper
+        context={`Moving center: ${completedTasks}/${totalTasks} tasks completed (${readiness}% readiness), ${totalBoxes} boxes packed, ${providers.length} providers. Move date: ${moveDate || "not set"}.`}
+        section="Relocation"
+        suggestions={language === "he"
+          ? ["מה עוד שכחתי?", "טיפים ליום המעבר", "איך לחסוך בהובלה?", "רשימת בדיקה אחרונה"]
+          : language === "es"
+          ? ["¿Qué me falta?", "Tips para el día de mudanza", "¿Cómo ahorrar?", "Lista de verificación final"]
+          : ["What am I missing?", "Moving day tips", "How to save on movers?", "Final checklist"]
+        }
+      />
     </div>
   );
 };

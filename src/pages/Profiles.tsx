@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { OnboardingWizard, SearchProfileDraft } from "@/components/onboarding/OnboardingWizard";
-import { Plus, Trash2, MapPin, Pencil, Search, Briefcase } from "lucide-react";
+import { Plus, Trash2, MapPin, Pencil, Search, Briefcase, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { scoreListing } from "@/lib/scoring";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -17,7 +18,7 @@ import {
 
 const Profiles = () => {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const qc = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [editingProfile, setEditingProfile] = useState<any>(null);
@@ -67,9 +68,51 @@ const Profiles = () => {
     },
   });
 
+  const rescoreMutation = useMutation({
+    mutationFn: async (profileData: any) => {
+      // Fetch all active listings and re-score them against the updated profile
+      const { data: listings } = await supabase
+        .from("listings")
+        .select("id, city, price, rooms, amenities")
+        .eq("user_id", user!.id)
+        .eq("status", "active");
+
+      if (!listings?.length) return;
+
+      const profile = {
+        cities: profileData.cities || [],
+        min_price: profileData.min_price || 0,
+        max_price: profileData.max_price || 99999,
+        min_rooms: profileData.min_rooms || 0,
+        max_rooms: profileData.max_rooms || 99,
+        must_haves: profileData.must_haves || [],
+        nice_to_haves: profileData.nice_to_haves || [],
+      };
+
+      // Re-score each listing
+      for (const listing of listings) {
+        const score = scoreListing(
+          { city: listing.city, price: listing.price, rooms: listing.rooms, amenities: listing.amenities },
+          profile
+        );
+        await supabase.from("listing_scores").upsert({
+          listing_id: listing.id,
+          user_id: user!.id,
+          profile_id: profileData.id,
+          score: score.total,
+          breakdown: score,
+        }, { onConflict: "listing_id,profile_id" });
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["listings"] });
+      toast.success(language === "he" ? "הציונים עודכנו" : language === "es" ? "Puntuaciones actualizadas" : "Scores updated");
+    },
+  });
+
   const updateMutation = useMutation({
     mutationFn: async ({ id, draft }: { id: string; draft: SearchProfileDraft }) => {
-      const { error } = await supabase.from("search_profiles").update({
+      const updates = {
         name: draft.name || "Untitled",
         cities: draft.cities,
         min_price: draft.minPrice,
@@ -79,13 +122,17 @@ const Profiles = () => {
         must_haves: draft.mustHaves,
         nice_to_haves: draft.niceToHaves,
         workplace_address: draft.workplaceAddress || null,
-      }).eq("id", id);
+      };
+      const { error } = await supabase.from("search_profiles").update(updates).eq("id", id);
       if (error) throw error;
+      return { id, ...updates };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["search_profiles"] });
       setEditingProfile(null);
       toast.success(t("profiles.profileUpdated"));
+      // Re-score all listings against the updated profile
+      if (data) rescoreMutation.mutate({ id: data.id, ...data });
     },
   });
 
@@ -140,6 +187,24 @@ const Profiles = () => {
                   )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => rescoreMutation.mutate({
+                      id: p.id,
+                      cities: p.cities,
+                      min_price: p.min_price,
+                      max_price: p.max_price,
+                      min_rooms: p.min_rooms,
+                      max_rooms: p.max_rooms,
+                      must_haves: p.must_haves,
+                      nice_to_haves: p.nice_to_haves,
+                    })}
+                    title={language === "he" ? "חשב ציונים מחדש" : "Re-score listings"}
+                    className="text-primary"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                  </Button>
                   <Button variant="ghost" size="icon" onClick={() => setEditingProfile(p)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
