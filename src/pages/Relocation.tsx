@@ -10,7 +10,8 @@ import {
   CheckCircle2, Circle, Clock, AlertTriangle, Package,
   Phone, Mail, Plus, Trash2, Search, Zap, Shield,
   Building2, Wifi, Bolt, Droplets, Truck, BookMarked,
-  ChevronDown, ChevronRight, Target, Activity, FileDown
+  ChevronDown, ChevronRight, Target, Activity, FileDown,
+  LayoutDashboard, ListTodo, BookOpen, Users
 } from "lucide-react";
 
 /* ─── Types ─── */
@@ -18,6 +19,7 @@ type Priority = "P0" | "P1" | "P2";
 type TaskStatus = "pending" | "in_progress" | "completed";
 type Week = "4_weeks" | "2_weeks" | "moving_day" | "after_move";
 type ProviderType = "movers" | "internet" | "electricity" | "gas" | "water" | "other";
+type View = "dashboard" | "tasks" | "boxes" | "providers" | "audit";
 
 interface Task {
   id: string;
@@ -34,6 +36,7 @@ interface Box {
   contents: string;
   fragile: boolean;
   scanned: boolean;
+  priority?: boolean;
 }
 
 interface Provider {
@@ -43,6 +46,12 @@ interface Provider {
   phone: string;
   email: string;
   status: "not_contacted" | "contacted" | "confirmed";
+}
+
+interface AuditItem {
+  id: string;
+  title: string;
+  done: boolean;
 }
 
 /* ─── Storage helpers ─── */
@@ -83,7 +92,7 @@ const DEFAULT_TASKS: Task[] = [
   { id: "t15", week: "moving_day", title: "בדוק את הדירה הישנה לפני עזיבה סופית", priority: "P0", status: "pending" },
   { id: "t16", week: "moving_day", title: "שמור ערכת הישרדות 48 שעות בהישג יד",  priority: "P0", status: "pending" },
   { id: "t17", week: "moving_day", title: "מסור מפתחות לבעל הדירה הישנה",        priority: "P0", status: "pending" },
-  { id: "t18", week: "moving_day", title: "חפש בטבלת ארגזים לפי מילת מפתח",      priority: "P1", status: "pending" },
+  { id: "t18", week: "moving_day", title: "פרוק ארגזים לפי חדרים (חפש לפי מספר)", priority: "P1", status: "pending" },
   { id: "t19", week: "moving_day", title: "צלם תיעוד מצב הדירה החדשה (בכניסה)",  priority: "P0", status: "pending" },
   // ─── After Move — Post-Move Audit ───
   { id: "t20", week: "after_move", title: "חבר חשמל, מים, גז בדירה החדשה",      priority: "P0", status: "pending" },
@@ -93,6 +102,19 @@ const DEFAULT_TASKS: Task[] = [
   { id: "t24", week: "after_move", title: "עדכן כתובת — משרד הפנים / רשות האוכלוסין", priority: "P1", status: "pending" },
   { id: "t25", week: "after_move", title: "עדכן מנויים: חדר כושר, חוגים, תוכנות",  priority: "P2", status: "pending" },
   { id: "t26", week: "after_move", title: "בצע System Check: כל החשבונות/מנויים עודכנו?", priority: "P1", status: "pending" },
+];
+
+const DEFAULT_AUDIT: AuditItem[] = [
+  { id: "a1",  title: "עדכון כתובת בבנק/ים",                           done: false },
+  { id: "a2",  title: "עדכון כתובת בכרטיסי אשראי",                    done: false },
+  { id: "a3",  title: "עדכון כתובת בחברות ביטוח",                     done: false },
+  { id: "a4",  title: "עדכון כתובת בדואר ישראל / הפניית דואר",        done: false },
+  { id: "a5",  title: "עדכון כתובת — סלולר ואינטרנט",                 done: false },
+  { id: "a6",  title: "עדכון כתובת — בתי ספר/גנים וחוגים",           done: false },
+  { id: "a7",  title: "עדכון כתובת — ביטוח לאומי / קופת חולים",      done: false },
+  { id: "a8",  title: "עדכון כתובת — רשות המסים / שלטון מקומי",       done: false },
+  { id: "a9",  title: "עדכון כתובת — משרד הפנים / רשות האוכלוסין",   done: false },
+  { id: "a10", title: "בדיקת כל המנויים — נטפליקס, ספוטיפיי, אמזון",  done: false },
 ];
 
 const SURVIVAL_KIT_DEFAULT = [
@@ -136,6 +158,14 @@ const STATUS_META: Record<Provider["status"], { label: string; color: string }> 
   confirmed:     { label: "מאושר ✓",     color: "bg-green-500/20 text-green-400" },
 };
 
+const VIEW_META: Record<View, { label: string; icon: React.ElementType }> = {
+  dashboard: { label: "חמ\"ל", icon: LayoutDashboard },
+  tasks:     { label: "משימות",  icon: ListTodo },
+  boxes:     { label: "ארגזים",  icon: Package },
+  providers: { label: "ספקים",   icon: Users },
+  audit:     { label: "בדיקת סיום", icon: BookOpen },
+};
+
 function uid() { return Math.random().toString(36).slice(2); }
 
 /* ─── Countdown clock ─── */
@@ -176,10 +206,12 @@ function exportTasksCsv(tasks: Task[], filename: string) {
 /* ─── Main Component ─── */
 const Relocation = () => {
   const { direction, t, language } = useLanguage();
+  const [activeView, setActiveView] = useState<View>("dashboard");
   const [tasks, setTasks] = useState<Task[]>(() => loadState("tasks", DEFAULT_TASKS));
   const [boxes, setBoxes] = useState<Box[]>(() => loadState("boxes", [] as Box[]));
   const [providers, setProviders] = useState<Provider[]>(() => loadState("providers", [] as Provider[]));
   const [survivalKit, setSurvivalKit] = useState<string[]>(() => loadState("survival", SURVIVAL_KIT_DEFAULT));
+  const [audit, setAudit] = useState<AuditItem[]>(() => loadState("audit", DEFAULT_AUDIT));
   const [boxSearch, setBoxSearch] = useState("");
   const [newBoxRoom, setNewBoxRoom] = useState("");
   const [newBoxContents, setNewBoxContents] = useState("");
@@ -197,6 +229,7 @@ const Relocation = () => {
   useEffect(() => { saveState("providers", providers); }, [providers]);
   useEffect(() => { saveState("survival", survivalKit); }, [survivalKit]);
   useEffect(() => { saveState("move_date", moveDate); }, [moveDate]);
+  useEffect(() => { saveState("audit", audit); }, [audit]);
 
   const countdown = useCountdown(moveDate || new Date(Date.now() + 30 * 86400000).toISOString());
 
@@ -205,6 +238,12 @@ const Relocation = () => {
   const totalBoxes = boxes.length;
   const scannedBoxes = boxes.filter((b) => b.scanned).length;
   const readiness = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  // Dashboard computed data
+  const p0OpenTasks = tasks.filter((t) => t.priority === "P0" && t.status !== "completed");
+  const urgentBoxes = boxes.filter((b) => !b.scanned).slice(0, 5);
+  const urgentProviders = providers.filter((p) => p.status !== "confirmed");
+  const auditDone = audit.filter((a) => a.done).length;
 
   const cycleTaskStatus = useCallback((id: string) => {
     setTasks((prev) => prev.map((t) => {
@@ -269,8 +308,11 @@ const Relocation = () => {
 
   const WEEKS: Week[] = ["4_weeks", "2_weeks", "moving_day", "after_move"];
 
+  /* ── Tab nav ── */
+  const VIEWS: View[] = ["dashboard", "tasks", "boxes", "providers", "audit"];
+
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-fade-up">
+    <div className="max-w-6xl mx-auto space-y-5 animate-fade-up">
 
       {/* ─── Header / Mission Control ─── */}
       <div className="glass rounded-2xl p-5 border border-border/60 relative overflow-hidden">
@@ -345,148 +387,489 @@ const Relocation = () => {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+      {/* ─── Tab Navigation ─── */}
+      <div className="flex gap-1 bg-muted/30 p-1 rounded-xl border border-border/40 overflow-x-auto">
+        {VIEWS.map((v) => {
+          const meta = VIEW_META[v];
+          const Icon = meta.icon;
+          const isActive = activeView === v;
+          // Badge counts
+          let badge = 0;
+          if (v === "tasks") badge = p0OpenTasks.length;
+          if (v === "boxes") badge = urgentBoxes.length;
+          if (v === "providers") badge = urgentProviders.filter(p => p.name).length;
+          if (v === "audit") badge = audit.filter(a => !a.done).length;
+          return (
+            <button
+              key={v}
+              onClick={() => setActiveView(v)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap relative ${
+                isActive
+                  ? "bg-background shadow-sm text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {meta.label}
+              {badge > 0 && !isActive && (
+                <span className="absolute -top-0.5 -end-0.5 w-3.5 h-3.5 rounded-full bg-red-500 text-white text-[9px] flex items-center justify-center font-bold">
+                  {badge > 9 ? "9+" : badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
 
-          {/* ─── Timeline / Deployment Tasks ─── */}
-          <div>
-            <h2 className="text-base font-display font-bold mb-3 flex items-center gap-2">
-              <Target className="h-4 w-4 text-primary" />
-              לוח זמנים — פריסת המשימות
-            </h2>
+      <AnimatePresence mode="wait">
 
-            <div className="space-y-3">
-              {WEEKS.map((week) => {
-                const meta = WEEK_META[week];
-                const weekTasks = tasks.filter((t) => t.week === week);
-                const weekDone = weekTasks.filter((t) => t.status === "completed").length;
-                const isOpen = expandedWeeks.has(week);
+        {/* ══════════════════════════════════════════ */}
+        {/* ─── DASHBOARD VIEW ─── */}
+        {/* ══════════════════════════════════════════ */}
+        {activeView === "dashboard" && (
+          <motion.div
+            key="dashboard"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="space-y-4"
+          >
+            {/* 3 Command Screens */}
+            <div className="grid md:grid-cols-3 gap-4">
 
-                return (
-                  <Card key={week} className="border-border/60 overflow-hidden">
-                    <button
-                      className="w-full p-3 flex items-center gap-3 hover:bg-muted/30 transition-colors"
-                      onClick={() => toggleWeek(week)}
-                    >
-                      <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${meta.color} flex items-center justify-center shrink-0`}>
-                        <meta.icon className="h-4 w-4 text-white" />
-                      </div>
-                      <div className="flex-1 text-start">
-                        <p className="text-sm font-semibold">{meta.label}</p>
-                        <p className="text-xs text-muted-foreground">{weekDone}/{weekTasks.length} הושלמו</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <motion.div
-                            className={`h-full rounded-full bg-gradient-to-r ${meta.color}`}
-                            animate={{ width: weekTasks.length ? `${(weekDone / weekTasks.length) * 100}%` : "0%" }}
-                            transition={{ duration: 0.5 }}
-                          />
-                        </div>
-                        {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground flip-rtl" />}
-                      </div>
+              {/* Screen 1: P0 פתוח */}
+              <Card className="p-4 border-red-500/30 bg-red-500/5">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-7 h-7 rounded-lg bg-red-500/20 flex items-center justify-center">
+                    <AlertTriangle className="h-3.5 w-3.5 text-red-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">P0 פתוח</p>
+                    <p className="text-xs text-muted-foreground">מה חייב להיסגר עכשיו</p>
+                  </div>
+                  {p0OpenTasks.length > 0 && (
+                    <span className="ms-auto text-xs font-bold text-red-400 bg-red-500/20 px-2 py-0.5 rounded-full">
+                      {p0OpenTasks.length}
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  {p0OpenTasks.length === 0 ? (
+                    <div className="text-center py-4">
+                      <CheckCircle2 className="h-8 w-8 text-score-high mx-auto mb-1" />
+                      <p className="text-xs text-muted-foreground">כל משימות P0 הושלמו! 🎉</p>
+                    </div>
+                  ) : (
+                    p0OpenTasks.slice(0, 5).map((task) => (
+                      <button
+                        key={task.id}
+                        onClick={() => cycleTaskStatus(task.id)}
+                        className="w-full flex items-center gap-2 text-start group"
+                      >
+                        {task.status === "in_progress" ? (
+                          <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>
+                            <Activity className="h-4 w-4 text-amber-500 shrink-0" />
+                          </motion.div>
+                        ) : (
+                          <Circle className="h-4 w-4 text-red-400/60 shrink-0" />
+                        )}
+                        <span className="text-xs flex-1 group-hover:text-primary transition-colors leading-snug">
+                          {task.title}
+                        </span>
+                        <span className="text-[9px] text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded-full shrink-0">
+                          {WEEK_META[task.week].label.split(" ").slice(0,2).join(" ")}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                  {p0OpenTasks.length > 5 && (
+                    <button onClick={() => setActiveView("tasks")} className="text-xs text-primary hover:underline w-full text-center pt-1">
+                      + {p0OpenTasks.length - 5} משימות נוספות →
                     </button>
+                  )}
+                </div>
+              </Card>
 
-                    <AnimatePresence>
-                      {isOpen && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.22 }}
-                          className="overflow-hidden"
+              {/* Screen 2: ארגזים לפתיחה מיידית */}
+              <Card className="p-4 border-blue-500/30 bg-blue-500/5">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-7 h-7 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                    <Package className="h-3.5 w-3.5 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">ארגזים לפתיחה</p>
+                    <p className="text-xs text-muted-foreground">מה צריך להגיע ראשון</p>
+                  </div>
+                  {boxes.filter(b => !b.scanned).length > 0 && (
+                    <span className="ms-auto text-xs font-bold text-blue-400 bg-blue-500/20 px-2 py-0.5 rounded-full">
+                      {boxes.filter(b => !b.scanned).length}
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  {boxes.length === 0 ? (
+                    <div className="text-center py-4">
+                      <Package className="h-8 w-8 text-muted-foreground/40 mx-auto mb-1" />
+                      <p className="text-xs text-muted-foreground">אין ארגזים עדיין</p>
+                      <button onClick={() => setActiveView("boxes")} className="text-xs text-primary hover:underline mt-1">
+                        + הוסף ארגזים
+                      </button>
+                    </div>
+                  ) : (
+                    urgentBoxes.map((box) => (
+                      <button
+                        key={box.id}
+                        onClick={() => toggleBoxScanned(box.id)}
+                        className="w-full flex items-center gap-2 text-start"
+                      >
+                        <div className="w-6 h-6 rounded-md bg-blue-500/20 text-blue-400 flex items-center justify-center text-[10px] font-bold shrink-0">
+                          #{box.number}
+                        </div>
+                        <span className="text-xs flex-1 leading-snug">{box.room}</span>
+                        {box.fragile && <span className="text-[9px] text-amber-400">⚠</span>}
+                        <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0" />
+                      </button>
+                    ))
+                  )}
+                  {boxes.filter(b => !b.scanned).length > 5 && (
+                    <button onClick={() => setActiveView("boxes")} className="text-xs text-primary hover:underline w-full text-center pt-1">
+                      + {boxes.filter(b => !b.scanned).length - 5} ארגזים נוספים →
+                    </button>
+                  )}
+                </div>
+              </Card>
+
+              {/* Screen 3: ספקים לטיפול עכשיו */}
+              <Card className="p-4 border-violet-500/30 bg-violet-500/5">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-7 h-7 rounded-lg bg-violet-500/20 flex items-center justify-center">
+                    <Users className="h-3.5 w-3.5 text-violet-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">ספקים לטיפול</p>
+                    <p className="text-xs text-muted-foreground">מה דורש שיחה/אישור</p>
+                  </div>
+                  {urgentProviders.filter(p => p.name).length > 0 && (
+                    <span className="ms-auto text-xs font-bold text-violet-400 bg-violet-500/20 px-2 py-0.5 rounded-full">
+                      {urgentProviders.filter(p => p.name).length}
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  {providers.length === 0 ? (
+                    <div className="text-center py-4">
+                      <Users className="h-8 w-8 text-muted-foreground/40 mx-auto mb-1" />
+                      <p className="text-xs text-muted-foreground">אין ספקים עדיין</p>
+                      <button onClick={() => setActiveView("providers")} className="text-xs text-primary hover:underline mt-1">
+                        + הוסף ספקים
+                      </button>
+                    </div>
+                  ) : (
+                    urgentProviders.filter(p => p.name).slice(0, 5).map((p) => {
+                      const meta = PROVIDER_META[p.type];
+                      const Icon = meta.icon;
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => cycleProviderStatus(p.id)}
+                          className="w-full flex items-center gap-2 text-start"
                         >
-                          <div className="px-3 pb-3 space-y-1.5 border-t border-border/40 pt-2">
-                            <AnimatePresence>
-                              {weekTasks.map((task, i) => (
-                                <motion.div
-                                  key={task.id}
-                                  initial={{ opacity: 0, x: 10 }}
-                                  animate={{ opacity: 1, x: 0 }}
-                                  exit={{ opacity: 0, height: 0 }}
-                                  transition={{ delay: i * 0.03 }}
-                                  className="flex items-center gap-2 group"
-                                >
-                                  <button
-                                    onClick={() => cycleTaskStatus(task.id)}
-                                    className="shrink-0"
-                                  >
-                                    {task.status === "completed" ? (
-                                      <CheckCircle2 className="h-5 w-5 text-score-high" />
-                                    ) : task.status === "in_progress" ? (
-                                      <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>
-                                        <Activity className="h-5 w-5 text-amber-500" />
-                                      </motion.div>
-                                    ) : (
-                                      <Circle className="h-5 w-5 text-muted-foreground/40" />
-                                    )}
-                                  </button>
-                                  <span className={`flex-1 text-sm ${task.status === "completed" ? "line-through text-muted-foreground" : ""}`}>
-                                    {task.title}
-                                  </span>
-                                  <span className={`text-xs px-1.5 py-0.5 rounded-full border font-mono ${PRIORITY_META[task.priority].color}`}>
-                                    {task.priority}
-                                  </span>
-                                  <button
-                                    onClick={() => deleteTask(task.id)}
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                                  </button>
-                                </motion.div>
-                              ))}
-                            </AnimatePresence>
+                          <div className={`w-6 h-6 rounded-md bg-gradient-to-br ${meta.color} flex items-center justify-center shrink-0`}>
+                            <Icon className="h-3 w-3 text-white" />
                           </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </Card>
-                );
-              })}
+                          <span className="text-xs flex-1 leading-snug">{p.name || meta.label}</span>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${STATUS_META[p.status].color}`}>
+                            {STATUS_META[p.status].label}
+                          </span>
+                        </button>
+                      );
+                    })
+                  )}
+                  {!providers.some(p => !p.name) && providers.length < Object.keys(PROVIDER_META).length && (
+                    <button onClick={() => setActiveView("providers")} className="text-xs text-primary hover:underline w-full text-center pt-1">
+                      + הוסף ספק חדש
+                    </button>
+                  )}
+                </div>
+              </Card>
             </div>
 
-            {/* Add task */}
-            <Card className="p-3 mt-3 border-border/60 border-dashed">
-              <p className="text-xs text-muted-foreground font-semibold mb-2">+ הוסף משימה</p>
-              <div className="flex gap-2 flex-wrap">
-                <Input
-                  value={newTask}
-                  onChange={(e) => setNewTask(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addTask()}
-                  placeholder="תיאור המשימה..."
-                  className="flex-1 min-w-[160px] h-8 text-sm"
-                />
-                <select
-                  value={newTaskWeek}
-                  onChange={(e) => setNewTaskWeek(e.target.value as Week)}
-                  className="h-8 bg-muted/50 border border-border/60 rounded-md text-xs px-2"
-                >
-                  {WEEKS.map((w) => <option key={w} value={w}>{WEEK_META[w].label}</option>)}
-                </select>
-                <select
-                  value={newTaskPri}
-                  onChange={(e) => setNewTaskPri(e.target.value as Priority)}
-                  className="h-8 bg-muted/50 border border-border/60 rounded-md text-xs px-2"
-                >
-                  <option value="P0">P0 קריטי</option>
-                  <option value="P1">P1 גבוה</option>
-                  <option value="P2">P2 רגיל</option>
-                </select>
-                <Button size="sm" onClick={addTask} className="h-8 gap-1">
-                  <Plus className="h-3.5 w-3.5" /> הוסף
-                </Button>
-              </div>
-            </Card>
-          </div>
+            {/* Survival Kit + Stats in 2 columns */}
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Survival Kit */}
+              <Card className="p-4 border-primary/40 bg-primary/5">
+                <h2 className="text-sm font-display font-bold mb-3 flex items-center gap-2 text-primary">
+                  <BookMarked className="h-4 w-4" />
+                  ערכת ישרדות — 48 שעות ראשונות
+                </h2>
+                <p className="text-xs text-muted-foreground mb-3">שמרו קופסה זו בהישג יד ביום המעבר</p>
+                <div className="space-y-1">
+                  {survivalKit.slice(0, 6).map((item, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-primary shrink-0" />
+                      <span className="text-xs">{item}</span>
+                    </div>
+                  ))}
+                  {survivalKit.length > 6 && (
+                    <p className="text-xs text-muted-foreground ps-5">+ {survivalKit.length - 6} פריטים נוספים...</p>
+                  )}
+                </div>
+              </Card>
 
-          {/* ─── Box Inventory ─── */}
-          <div>
-            <h2 className="text-base font-display font-bold mb-3 flex items-center gap-2">
+              {/* Operation Status */}
+              <Card className="p-4 border-border/60 space-y-3">
+                <h3 className="text-sm font-display font-bold flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-primary" />
+                  סטטוס מבצע
+                </h3>
+                {[
+                  { label: "משימות P0 שהושלמו", value: tasks.filter((t) => t.priority === "P0" && t.status === "completed").length, total: tasks.filter((t) => t.priority === "P0").length || 1, color: "bg-red-500" },
+                  { label: "ארגזים שנפתחו", value: scannedBoxes, total: totalBoxes || 1, color: "bg-blue-500" },
+                  { label: "ספקים מאושרים", value: providers.filter((p) => p.status === "confirmed").length, total: providers.length || 1, color: "bg-green-500" },
+                  { label: "בדיקת סיום (Post-Audit)", value: auditDone, total: audit.length || 1, color: "bg-violet-500" },
+                ].map((stat) => (
+                  <div key={stat.label} className="space-y-1">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{stat.label}</span>
+                      <span className="font-bold text-foreground">{stat.value}/{stat.total}</span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <motion.div
+                        className={`h-full rounded-full ${stat.color}`}
+                        animate={{ width: `${(stat.value / stat.total) * 100}%` }}
+                        transition={{ duration: 0.7 }}
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                <div className="pt-1 flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => exportTasksCsv(tasks, `rentelx-relocation-tasks-${new Date().toISOString().slice(0, 10)}.csv`)}
+                    className="flex-1 gap-1.5 h-8 text-xs"
+                  >
+                    <FileDown className="h-3.5 w-3.5" />
+                    ייצא CSV
+                  </Button>
+                </div>
+              </Card>
+            </div>
+
+            {/* P0 Moving Day Alert */}
+            {tasks.some((t) => t.priority === "P0" && t.status === "pending" && t.week === "moving_day") && (
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+                <Card className="p-3 border-destructive/40 bg-destructive/5">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+                    <p className="text-xs text-destructive font-medium">משימות P0 ביום המעבר ממתינות — לחץ כאן לצפייה</p>
+                    <Button size="sm" variant="ghost" className="ms-auto h-7 text-xs" onClick={() => setActiveView("tasks")}>
+                      צפה →
+                    </Button>
+                  </div>
+                </Card>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+
+        {/* ══════════════════════════════════════════ */}
+        {/* ─── TASKS VIEW ─── */}
+        {/* ══════════════════════════════════════════ */}
+        {activeView === "tasks" && (
+          <motion.div
+            key="tasks"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="space-y-4"
+          >
+            <div className="grid lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-3">
+                <h2 className="text-base font-display font-bold flex items-center gap-2">
+                  <Target className="h-4 w-4 text-primary" />
+                  לוח זמנים — פריסת המשימות
+                </h2>
+                {WEEKS.map((week) => {
+                  const meta = WEEK_META[week];
+                  const weekTasks = tasks.filter((t) => t.week === week);
+                  const weekDone = weekTasks.filter((t) => t.status === "completed").length;
+                  const isOpen = expandedWeeks.has(week);
+                  return (
+                    <Card key={week} className="border-border/60 overflow-hidden">
+                      <button
+                        className="w-full p-3 flex items-center gap-3 hover:bg-muted/30 transition-colors"
+                        onClick={() => toggleWeek(week)}
+                      >
+                        <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${meta.color} flex items-center justify-center shrink-0`}>
+                          <meta.icon className="h-4 w-4 text-white" />
+                        </div>
+                        <div className="flex-1 text-start">
+                          <p className="text-sm font-semibold">{meta.label}</p>
+                          <p className="text-xs text-muted-foreground">{weekDone}/{weekTasks.length} הושלמו</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                            <motion.div
+                              className={`h-full rounded-full bg-gradient-to-r ${meta.color}`}
+                              animate={{ width: weekTasks.length ? `${(weekDone / weekTasks.length) * 100}%` : "0%" }}
+                              transition={{ duration: 0.5 }}
+                            />
+                          </div>
+                          {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground flip-rtl" />}
+                        </div>
+                      </button>
+                      <AnimatePresence>
+                        {isOpen && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.22 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="px-3 pb-3 space-y-1.5 border-t border-border/40 pt-2">
+                              <AnimatePresence>
+                                {weekTasks.map((task, i) => (
+                                  <motion.div
+                                    key={task.id}
+                                    initial={{ opacity: 0, x: 10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    transition={{ delay: i * 0.03 }}
+                                    className="flex items-center gap-2 group"
+                                  >
+                                    <button onClick={() => cycleTaskStatus(task.id)} className="shrink-0">
+                                      {task.status === "completed" ? (
+                                        <CheckCircle2 className="h-5 w-5 text-score-high" />
+                                      ) : task.status === "in_progress" ? (
+                                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>
+                                          <Activity className="h-5 w-5 text-amber-500" />
+                                        </motion.div>
+                                      ) : (
+                                        <Circle className="h-5 w-5 text-muted-foreground/40" />
+                                      )}
+                                    </button>
+                                    <span className={`flex-1 text-sm ${task.status === "completed" ? "line-through text-muted-foreground" : ""}`}>
+                                      {task.title}
+                                    </span>
+                                    <span className={`text-xs px-1.5 py-0.5 rounded-full border font-mono ${PRIORITY_META[task.priority].color}`}>
+                                      {task.priority}
+                                    </span>
+                                    <button onClick={() => deleteTask(task.id)} className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                    </button>
+                                  </motion.div>
+                                ))}
+                              </AnimatePresence>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </Card>
+                  );
+                })}
+
+                {/* Add task */}
+                <Card className="p-3 border-border/60 border-dashed">
+                  <p className="text-xs text-muted-foreground font-semibold mb-2">+ הוסף משימה</p>
+                  <div className="flex gap-2 flex-wrap">
+                    <Input
+                      value={newTask}
+                      onChange={(e) => setNewTask(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && addTask()}
+                      placeholder="תיאור המשימה..."
+                      className="flex-1 min-w-[160px] h-8 text-sm"
+                    />
+                    <select
+                      value={newTaskWeek}
+                      onChange={(e) => setNewTaskWeek(e.target.value as Week)}
+                      className="h-8 bg-muted/50 border border-border/60 rounded-md text-xs px-2"
+                    >
+                      {WEEKS.map((w) => <option key={w} value={w}>{WEEK_META[w].label}</option>)}
+                    </select>
+                    <select
+                      value={newTaskPri}
+                      onChange={(e) => setNewTaskPri(e.target.value as Priority)}
+                      className="h-8 bg-muted/50 border border-border/60 rounded-md text-xs px-2"
+                    >
+                      <option value="P0">P0 קריטי</option>
+                      <option value="P1">P1 גבוה</option>
+                      <option value="P2">P2 רגיל</option>
+                    </select>
+                    <Button size="sm" onClick={addTask} className="h-8 gap-1">
+                      <Plus className="h-3.5 w-3.5" /> הוסף
+                    </Button>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Sidebar: Survival Kit */}
+              <div>
+                <Card className="p-4 border-primary/40 bg-primary/5 sticky top-4">
+                  <h2 className="text-sm font-display font-bold mb-3 flex items-center gap-2 text-primary">
+                    <BookMarked className="h-4 w-4" />
+                    ערכת ישרדות — 48 שעות
+                  </h2>
+                  <div className="space-y-1.5">
+                    <AnimatePresence>
+                      {survivalKit.map((item, i) => (
+                        <motion.div
+                          key={item + i}
+                          initial={{ opacity: 0, x: -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ delay: i * 0.03 }}
+                          className="flex items-center gap-2 group"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                          <span className="text-xs flex-1">{item}</span>
+                          <button
+                            onClick={() => setSurvivalKit((prev) => prev.filter((_, idx) => idx !== i))}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 className="h-3 w-3 text-destructive" />
+                          </button>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <Input
+                      value={newKitItem}
+                      onChange={(e) => setNewKitItem(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && addKitItem()}
+                      placeholder="פריט חדש..."
+                      className="h-7 text-xs flex-1"
+                    />
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={addKitItem}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ══════════════════════════════════════════ */}
+        {/* ─── BOXES VIEW ─── */}
+        {/* ══════════════════════════════════════════ */}
+        {activeView === "boxes" && (
+          <motion.div
+            key="boxes"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="space-y-4"
+          >
+            <h2 className="text-base font-display font-bold flex items-center gap-2">
               <Package className="h-4 w-4 text-primary" />
               מלאי קופסאות
             </h2>
 
-            <div className="relative mb-3">
+            <div className="relative">
               <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 value={boxSearch}
@@ -513,12 +896,8 @@ const Relocation = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-semibold">{box.room}</span>
-                          {box.fragile && (
-                            <Badge variant="outline" className="text-xs border-amber-500/40 text-amber-500">⚠ שביר</Badge>
-                          )}
-                          {box.scanned && (
-                            <Badge variant="outline" className="text-xs border-green-500/40 text-green-500">✓ נסרק</Badge>
-                          )}
+                          {box.fragile && <Badge variant="outline" className="text-xs border-amber-500/40 text-amber-500">⚠ שביר</Badge>}
+                          {box.scanned && <Badge variant="outline" className="text-xs border-green-500/40 text-green-500">✓ נפתח</Badge>}
                         </div>
                         {box.contents && <p className="text-xs text-muted-foreground mt-0.5 truncate">{box.contents}</p>}
                       </div>
@@ -541,7 +920,7 @@ const Relocation = () => {
             </div>
 
             {/* Add box */}
-            <Card className="p-3 mt-3 border-border/60 border-dashed">
+            <Card className="p-3 border-border/60 border-dashed">
               <p className="text-xs text-muted-foreground font-semibold mb-2">+ הוסף קופסה</p>
               <div className="flex gap-2 flex-wrap">
                 <Input value={newBoxRoom} onChange={(e) => setNewBoxRoom(e.target.value)} placeholder="חדר (ל דוגמה: מטבח)" className="flex-1 min-w-[120px] h-8 text-sm" />
@@ -555,11 +934,21 @@ const Relocation = () => {
                 </Button>
               </div>
             </Card>
-          </div>
+          </motion.div>
+        )}
 
-          {/* ─── Critical Infrastructure ─── */}
-          <div>
-            <h2 className="text-base font-display font-bold mb-3 flex items-center gap-2">
+        {/* ══════════════════════════════════════════ */}
+        {/* ─── PROVIDERS VIEW ─── */}
+        {/* ══════════════════════════════════════════ */}
+        {activeView === "providers" && (
+          <motion.div
+            key="providers"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="space-y-4"
+          >
+            <h2 className="text-base font-display font-bold flex items-center gap-2">
               <Building2 className="h-4 w-4 text-primary" />
               ספקי שירות קריטיים
             </h2>
@@ -578,7 +967,7 @@ const Relocation = () => {
                           <span className="text-sm font-semibold">{meta.label}</span>
                           <button
                             onClick={() => cycleProviderStatus(p.id)}
-                            className={`ms-auto text-xs px-2 py-0.5 rounded-full ${STATUS_META[p.status].color}`}
+                            className={`ms-auto text-xs px-2 py-0.5 rounded-full cursor-pointer ${STATUS_META[p.status].color}`}
                           >
                             {STATUS_META[p.status].label}
                           </button>
@@ -629,116 +1018,88 @@ const Relocation = () => {
                 })}
               </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        )}
 
-        {/* ─── Survival Kit Sidebar ─── */}
-        <div className="space-y-4">
-          <div className="lg:sticky lg:top-4 space-y-4">
-            <Card className="p-4 border-primary/40 bg-primary/5">
-              <h2 className="text-sm font-display font-bold mb-3 flex items-center gap-2 text-primary">
-                <BookMarked className="h-4 w-4" />
-                ערכת ישרדות — 48 שעות ראשונות
+        {/* ══════════════════════════════════════════ */}
+        {/* ─── POST-MOVE AUDIT VIEW ─── */}
+        {/* ══════════════════════════════════════════ */}
+        {activeView === "audit" && (
+          <motion.div
+            key="audit"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-display font-bold flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-primary" />
+                Post‑Move Audit — System Checks
               </h2>
-              <p className="text-xs text-muted-foreground mb-3">שמרו קופסה זו בהישג יד ביום המעבר</p>
-              <div className="space-y-1.5">
-                <AnimatePresence>
-                  {survivalKit.map((item, i) => (
-                    <motion.div
-                      key={item + i}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ delay: i * 0.03 }}
-                      className="flex items-center gap-2 group"
+              <span className="text-sm font-bold text-primary">{auditDone}/{audit.length}</span>
+            </div>
+
+            <div className="h-2 bg-muted/60 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full rounded-full bg-gradient-to-r from-violet-500 to-green-500"
+                animate={{ width: audit.length > 0 ? `${(auditDone / audit.length) * 100}%` : "0%" }}
+                transition={{ duration: 0.7 }}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <AnimatePresence>
+                {audit.map((item, i) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.04 }}
+                  >
+                    <Card
+                      className={`p-3 border-border/60 flex items-center gap-3 cursor-pointer hover:bg-muted/30 transition-colors group ${item.done ? "opacity-60" : ""}`}
+                      onClick={() => setAudit(prev => prev.map(a => a.id === item.id ? { ...a, done: !a.done } : a))}
                     >
-                      <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
-                      <span className="text-xs flex-1">{item}</span>
-                      <button
-                        onClick={() => setSurvivalKit((prev) => prev.filter((_, idx) => idx !== i))}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 className="h-3 w-3 text-destructive" />
-                      </button>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
-              <div className="flex gap-2 mt-3">
-                <Input
-                  value={newKitItem}
-                  onChange={(e) => setNewKitItem(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addKitItem()}
-                  placeholder="פריט חדש..."
-                  className="h-7 text-xs flex-1"
-                />
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={addKitItem}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </Card>
+                      {item.done ? (
+                        <CheckCircle2 className="h-5 w-5 text-score-high shrink-0" />
+                      ) : (
+                        <Circle className="h-5 w-5 text-muted-foreground/40 shrink-0" />
+                      )}
+                      <span className={`text-sm flex-1 ${item.done ? "line-through text-muted-foreground" : ""}`}>
+                        {item.title}
+                      </span>
+                      {item.done && (
+                        <Badge variant="outline" className="text-xs border-green-500/40 text-green-500 shrink-0">✓ עודכן</Badge>
+                      )}
+                    </Card>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
 
-            {/* Stats mini panel */}
-            <Card className="p-4 border-border/60 space-y-3">
-              <h3 className="text-sm font-display font-bold flex items-center gap-2">
-                <Activity className="h-4 w-4 text-primary" />
-                סטטוס מבצע
-              </h3>
-              {[
-                { label: "משימות P0 שהושלמו", value: tasks.filter((t) => t.priority === "P0" && t.status === "completed").length, total: tasks.filter((t) => t.priority === "P0").length, color: "bg-red-500" },
-                { label: "קופסאות ארוזות", value: totalBoxes, total: totalBoxes || 1, color: "bg-blue-500" },
-                { label: "ספקים מאושרים", value: providers.filter((p) => p.status === "confirmed").length, total: providers.length || 1, color: "bg-green-500" },
-              ].map((stat) => (
-                <div key={stat.label} className="space-y-1">
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{stat.label}</span>
-                    <span className="font-bold text-foreground">{stat.value}/{stat.total}</span>
-                  </div>
-                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                    <motion.div
-                      className={`h-full rounded-full ${stat.color}`}
-                      animate={{ width: stat.total > 0 ? `${(stat.value / stat.total) * 100}%` : "0%" }}
-                      transition={{ duration: 0.7 }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </Card>
-
-            {/* Alert for overdue P0 */}
-            {/* Export button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => exportTasksCsv(tasks, `rentelx-relocation-tasks-${new Date().toISOString().slice(0, 10)}.csv`)}
-              className="w-full gap-1.5"
-            >
-              <FileDown className="h-3.5 w-3.5" />
-              {t("common.export")} CSV
-            </Button>
-
-            {tasks.some((t) => t.priority === "P0" && t.status === "pending" && t.week === "moving_day") && (
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-                <Card className="p-3 border-destructive/40 bg-destructive/5">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
-                    <p className="text-xs text-destructive font-medium">משימות P0 ביום המעבר ממתינות</p>
-                  </div>
-                </Card>
+            {auditDone === audit.length && audit.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center py-6 space-y-2"
+              >
+                <div className="text-4xl">🎉</div>
+                <p className="font-display font-bold text-lg text-score-high">כל העדכונים הושלמו!</p>
+                <p className="text-sm text-muted-foreground">המעבר הושלם בהצלחה. ברוכים הבאים לבית החדש!</p>
               </motion.div>
             )}
-          </div>
-        </div>
-      </div>
+          </motion.div>
+        )}
+
+      </AnimatePresence>
 
       {/* AI Assistant for Relocation */}
       <AiSectionHelper
-        context={`Moving center: ${completedTasks}/${totalTasks} tasks completed (${readiness}% readiness), ${totalBoxes} boxes packed, ${providers.length} providers. Move date: ${moveDate || "not set"}.`}
+        context={`Moving center: ${completedTasks}/${totalTasks} tasks completed (${readiness}% readiness), ${totalBoxes} boxes, ${providers.length} providers, ${auditDone}/${audit.length} post-audit done. Move date: ${moveDate || "not set"}.`}
         section="Relocation"
         suggestions={language === "he"
           ? ["מה עוד שכחתי?", "טיפים ליום המעבר", "איך לחסוך בהובלה?", "רשימת בדיקה אחרונה"]
-          : language === "es"
-          ? ["¿Qué me falta?", "Tips para el día de mudanza", "¿Cómo ahorrar?", "Lista de verificación final"]
           : ["What am I missing?", "Moving day tips", "How to save on movers?", "Final checklist"]
         }
       />
