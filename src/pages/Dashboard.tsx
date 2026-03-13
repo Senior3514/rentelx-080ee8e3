@@ -15,6 +15,7 @@ import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
 import { NeighborhoodInsights } from "@/components/dashboard/NeighborhoodInsights";
 import { RemindersWidget } from "@/components/dashboard/RemindersWidget";
+import { AiSectionHelper } from "@/components/ui/ai-section-helper";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
 const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
@@ -292,6 +293,16 @@ const Dashboard = () => {
 
       {/* Neighborhood Market Intelligence */}
       <NeighborhoodInsights />
+
+      {/* AI Dashboard Assistant */}
+      <AiSectionHelper
+        context={`Dashboard overview: ${totalListings} total listings, average score ${avgScore}, ${pipelineCount} in pipeline, ${profileCount} active profiles. Recent listings: ${recentListings.map(l => `${l.address || l.city} (₪${l.price?.toLocaleString()})`).join(", ")}`}
+        section="Dashboard"
+        suggestions={language === "he"
+          ? ["תן סיכום מצב החיפוש", "מה הצעד הבא שלי?", "איפה כדאי לחפש?", "תן טיפים לשיפור"]
+          : ["Summarize my search status", "What's my next step?", "Where should I look?", "Tips to improve"]
+        }
+      />
 
       <AddListingModal open={showAdd} onOpenChange={setShowAdd} />
     </div>
