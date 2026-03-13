@@ -62,33 +62,49 @@ function saveState<T>(key: string, val: T) {
 
 /* ─── Default data (Hebrew) ─── */
 const DEFAULT_TASKS: Task[] = [
-  { id: "t1",  week: "4_weeks",    title: "הזמן חברת הובלה",                  priority: "P0", status: "pending" },
-  { id: "t2",  week: "4_weeks",    title: "הודע לבעל הדירה ותאם עזיבה",        priority: "P0", status: "pending" },
-  { id: "t3",  week: "4_weeks",    title: "הזמן חומרי אריזה (קרטונים, סרט)",   priority: "P1", status: "pending" },
-  { id: "t4",  week: "4_weeks",    title: "ערוך רשימת פריטים לתרומה/מכירה",    priority: "P2", status: "pending" },
-  { id: "t5",  week: "2_weeks",    title: "עדכן כתובת בבנק וביטוח",            priority: "P0", status: "pending" },
-  { id: "t6",  week: "2_weeks",    title: "ארוז פריטים שאינם בשימוש יומי",     priority: "P0", status: "pending" },
-  { id: "t7",  week: "2_weeks",    title: "הזמן אינטרנט לדירה החדשה",          priority: "P1", status: "pending" },
-  { id: "t8",  week: "2_weeks",    title: "ארוז ספרים, תמונות, עיצוב",         priority: "P1", status: "pending" },
-  { id: "t9",  week: "2_weeks",    title: "עדכן כתובת — דואר ישראל",           priority: "P2", status: "pending" },
-  { id: "t10", week: "moving_day", title: "בדוק את הדירה הישנה לפני עזיבה",    priority: "P0", status: "pending" },
-  { id: "t11", week: "moving_day", title: "צלם תיעוד מצב הדירה הישנה",         priority: "P0", status: "pending" },
-  { id: "t12", week: "moving_day", title: "שמור ערכת הישרדות בהישג יד",         priority: "P0", status: "pending" },
-  { id: "t13", week: "moving_day", title: "מסור מפתחות לבעל הדירה הישנה",      priority: "P1", status: "pending" },
-  { id: "t14", week: "after_move", title: "חבר חשמל, מים, גז בדירה החדשה",     priority: "P0", status: "pending" },
-  { id: "t15", week: "after_move", title: "עדכן כתובת — מס הכנסה / ביטוח לאומי", priority: "P1", status: "pending" },
-  { id: "t16", week: "after_move", title: "פרוק קופסאות לפי חדרים",            priority: "P2", status: "pending" },
+  // ─── 4 Weeks Before ───
+  { id: "t1",  week: "4_weeks",    title: "הזמן חברת הובלה ואשר תאריך",         priority: "P0", status: "pending" },
+  { id: "t2",  week: "4_weeks",    title: "הודע לבעל הדירה ותאם עזיבה רשמית",   priority: "P0", status: "pending" },
+  { id: "t3",  week: "4_weeks",    title: "הזמן חומרי אריזה (קרטונים, סרט, ניילון מבעבע)", priority: "P1", status: "pending" },
+  { id: "t4",  week: "4_weeks",    title: "ערוך רשימת פריטים לתרומה/מכירה",     priority: "P2", status: "pending" },
+  { id: "t5",  week: "4_weeks",    title: "צלם תיעוד מצב הדירה הישנה (לפני)",   priority: "P0", status: "pending" },
+  { id: "t6",  week: "4_weeks",    title: "עדכן כתובת בבנק וכרטיסי אשראי",      priority: "P0", status: "pending" },
+  { id: "t7",  week: "4_weeks",    title: "עדכן כתובת בחברות ביטוח",            priority: "P1", status: "pending" },
+  // ─── 2 Weeks Before ───
+  { id: "t8",  week: "2_weeks",    title: "הזמן אינטרנט לדירה החדשה",           priority: "P0", status: "pending" },
+  { id: "t9",  week: "2_weeks",    title: "ארוז פריטים שאינם בשימוש יומי",      priority: "P0", status: "pending" },
+  { id: "t10", week: "2_weeks",    title: "ארוז ספרים, תמונות, עיצוב ודקורציה", priority: "P1", status: "pending" },
+  { id: "t11", week: "2_weeks",    title: "עדכן כתובת — דואר ישראל / הפניית דואר", priority: "P1", status: "pending" },
+  { id: "t12", week: "2_weeks",    title: "עדכן כתובת — ביטוח לאומי / קופות חולים", priority: "P1", status: "pending" },
+  { id: "t13", week: "2_weeks",    title: "עדכן שירותי סטרימינג ומשלוחים",      priority: "P2", status: "pending" },
+  { id: "t14", week: "2_weeks",    title: "הודע למעסיק/בי\"ס/גנים על שינוי כתובת", priority: "P2", status: "pending" },
+  // ─── Moving Day ───
+  { id: "t15", week: "moving_day", title: "בדוק את הדירה הישנה לפני עזיבה סופית", priority: "P0", status: "pending" },
+  { id: "t16", week: "moving_day", title: "שמור ערכת הישרדות 48 שעות בהישג יד",  priority: "P0", status: "pending" },
+  { id: "t17", week: "moving_day", title: "מסור מפתחות לבעל הדירה הישנה",        priority: "P0", status: "pending" },
+  { id: "t18", week: "moving_day", title: "חפש בטבלת ארגזים לפי מילת מפתח",      priority: "P1", status: "pending" },
+  { id: "t19", week: "moving_day", title: "צלם תיעוד מצב הדירה החדשה (בכניסה)",  priority: "P0", status: "pending" },
+  // ─── After Move — Post-Move Audit ───
+  { id: "t20", week: "after_move", title: "חבר חשמל, מים, גז בדירה החדשה",      priority: "P0", status: "pending" },
+  { id: "t21", week: "after_move", title: "בדוק Wi-Fi ואינטרנט — חבר נתב",       priority: "P0", status: "pending" },
+  { id: "t22", week: "after_move", title: "פרוק ערכת הישרדות וארגז ראשוני",       priority: "P0", status: "pending" },
+  { id: "t23", week: "after_move", title: "פרוק קופסאות לפי חדרים (חפש לפי מספר)", priority: "P1", status: "pending" },
+  { id: "t24", week: "after_move", title: "עדכן כתובת — משרד הפנים / רשות האוכלוסין", priority: "P1", status: "pending" },
+  { id: "t25", week: "after_move", title: "עדכן מנויים: חדר כושר, חוגים, תוכנות",  priority: "P2", status: "pending" },
+  { id: "t26", week: "after_move", title: "בצע System Check: כל החשבונות/מנויים עודכנו?", priority: "P1", status: "pending" },
 ];
 
 const SURVIVAL_KIT_DEFAULT = [
-  "מטען טלפון + פנס",
-  "מגבות + סבון יד",
-  "שמיכה + כרית",
-  "כלי אוכל בסיסיים",
-  "תרופות + עזרה ראשונה",
-  "מחשב נייד + כבל HDMI",
-  "מסמכים חשובים (תעודת זהות, חוזה)",
-  "מזון וחטיפים ליום הראשון",
+  "מטענים: לפטופים, טלפונים, שעונים, סוללות + מפצל/כבל מאריך",
+  "Wi-Fi: נתב, ספק כוח, כבלי Ethernet, פרטי התחברות, Hotspot",
+  "מסמכים: חוזה/מפתח, ת\"ז/דרכונים, ביטוח, מסמכי ילדים",
+  "כלי עבודה: מברג, סכין יפני, סרט הדבקה, טושים, אזיקונים",
+  "מטבח מהיר: קומקום, כוסות, צלחות, סכו\"ם, מגבות נייר",
+  "לילה ראשון: מצעים, שמיכות, פיג'מות, מטעני לילה, אטמי אוזניים",
+  "היגיינה: מברשות שיניים, סבון, שמפו, נייר טואלט, מגבונים",
+  "ילדים: בקבוק/מוצץ/צעצוע מעבר, בגדי החלפה, חטיפים",
+  "תרופות: קבועות + משככי כאבים + ערכת עזרה ראשונה",
+  "ניקיון מהיר: ספריי, ספוג, שקיות זבל",
 ];
 
 const WEEK_META: Record<Week, { label: string; color: string; icon: React.ElementType }> = {
@@ -659,7 +675,7 @@ const Relocation = () => {
                 <div key={stat.label} className="space-y-1">
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>{stat.label}</span>
-                    <span className="font-bold text-foreground">{stat.value}/{stat.total === 1 && stat.total === totalBoxes && totalBoxes === 0 ? 0 : stat.total}</span>
+                    <span className="font-bold text-foreground">{stat.value}/{stat.total}</span>
                   </div>
                   <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                     <motion.div

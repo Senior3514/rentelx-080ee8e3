@@ -17,6 +17,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/compare": "nav.compare",
   "/relocation": "nav.relocation",
   "/profiles": "nav.profiles",
+  "/knowledge-base": "nav.knowledgeBase",
   "/settings": "nav.settings",
 };
 

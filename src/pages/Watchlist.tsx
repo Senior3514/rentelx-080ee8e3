@@ -38,6 +38,7 @@ const Watchlist = () => {
   const [results, setResults] = useState<ScannedListing[]>([]);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isDemo, setIsDemo] = useState(false);
   const [saved, setSaved] = useState<Set<string>>(new Set());
 
   // Load active search profile for scoring
@@ -76,6 +77,7 @@ const Watchlist = () => {
         setError(result.error);
         toast.error(language === "he" ? "שגיאה בסריקה" : "Scan error");
       } else {
+        setIsDemo(result.isDemo ?? false);
         // Score & sort
         const scored = result.listings
           .map((l) => ({
@@ -230,6 +232,22 @@ const Watchlist = () => {
           </div>
         )}
       </Card>
+
+      {/* Demo data banner */}
+      {isDemo && results.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs"
+        >
+          <Sparkles className="h-3.5 w-3.5 shrink-0" />
+          <span className="font-medium">
+            {language === "he"
+              ? "יד2 אינו זמין כרגע — מוצגות דירות לדוגמה. הנתונים האמיתיים יעודכנו אוטומטית."
+              : "Yad2 is temporarily unavailable — showing demo listings. Real data will update automatically."}
+          </span>
+        </motion.div>
+      )}
 
       {/* Live Status Bar */}
       <motion.div

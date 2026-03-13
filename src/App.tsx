@@ -22,6 +22,7 @@ import Settings from "./pages/Settings";
 import Watchlist from "./pages/Watchlist";
 import Compare from "./pages/Compare";
 import Relocation from "./pages/Relocation";
+import KnowledgeBase from "./pages/KnowledgeBase";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,7 @@ const App = () => (
                   <Route path="/watchlist" element={<Watchlist />} />
                   <Route path="/compare" element={<Compare />} />
                   <Route path="/relocation" element={<Relocation />} />
+                  <Route path="/knowledge-base" element={<KnowledgeBase />} />
                   <Route path="/profiles" element={<Profiles />} />
                   <Route path="/settings" element={<Settings />} />
                 </Route>

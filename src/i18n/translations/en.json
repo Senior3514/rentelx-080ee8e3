@@ -64,6 +64,7 @@
     "compare": "Compare",
     "relocation": "Relocation",
     "profiles": "Profiles",
+    "knowledgeBase": "Knowledge Base",
     "settings": "Settings",
     "logout": "Log Out"
   },
@@ -268,6 +269,24 @@
     "title": "404",
     "message": "Oops! Page not found",
     "backHome": "Return to Home"
+  },
+  "knowledgeBase": {
+    "title": "Knowledge Base",
+    "subtitle": "Your team's documentation hub, powered by Notion",
+    "connectNotion": "Connect to Notion",
+    "connectInstructions": "Connect your Notion workspace to use it as your team's knowledge base. Follow these steps:",
+    "step1": "Create a Notion integration at notion.so/my-integrations and copy the API key",
+    "step2": "Share your Notion database with the integration",
+    "step3": "Paste the database ID below (the 32-char ID from the database URL)",
+    "dbIdPlaceholder": "Paste Notion database ID...",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "searchPlaceholder": "Search knowledge base...",
+    "lastEdited": "Last edited",
+    "empty": "No articles found",
+    "emptyHint": "Add pages to your Notion database to see them here",
+    "emptyPage": "This page has no content yet",
+    "error": "Failed to load knowledge base"
   },
   "common": {
     "rooms": "rooms",

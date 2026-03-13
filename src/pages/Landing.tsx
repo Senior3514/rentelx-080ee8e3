@@ -59,13 +59,13 @@ function WorkflowNode({
 }
 
 /* ─── Flowing Data Dot ─── */
-function FlowDot({ delay = 0, color = "hsl(var(--primary))" }: { delay?: number; color?: string }) {
+function FlowDot({ delay = 0, color = "hsl(var(--primary))", rtl = false }: { delay?: number; color?: string; rtl?: boolean }) {
   return (
     <motion.div
       className="absolute w-2 h-2 rounded-full top-1/2 -translate-y-1/2"
       style={{ background: color }}
-      initial={{ left: "0%", opacity: 0 }}
-      animate={{ left: "100%", opacity: [0, 1, 1, 0] }}
+      initial={{ [rtl ? "right" : "left"]: "0%", opacity: 0 }}
+      animate={{ [rtl ? "right" : "left"]: "100%", opacity: [0, 1, 1, 0] }}
       transition={{ duration: 2, delay, repeat: Infinity, ease: "easeInOut" }}
     />
   );

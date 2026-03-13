@@ -1,9 +1,9 @@
 import {
   LayoutDashboard, Inbox, Columns3, UserSearch, Settings,
-  LogOut, Sparkles, BookHeart, Scale, Truck, ChevronLeft, ChevronRight
+  LogOut, Sparkles, BookHeart, Scale, Truck, ChevronLeft, ChevronRight, BookOpen
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -29,6 +29,7 @@ const navItems = [
   { titleKey: "nav.compare", url: "/compare", icon: Scale, color: "text-teal-500" },
   { titleKey: "nav.relocation", url: "/relocation", icon: Truck, color: "text-orange-500" },
   { titleKey: "nav.profiles", url: "/profiles", icon: UserSearch, color: "text-indigo-500" },
+  { titleKey: "nav.knowledgeBase", url: "/knowledge-base", icon: BookOpen, color: "text-amber-500" },
   { titleKey: "nav.settings", url: "/settings", icon: Settings, color: "text-muted-foreground" },
 ];
 
