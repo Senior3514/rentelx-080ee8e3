@@ -10,7 +10,7 @@ import {
   Bell, BellOff, RefreshCw, MapPin, BedDouble, Maximize,
   Clock, ExternalLink, Sparkles, BookHeart, Zap, PlusCircle,
   Check, Radio, Filter, WifiOff, RotateCcw, TrendingUp,
-  Building2, Star, ChevronRight, Eye
+  Building2, Star, ChevronRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -95,21 +95,15 @@ const Watchlist = () => {
         maxRooms: activeProfile?.max_rooms ?? undefined,
       });
 
-      if (result.error && result.listings.length === 0) {
-        setError(result.error);
-        setUnavailable(result.unavailable ?? false);
-        toast.error(language === "he" ? "שגיאה בסריקה" : "Scan error");
-        return;
-      }
-
+      // Unavailable = Yad2 blocked or returned nothing
       if (result.unavailable || result.listings.length === 0) {
         setUnavailable(true);
         setResults([]);
         setFetchedAt(result.fetchedAt);
         toast.warning(
           language === "he"
-            ? "יד2 לא החזיר תוצאות כרגע — נסו שוב בעוד מספר דקות"
-            : "Yad2 returned no results right now — try again in a few minutes"
+            ? "יד2 חוסם בקשות אוטומטיות כרגע — נסו שוב בעוד מספר דקות"
+            : "Yad2 is temporarily blocking automated requests — try again shortly"
         );
         return;
       }
@@ -565,9 +559,19 @@ const Watchlist = () => {
                                 ? <Check className="h-3.5 w-3.5" />
                                 : <PlusCircle className="h-3.5 w-3.5" />}
                             </motion.button>
-                            <div className="w-7 h-7 rounded-lg bg-muted/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-primary/10 hover:text-primary">
-                              <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-                            </div>
+                            {listing.source_url && (
+                              <motion.a
+                                href={listing.source_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title={language === "he" ? "פתח ביד2" : "Open on Yad2"}
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                className="w-7 h-7 rounded-lg bg-muted/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/10 hover:text-primary"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                              </motion.a>
+                            )}
                           </div>
                         </div>
 

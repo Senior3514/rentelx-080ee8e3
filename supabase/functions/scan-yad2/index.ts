@@ -10,19 +10,20 @@ function getCorsHeaders(req: Request) {
       : ALLOWED_ORIGINS[0] || "*";
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   };
 }
 
+/* ── City codes ── */
 const CITY_CODES: Record<string, { id: number; label: string; topArea: number; area: number }> = {
   "tel-aviv":  { id: 5000, label: "תל אביב",  topArea: 2, area: 1 },
   "givatayim": { id: 7900, label: "גבעתיים",   topArea: 2, area: 2 },
   "ramat-gan": { id: 8300, label: "רמת גן",    topArea: 2, area: 2 },
 };
 
+/* ── Yad2 item shape (all fields optional — API shape varies) ── */
 interface Yad2Item {
-  id?: string; token?: string;
+  id?: string; token?: string; link_token?: string;
   address?: { street?: { text?: string }; house?: { text?: string }; neighborhood?: { text?: string } };
   price?: number; rooms?: number | string; square_meters?: number | string;
   floor?: number | string; total_floors?: number | string; city_text?: string;
@@ -32,14 +33,21 @@ interface Yad2Item {
   cover_image?: string; images?: Array<{ src?: string }>;
   contact_name?: string; contact_phone?: string;
   updated_at?: string; created_at?: string;
-  link_token?: string;
+  // Mobile API fields
+  row_4?: string; row_1?: string; row_2?: string; row_3?: string;
+  main_image?: string;
 }
 
 function normalizeItem(item: Yad2Item, cityLabel: string) {
-  const street = item.address?.street?.text ?? "";
-  const houseNum = item.address?.house?.text ?? "";
+  const street    = item.address?.street?.text ?? "";
+  const houseNum  = item.address?.house?.text  ?? "";
   const neighborhood = item.address?.neighborhood?.text ?? null;
-  const address = [street, houseNum].filter(Boolean).join(" ") || null;
+  const address   = [street, houseNum].filter(Boolean).join(" ") || null;
+
+  // Build Yad2 direct link — link_token → token → id → null
+  const tokenId = item.link_token ?? item.token ?? item.id ?? null;
+  const source_url = tokenId ? `https://www.yad2.co.il/item/${tokenId}` : null;
+
   const amenities: string[] = [];
   if (item.parking)         amenities.push("חניה");
   if (item.elevator)        amenities.push("מעלית");
@@ -48,9 +56,11 @@ function normalizeItem(item: Yad2Item, cityLabel: string) {
   if (item.furniture)       amenities.push("מרוהטת");
   if (item.safe_room)       amenities.push('ממ"ד');
   if (item.storage)         amenities.push("מחסן");
+
   return {
-    source_id: String(item.id ?? item.token ?? item.link_token ?? Math.random()),
+    source_id: String(tokenId ?? Math.random()),
     source: "yad2" as const,
+    source_url,
     address, neighborhood,
     city: item.city_text ?? cityLabel,
     price: typeof item.price === "number" ? item.price : null,
@@ -65,19 +75,38 @@ function normalizeItem(item: Yad2Item, cityLabel: string) {
       airConditioning: !!item.air_conditioner, furnished: !!item.furniture,
       safeRoom: !!item.safe_room, storage: !!item.storage,
     },
-    cover_image: item.cover_image ?? item.images?.[0]?.src ?? null,
+    cover_image: item.cover_image ?? item.main_image ?? item.images?.[0]?.src ?? null,
     contact_name: item.contact_name ?? null,
     contact_phone: item.contact_phone ?? null,
     listed_at: item.updated_at ?? item.created_at ?? new Date().toISOString(),
   };
 }
 
-const BROWSER_HEADERS = {
+/* ── Extract feed items from any known Yad2 response shape ── */
+function extractItems(json: unknown): Yad2Item[] {
+  if (!json || typeof json !== "object") return [];
+  const j = json as Record<string, unknown>;
+  const candidates = [
+    (j as any)?.data?.feed?.feed_items,
+    (j as any)?.data?.listings,
+    (j as any)?.feed_items,
+    (j as any)?.data?.feed_items,
+    (j as any)?.data?.items,
+    (j as any)?.listings,
+    (j as any)?.items,
+    (j as any)?.data,
+  ];
+  for (const c of candidates) {
+    if (Array.isArray(c) && c.length > 0) return c as Yad2Item[];
+  }
+  return [];
+}
+
+/* ── Browser headers (desktop Chrome 122) ── */
+const DESKTOP_HEADERS = {
   "Accept": "application/json, text/plain, */*",
   "Accept-Language": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7",
-  "Accept-Encoding": "gzip, deflate, br",
   "Cache-Control": "no-cache",
-  "Pragma": "no-cache",
   "Origin": "https://www.yad2.co.il",
   "Referer": "https://www.yad2.co.il/realestate/rent",
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
@@ -87,85 +116,77 @@ const BROWSER_HEADERS = {
   "sec-fetch-dest": "empty",
   "sec-fetch-mode": "cors",
   "sec-fetch-site": "same-site",
-  "DNT": "1",
 };
 
-/** Build all candidate Yad2 API URLs to try for a city */
-function buildUrls(city: typeof CITY_CODES[string], qs: URLSearchParams): string[] {
-  const base = qs.toString();
-  return [
-    // Feed search legacy (main endpoint)
-    `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${city.id}&${base}`,
-    // Feed search with topArea + area
-    `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?topArea=${city.topArea}&area=${city.area}&city=${city.id}&${base}`,
-    // Direct realestate endpoint
-    `https://gw.yad2.co.il/realestate/rent?city=${city.id}&${base}`,
-    // Pre-load feed index
-    `https://www.yad2.co.il/api/pre-load/getFeedIndex/realestate/rent?city=${city.id}&${base}`,
-  ];
-}
+/* ── Mobile app headers ── */
+const MOBILE_HEADERS = {
+  "Accept": "application/json",
+  "Accept-Language": "he-IL,he;q=0.9",
+  "User-Agent": "Yad2/9.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Mobile/21A329",
+  "x-app-version": "9.0",
+  "x-platform": "ios",
+};
 
-function extractItems(json: unknown): Yad2Item[] {
-  if (!json || typeof json !== "object") return [];
-  const j = json as Record<string, unknown>;
-  // Try all known response shapes
-  const candidates = [
-    (j as any)?.data?.feed?.feed_items,
-    (j as any)?.data?.listings,
-    (j as any)?.feed_items,
-    (j as any)?.data?.feed_items,
-    (j as any)?.data?.items,
-    (j as any)?.listings,
-    (j as any)?.items,
-  ];
-  for (const c of candidates) {
-    if (Array.isArray(c) && c.length > 0) return c as Yad2Item[];
+async function tryFetch(url: string, headers: Record<string, string>, timeoutMs: number): Promise<Yad2Item[]> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { headers, signal: controller.signal });
+    clearTimeout(timer);
+    if (!res.ok) {
+      console.warn(`[yad2] ${res.status} from ${url}`);
+      return [];
+    }
+    const text = await res.text();
+    let json: unknown;
+    try { json = JSON.parse(text); } catch { return []; }
+    return extractItems(json);
+  } catch (e) {
+    clearTimeout(timer);
+    const name = (e as Error)?.name;
+    if (name === "AbortError") console.warn(`[yad2] timeout: ${url}`);
+    else console.warn(`[yad2] error: ${url}`, (e as Error)?.message);
+    return [];
   }
-  return [];
 }
 
 async function fetchCityListings(
   city: typeof CITY_CODES[string],
   params: Record<string, string>,
-  timeoutMs: number,
 ): Promise<ReturnType<typeof normalizeItem>[]> {
-  const qs = new URLSearchParams({ ...params, compact: "1", forceLdLoad: "true" });
-  const urls = buildUrls(city, qs);
+  const qs = new URLSearchParams({ ...params, compact: "1", forceLdLoad: "true" }).toString();
+  const { id, topArea, area } = city;
 
-  for (const url of urls) {
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-      const res = await fetch(url, { headers: BROWSER_HEADERS, signal: controller.signal });
-      clearTimeout(timer);
+  // Try these URLs in sequence — stop at first success
+  const attempts: Array<{ url: string; headers: Record<string, string> }> = [
+    // 1. Feed search legacy with city ID (main desktop API)
+    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
+    // 2. Same with topArea + area for better routing
+    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?topArea=${topArea}&area=${area}&city=${id}&${qs}`, headers: DESKTOP_HEADERS },
+    // 3. Direct realestate endpoint (older format)
+    { url: `https://gw.yad2.co.il/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
+    // 4. Pre-load SSR endpoint
+    { url: `https://www.yad2.co.il/api/pre-load/getFeedIndex/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
+    // 5. Mobile API (Yad2 mobile app endpoint — different IP limits)
+    { url: `https://mobile-api.yad2.co.il/api/1/feed/realestate/rent?city=${id}&${qs}`, headers: MOBILE_HEADERS },
+    // 6. Mobile API v2
+    { url: `https://mobile-api.yad2.co.il/api/2/feed/realestate/rent?city=${id}&${qs}`, headers: MOBILE_HEADERS },
+  ];
 
-      if (!res.ok) {
-        console.warn(`Yad2 ${res.status} for ${url}`);
-        continue;
-      }
-      const text = await res.text();
-      let json: unknown;
-      try { json = JSON.parse(text); } catch { continue; }
-
-      const items = extractItems(json);
-      if (items.length === 0) continue;
-
+  for (const { url, headers } of attempts) {
+    const items = await tryFetch(url, headers, 14000);
+    if (items.length > 0) {
       const valid = items
         .filter((item) => item.price && item.price > 0)
         .map((item) => normalizeItem(item, city.label));
-
       if (valid.length > 0) {
-        console.log(`Yad2 success: ${valid.length} listings from ${url}`);
+        console.log(`[yad2] ✓ ${valid.length} listings from ${url}`);
         return valid;
-      }
-    } catch (e) {
-      if ((e as Error)?.name === "AbortError") {
-        console.warn(`Yad2 timeout: ${url}`);
-      } else {
-        console.warn(`Yad2 fetch error for ${url}:`, e);
       }
     }
   }
+
+  console.warn(`[yad2] ✗ No listings for city ${city.label} (${city.id}) — all endpoints blocked`);
   return [];
 }
 
@@ -179,24 +200,24 @@ serve(async (req) => {
     const raw = body as Record<string, unknown>;
     const VALID_CITIES = Object.keys(CITY_CODES);
 
-    const cities = (Array.isArray(raw.cities) ? raw.cities : ["tel-aviv", "givatayim", "ramat-gan"])
+    const cities = (Array.isArray(raw.cities) ? raw.cities : VALID_CITIES)
       .filter((c: unknown): c is string => typeof c === "string" && VALID_CITIES.includes(c))
       .slice(0, 5);
 
-    const minPrice = typeof raw.minPrice === "number" && raw.minPrice >= 0 && raw.minPrice <= 100000 ? raw.minPrice : undefined;
-    const maxPrice = typeof raw.maxPrice === "number" && raw.maxPrice >= 0 && raw.maxPrice <= 100000 ? raw.maxPrice : undefined;
-    const minRooms = typeof raw.minRooms === "number" && raw.minRooms >= 0.5 && raw.minRooms <= 20 ? raw.minRooms : undefined;
-    const maxRooms = typeof raw.maxRooms === "number" && raw.maxRooms >= 0.5 && raw.maxRooms <= 20 ? raw.maxRooms : undefined;
+    const minPrice = typeof raw.minPrice === "number" && raw.minPrice >= 0 ? raw.minPrice : undefined;
+    const maxPrice = typeof raw.maxPrice === "number" && raw.maxPrice <= 100000 ? raw.maxPrice : undefined;
+    const minRooms = typeof raw.minRooms === "number" && raw.minRooms >= 0.5 ? raw.minRooms : undefined;
+    const maxRooms = typeof raw.maxRooms === "number" && raw.maxRooms <= 20 ? raw.maxRooms : undefined;
 
     const params: Record<string, string> = {};
     if (minPrice != null || maxPrice != null) params.price = `${minPrice ?? 0}-${maxPrice ?? 99999}`;
     if (minRooms != null || maxRooms != null) params.rooms = `${minRooms ?? 1}-${maxRooms ?? 10}`;
 
-    // Fetch from all requested cities in parallel (15s per city)
+    // Fetch all cities in parallel
     const cityResults = await Promise.allSettled(
       cities
         .filter((c) => CITY_CODES[c])
-        .map((c) => fetchCityListings(CITY_CODES[c], params, 15000))
+        .map((c) => fetchCityListings(CITY_CODES[c], params))
     );
 
     const listings = cityResults
@@ -205,17 +226,22 @@ serve(async (req) => {
 
     const unavailable = listings.length === 0;
 
+    console.log(`[yad2] Returning ${listings.length} listings (unavailable=${unavailable})`);
+
     return new Response(
       JSON.stringify({
         listings,
         fetchedAt: new Date().toISOString(),
         unavailable,
-        ...(unavailable ? { error: "Yad2 API did not return listings. Please try again shortly." } : {}),
+        ...(unavailable ? {
+          error: "Yad2 is temporarily blocking automated requests. Please try again in a few minutes.",
+          errorHe: "יד2 חוסם בקשות אוטומטיות כרגע. נסו שוב בעוד מספר דקות.",
+        } : {}),
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
-    console.error("scan-yad2 error:", err);
+    console.error("[yad2] Fatal error:", err);
     return new Response(
       JSON.stringify({
         listings: [],
