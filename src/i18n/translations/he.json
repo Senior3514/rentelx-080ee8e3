@@ -120,7 +120,10 @@
       "airConditioning": "מיזוג",
       "storage": "מחסן",
       "furnished": "מרוהטת",
-      "accessible": "נגישות"
+      "accessible": "נגישות",
+      "workplace": "כתובת מקום עבודה (אופציונלי)",
+      "workplacePlaceholder": "לדוגמה: רוטשילד 1, תל אביב",
+      "workplaceHint": "נעזור לך להעריך מרחק נסיעה לכל דירה"
     },
     "profileName": "שם הפרופיל",
     "profileNamePlaceholder": "לדוגמה: תל אביב סולו, גוש דן...",
@@ -186,7 +189,9 @@
     "rooms": "חדרים",
     "size": "גודל",
     "noScores": "אין ציונים עדיין",
-    "photos": "תמונות"
+    "photos": "תמונות",
+    "viewOriginal": "צפה במודעה המקורית",
+    "source": "מקור"
   },
   "pipeline": {
     "title": "תהליך",

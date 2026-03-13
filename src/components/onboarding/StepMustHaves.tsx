@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import type { SearchProfileDraft } from "./OnboardingWizard";
 import {
   Car, ArrowUpFromLine, Sun, PawPrint,
-  Wind, Package, Sofa, Accessibility,
+  Wind, Package, Sofa, Accessibility, Briefcase,
 } from "lucide-react";
 
 interface StepMustHavesProps {
@@ -73,6 +73,23 @@ export const StepMustHaves = ({ profile, onChange }: StepMustHavesProps) => {
           onChange={(e) => onChange({ ...profile, name: e.target.value })}
           placeholder={t("onboarding.profileNamePlaceholder")}
         />
+      </div>
+
+      {/* Workplace address (optional) */}
+      <div className="mb-6">
+        <label className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
+          <Briefcase className="h-4 w-4 text-primary" />
+          {t("onboarding.step3.workplace")}
+        </label>
+        <Input
+          value={profile.workplaceAddress}
+          onChange={(e) => onChange({ ...profile, workplaceAddress: e.target.value })}
+          placeholder={t("onboarding.step3.workplacePlaceholder")}
+          maxLength={200}
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          {t("onboarding.step3.workplaceHint")}
+        </p>
       </div>
 
       {/* Amenity grid */}

@@ -51,7 +51,7 @@ export const ListingCard = ({ listing }: ListingCardProps) => {
               )}
             </div>
             {listing.source_url && (
-              <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
             )}
           </div>
 

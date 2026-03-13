@@ -17,7 +17,7 @@ const ListingDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const qc = useQueryClient();
   const [noteText, setNoteText] = useState("");
   const [aiResult, setAiResult] = useState("");
@@ -221,7 +221,10 @@ const ListingDetail = () => {
         {listing.floor != null && (
           <Card className="p-3 text-center">
             <p className="text-xs text-muted-foreground">{t("common.floor")}</p>
-            <p className="font-bold text-lg">{listing.floor}</p>
+            <p className="font-bold text-lg">
+              {listing.floor}
+              {listing.total_floors ? `/${listing.total_floors}` : ""}
+            </p>
           </Card>
         )}
       </div>
@@ -232,9 +235,9 @@ const ListingDetail = () => {
           href={listing.source_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+          className="inline-flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-colors font-medium"
         >
-          <ExternalLink className="h-3.5 w-3.5" /> {t("addListing.pasteUrl")}
+          <ExternalLink className="h-4 w-4" /> {t("listing.viewOriginal")}
         </a>
       )}
 

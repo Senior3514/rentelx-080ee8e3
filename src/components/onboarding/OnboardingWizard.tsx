@@ -17,6 +17,7 @@ export interface SearchProfileDraft {
   maxRooms: number;
   mustHaves: string[];
   niceToHaves: string[];
+  workplaceAddress: string;
 }
 
 const initialProfile: SearchProfileDraft = {
@@ -28,6 +29,7 @@ const initialProfile: SearchProfileDraft = {
   maxRooms: 4,
   mustHaves: [],
   niceToHaves: [],
+  workplaceAddress: "",
 };
 
 export interface OnboardingWizardProps {
