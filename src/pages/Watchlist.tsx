@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Bell, BellOff, RefreshCw, MapPin, BedDouble, Maximize,
-  Clock, ExternalLink, Sparkles, BookHeart, Zap, PlusCircle, Check,
-  Radio, Filter
+  Clock, ExternalLink, Sparkles, BookHeart, Zap, PlusCircle,
+  Check, Radio, Filter, WifiOff, RotateCcw, TrendingUp,
+  Building2, Star, ChevronRight, Eye
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -17,30 +18,51 @@ import { scanYad2, scoreScannedListing, SCAN_KEY, ScannedListing } from "@/lib/s
 import { formatDistanceToNow } from "date-fns";
 import { he } from "date-fns/locale";
 
-const CITIES: Array<{ key: "tel-aviv" | "givatayim" | "ramat-gan"; labelEn: string; labelHe: string }> = [
-  { key: "tel-aviv", labelEn: "Tel Aviv", labelHe: "תל אביב" },
-  { key: "givatayim", labelEn: "Givatayim", labelHe: "גבעתיים" },
-  { key: "ramat-gan", labelEn: "Ramat Gan", labelHe: "רמת גן" },
+const CITIES: Array<{ key: "tel-aviv" | "givatayim" | "ramat-gan"; labelEn: string; labelHe: string; color: string }> = [
+  { key: "tel-aviv",  labelEn: "Tel Aviv",  labelHe: "תל אביב",  color: "blue"   },
+  { key: "givatayim", labelEn: "Givatayim", labelHe: "גבעתיים",  color: "violet" },
+  { key: "ramat-gan", labelEn: "Ramat Gan", labelHe: "רמת גן",   color: "teal"   },
 ];
 
-const POLL_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const CITY_COLOR: Record<string, string> = {
+  blue:   "bg-blue-500/10 border-blue-500/40 text-blue-600 dark:text-blue-400",
+  violet: "bg-violet-500/10 border-violet-500/40 text-violet-600 dark:text-violet-400",
+  teal:   "bg-teal-500/10 border-teal-500/40 text-teal-600 dark:text-teal-400",
+};
+
+const CITY_ACTIVE: Record<string, string> = {
+  blue:   "bg-blue-500 border-blue-500 text-white shadow-blue-500/30",
+  violet: "bg-violet-500 border-violet-500 text-white shadow-violet-500/30",
+  teal:   "bg-teal-500 border-teal-500 text-white shadow-teal-500/30",
+};
+
+const POLL_INTERVAL_MS = 5 * 60 * 1000;
+
+const containerVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.04 } },
+};
+const itemVariants = {
+  hidden: { opacity: 0, y: 18 },
+  show:   { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 26 } },
+};
 
 const Watchlist = () => {
   const { user } = useAuth();
-  const { t, language } = useLanguage();
+  const { t, language, direction } = useLanguage();
   const qc = useQueryClient();
 
   const [selectedCities, setSelectedCities] = useState<Array<"tel-aviv" | "givatayim" | "ramat-gan">>(
     ["tel-aviv", "givatayim", "ramat-gan"]
   );
-  const [autoScan, setAutoScan] = useState(false);
-  const [scanning, setScanning] = useState(false);
-  const [results, setResults] = useState<ScannedListing[]>([]);
+  const [autoScan, setAutoScan]   = useState(false);
+  const [scanning, setScanning]   = useState(false);
+  const [results, setResults]     = useState<ScannedListing[]>([]);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState<Set<string>>(new Set());
+  const [error, setError]         = useState<string | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
+  const [saved, setSaved]         = useState<Set<string>>(new Set());
 
-  // Load active search profile for scoring
   const { data: activeProfile } = useQuery({
     queryKey: ["active_profile", user?.id],
     queryFn: async () => {
@@ -63,6 +85,7 @@ const Watchlist = () => {
     }
     setScanning(true);
     setError(null);
+    setUnavailable(false);
     try {
       const result = await scanYad2({
         cities: selectedCities,
@@ -72,32 +95,42 @@ const Watchlist = () => {
         maxRooms: activeProfile?.max_rooms ?? undefined,
       });
 
-      if (result.error) {
+      if (result.error && result.listings.length === 0) {
         setError(result.error);
+        setUnavailable(result.unavailable ?? false);
         toast.error(language === "he" ? "שגיאה בסריקה" : "Scan error");
-      } else {
-        // Score & sort
-        const scored = result.listings
-          .map((l) => ({
-            ...l,
-            _score: activeProfile ? scoreScannedListing(l, activeProfile) : null,
-          }))
-          .sort((a, b) => {
-            if (a._score !== null && b._score !== null) return b._score - a._score;
-            if (a.price && b.price) return a.price - b.price;
-            return 0;
-          });
-
-        setResults(scored as ScannedListing[]);
-        setFetchedAt(result.fetchedAt);
-        if (user) localStorage.setItem(SCAN_KEY(user.id), result.fetchedAt);
-        toast.success(
-          language === "he"
-            ? `נמצאו ${scored.length} דירות`
-            : `Found ${scored.length} listings`
-        );
-        qc.invalidateQueries({ queryKey: ["listings"] });
+        return;
       }
+
+      if (result.unavailable || result.listings.length === 0) {
+        setUnavailable(true);
+        setResults([]);
+        setFetchedAt(result.fetchedAt);
+        toast.warning(
+          language === "he"
+            ? "יד2 לא החזיר תוצאות כרגע — נסו שוב בעוד מספר דקות"
+            : "Yad2 returned no results right now — try again in a few minutes"
+        );
+        return;
+      }
+
+      const scored = result.listings
+        .map((l) => ({ ...l, _score: activeProfile ? scoreScannedListing(l, activeProfile) : null }))
+        .sort((a, b) => {
+          if (a._score !== null && b._score !== null) return b._score - a._score;
+          if (a.price && b.price) return a.price - b.price;
+          return 0;
+        });
+
+      setResults(scored as ScannedListing[]);
+      setFetchedAt(result.fetchedAt);
+      if (user) localStorage.setItem(SCAN_KEY(user.id), result.fetchedAt);
+      toast.success(
+        language === "he"
+          ? `נמצאו ${scored.length} דירות בזמן אמת`
+          : `Found ${scored.length} live listings`
+      );
+      qc.invalidateQueries({ queryKey: ["listings"] });
     } catch (e: any) {
       setError(e.message ?? "Unknown error");
       toast.error(language === "he" ? "שגיאה בסריקה" : "Scan failed");
@@ -106,7 +139,6 @@ const Watchlist = () => {
     }
   }, [selectedCities, activeProfile, language, user, qc]);
 
-  // Auto-scan polling
   useEffect(() => {
     if (!autoScan) return;
     doScan();
@@ -121,8 +153,7 @@ const Watchlist = () => {
   };
 
   const saveToInbox = async (listing: ScannedListing) => {
-    if (!user) return;
-    if (saved.has(listing.source_id)) return;
+    if (!user || saved.has(listing.source_id)) return;
     try {
       const { error: insertErr } = await supabase.from("listings").insert({
         user_id: user.id,
@@ -149,25 +180,30 @@ const Watchlist = () => {
     }
   };
 
-  const cityLabel = (city: typeof CITIES[number]) =>
-    language === "he" ? city.labelHe : city.labelEn;
-
+  const cityLabel = (city: typeof CITIES[number]) => language === "he" ? city.labelHe : city.labelEn;
   const scoreOf = (l: any): number | null => l._score ?? null;
-
   const scoreColor = (s: number | null) => {
     if (s === null) return "bg-muted text-muted-foreground";
-    if (s >= 80) return "bg-score-high text-white";
-    if (s >= 50) return "bg-score-medium text-white";
+    if (s >= 80)   return "bg-score-high text-white";
+    if (s >= 50)   return "bg-score-medium text-white";
     return "bg-score-low text-white";
   };
 
+  const highScoreCount = results.filter((l) => (scoreOf(l) ?? 0) >= 80).length;
+  const avgPrice = results.length
+    ? Math.round(results.filter((l) => l.price).reduce((s, l) => s + (l.price ?? 0), 0) / results.filter((l) => l.price).length)
+    : null;
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-fade-up">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+    <div className="max-w-4xl mx-auto space-y-6 animate-fade-up" dir={direction}>
+
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-display font-bold flex items-center gap-2">
-            <BookHeart className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-display font-bold flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
+              <BookHeart className="h-4.5 w-4.5 text-primary" />
+            </div>
             {t("watchlist.title")}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">{t("watchlist.subtitle")}</p>
@@ -179,47 +215,111 @@ const Watchlist = () => {
             onClick={() => setAutoScan((v) => !v)}
             className="gap-1.5"
           >
-            {autoScan ? <Bell className="h-4 w-4 animate-bounce-subtle" /> : <BellOff className="h-4 w-4" />}
+            {autoScan
+              ? <Bell className="h-4 w-4 animate-bounce-subtle" />
+              : <BellOff className="h-4 w-4" />}
             {autoScan ? t("watchlist.autoOn") : t("watchlist.autoOff")}
           </Button>
-          <Button size="sm" onClick={doScan} disabled={scanning} className="gap-1.5 glow-primary">
-            <RefreshCw className={`h-4 w-4 ${scanning ? "animate-spin" : ""}`} />
+          <Button
+            size="sm"
+            onClick={doScan}
+            disabled={scanning}
+            className="gap-1.5 glow-primary relative overflow-hidden"
+          >
+            {scanning
+              ? <RefreshCw className="h-4 w-4 animate-spin" />
+              : <Zap className="h-4 w-4" />}
             {scanning ? t("watchlist.scanning") : t("watchlist.scan")}
+            {scanning && (
+              <span className="absolute inset-0 bg-white/10 animate-shimmer" />
+            )}
           </Button>
         </div>
       </div>
 
-      {/* City filters */}
+      {/* ── Stats strip (only when results exist) ── */}
+      <AnimatePresence>
+        {results.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="grid grid-cols-3 gap-3"
+          >
+            {[
+              {
+                icon: <Building2 className="h-4 w-4 text-primary" />,
+                value: results.length,
+                label: language === "he" ? "דירות חיות" : "Live listings",
+              },
+              {
+                icon: <Star className="h-4 w-4 text-score-high" />,
+                value: highScoreCount,
+                label: language === "he" ? "ציון גבוה (80+)" : "High score (80+)",
+              },
+              {
+                icon: <TrendingUp className="h-4 w-4 text-score-medium" />,
+                value: avgPrice ? `₪${avgPrice.toLocaleString()}` : "—",
+                label: language === "he" ? "מחיר ממוצע" : "Avg. price",
+              },
+            ].map((stat, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.07, type: "spring", stiffness: 300, damping: 24 }}
+              >
+                <Card className="p-3 border-border/60 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                    {stat.icon}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-base leading-tight tabular-nums">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground truncate">{stat.label}</p>
+                  </div>
+                </Card>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── City filters ── */}
       <Card className="p-4 border-border/60">
         <p className="text-sm font-semibold mb-3 flex items-center gap-2">
           <MapPin className="h-4 w-4 text-primary" />
           {t("watchlist.cities")}
         </p>
         <div className="flex flex-wrap gap-2">
-          {CITIES.map((city) => (
-            <button
-              key={city.key}
-              onClick={() => toggleCity(city.key)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all duration-200 ${
-                selectedCities.includes(city.key)
-                  ? "bg-primary text-primary-foreground border-primary glow-primary"
-                  : "bg-muted/50 text-muted-foreground border-border/60 hover:border-primary/40"
-              }`}
-            >
-              {cityLabel(city)}
-            </button>
-          ))}
+          {CITIES.map((city) => {
+            const active = selectedCities.includes(city.key);
+            return (
+              <motion.button
+                key={city.key}
+                onClick={() => toggleCity(city.key)}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.96 }}
+                className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-all duration-200 shadow-sm ${
+                  active ? CITY_ACTIVE[city.color] + " shadow-md" : CITY_COLOR[city.color]
+                }`}
+              >
+                {cityLabel(city)}
+              </motion.button>
+            );
+          })}
         </div>
 
         {activeProfile && (
-          <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Sparkles className="h-3 w-3 text-primary" />
-              {t("watchlist.scoringBy")}: <strong className="text-foreground">{activeProfile.name}</strong>
+          <div className="mt-3 pt-3 border-t border-border/40 flex flex-wrap gap-2 items-center text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
+              <span>{t("watchlist.scoringBy")}:</span>
+              <strong className="text-foreground font-semibold">{activeProfile.name}</strong>
             </span>
             {activeProfile.max_price && (
               <Badge variant="outline" className="text-xs">
-                ₪{activeProfile.max_price.toLocaleString()}
+                ≤ ₪{activeProfile.max_price.toLocaleString()}
               </Badge>
             )}
             {activeProfile.min_rooms && (
@@ -231,189 +331,351 @@ const Watchlist = () => {
         )}
       </Card>
 
-      {/* Live Status Bar */}
+      {/* ── Status bar ── */}
       <motion.div
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-3 text-xs text-muted-foreground"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap"
       >
-        {scanning && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-            <Radio className="h-3.5 w-3.5 text-primary animate-sparkle" />
-            <span className="text-primary font-medium">{t("watchlist.scanning")}...</span>
-          </div>
-        )}
-        {!scanning && fetchedAt && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/60 border border-border/60">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-bounce-subtle" />
-            <span>
-              {t("watchlist.lastScan")}:{" "}
-              {formatDistanceToNow(new Date(fetchedAt), {
-                addSuffix: true,
-                locale: language === "he" ? he : undefined,
-              })}
-            </span>
-          </div>
-        )}
-        {autoScan && !scanning && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-            <Radio className="h-3 w-3 text-primary" />
-            <span className="text-primary font-medium">{t("watchlist.autoOn")}</span>
-          </div>
-        )}
-        {error && (
-          <div className="px-3 py-1.5 rounded-full bg-destructive/10 border border-destructive/20">
-            <span className="text-destructive font-medium">{error}</span>
-          </div>
-        )}
-        {results.length > 0 && !scanning && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/60 border border-border/60 ms-auto">
-            <Filter className="h-3 w-3" />
-            <span>{results.length} {t("watchlist.results")}</span>
-          </div>
-        )}
+        <AnimatePresence mode="popLayout">
+          {scanning && (
+            <motion.div
+              key="scanning-pill"
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.85 }}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30"
+            >
+              <Radio className="h-3.5 w-3.5 text-primary animate-pulse" />
+              <span className="text-primary font-medium">
+                {language === "he" ? "סורק יד2..." : "Scanning Yad2..."}
+              </span>
+            </motion.div>
+          )}
+          {!scanning && fetchedAt && !unavailable && (
+            <motion.div
+              key="lastscan-pill"
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.85 }}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/60 border border-border/60"
+            >
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-bounce-subtle" />
+              <span>
+                {t("watchlist.lastScan")}:{" "}
+                {formatDistanceToNow(new Date(fetchedAt), {
+                  addSuffix: true,
+                  locale: language === "he" ? he : undefined,
+                })}
+              </span>
+            </motion.div>
+          )}
+          {autoScan && !scanning && (
+            <motion.div
+              key="autoscan-pill"
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.85 }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20"
+            >
+              <Radio className="h-3 w-3 text-primary" />
+              <span className="text-primary font-medium">{t("watchlist.autoOn")}</span>
+            </motion.div>
+          )}
+          {results.length > 0 && !scanning && (
+            <motion.div
+              key="count-pill"
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.85 }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/60 border border-border/60 ms-auto"
+            >
+              <Filter className="h-3 w-3" />
+              <span>{results.length} {t("watchlist.results")}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
-      {/* Results */}
-      {results.length === 0 && !scanning ? (
+      {/* ── Unavailable state ── */}
+      <AnimatePresence>
+        {unavailable && !scanning && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <Card className="p-8 border-border/60 border-dashed">
+              <div className="flex flex-col items-center text-center gap-4">
+                <motion.div
+                  className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center"
+                  animate={{ rotate: [0, -8, 8, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                >
+                  <WifiOff className="h-7 w-7 text-muted-foreground" />
+                </motion.div>
+                <div>
+                  <p className="font-semibold text-lg">
+                    {language === "he" ? "יד2 לא זמין כרגע" : "Yad2 Temporarily Unavailable"}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                    {language === "he"
+                      ? "שרת יד2 לא הגיב. זהו מצב זמני — נסו שוב בעוד מספר דקות."
+                      : "Yad2's server didn't respond. This is temporary — please try again in a few minutes."}
+                  </p>
+                </div>
+                <Button onClick={doScan} variant="outline" className="gap-2">
+                  <RotateCcw className="h-4 w-4" />
+                  {language === "he" ? "נסה שוב" : "Retry"}
+                </Button>
+              </div>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Error state ── */}
+      {error && !unavailable && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="px-4 py-3 rounded-xl bg-destructive/10 border border-destructive/30 text-sm text-destructive flex items-center gap-2"
+        >
+          <span className="font-medium">{error}</span>
+          <Button size="sm" variant="ghost" onClick={doScan} className="ms-auto gap-1 h-7 text-xs">
+            <RotateCcw className="h-3 w-3" />
+            {language === "he" ? "נסה שוב" : "Retry"}
+          </Button>
+        </motion.div>
+      )}
+
+      {/* ── Empty state (never scanned) ── */}
+      {results.length === 0 && !scanning && !unavailable && !error && (
         <Card className="p-12 text-center border-dashed border-border/60">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            className="space-y-4"
+            className="space-y-5"
           >
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
-              <BookHeart className="h-7 w-7 text-primary" />
-            </div>
+            <motion.div
+              className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center mx-auto"
+              animate={{ y: [0, -6, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <BookHeart className="h-9 w-9 text-primary" />
+            </motion.div>
             <div>
-              <p className="font-semibold text-lg">{t("watchlist.empty")}</p>
-              <p className="text-muted-foreground text-sm mt-1">{t("watchlist.emptyHint")}</p>
+              <p className="font-semibold text-xl">{t("watchlist.empty")}</p>
+              <p className="text-muted-foreground text-sm mt-1.5 max-w-xs mx-auto leading-relaxed">
+                {t("watchlist.emptyHint")}
+              </p>
             </div>
-            <Button onClick={doScan} disabled={scanning} className="gap-1.5 glow-primary">
+            <Button onClick={doScan} disabled={scanning} className="gap-2 glow-primary">
               <Zap className="h-4 w-4" />
-              {t("watchlist.scan")}
+              {language === "he" ? "סרוק יד2 עכשיו" : "Scan Yad2 Now"}
             </Button>
           </motion.div>
         </Card>
-      ) : (
-        <div className="space-y-2">
-          <AnimatePresence>
-            {results.map((listing, i) => {
+      )}
+
+      {/* ── Results grid ── */}
+      <AnimatePresence>
+        {results.length > 0 && !scanning && (
+          <motion.div
+            key="results"
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            className="space-y-3"
+          >
+            {results.map((listing) => {
               const s = scoreOf(listing);
+              const cityInfo = CITIES.find((c) =>
+                listing.city.includes("תל אביב") ? c.key === "tel-aviv" :
+                listing.city.includes("גבעתיים") ? c.key === "givatayim" :
+                listing.city.includes("רמת גן") ? c.key === "ramat-gan" : false
+              );
+
               return (
                 <motion.div
                   key={listing.source_id}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ delay: i * 0.03, type: "spring", stiffness: 280, damping: 24 }}
-                  whileHover={{ y: -2 }}
+                  variants={itemVariants}
+                  whileHover={{ y: -2, transition: { duration: 0.18 } }}
+                  layout
                 >
-                  <Card className="p-4 border-border/60 card-hover shine-overlay group">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3 min-w-0 flex-1">
+                  <Card className="border-border/60 card-hover group overflow-hidden">
+                    <div className="flex gap-0">
+                      {/* Cover image or gradient placeholder */}
+                      <div className="relative w-28 sm:w-36 shrink-0">
                         {listing.cover_image ? (
                           <img
                             src={listing.cover_image}
-                            alt={listing.address ?? ""}
-                            className="w-16 h-16 rounded-xl object-cover shrink-0 ring-1 ring-border/40"
+                            alt={listing.address ?? listing.city}
+                            className="w-full h-full object-cover min-h-[120px]"
                           />
                         ) : (
-                          <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                            <MapPin className="h-6 w-6 text-primary" />
+                          <div className="w-full h-full min-h-[120px] bg-gradient-to-br from-primary/20 via-primary/10 to-transparent flex items-center justify-center">
+                            <Building2 className="h-8 w-8 text-primary/40" />
                           </div>
                         )}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-sm truncate">
-                              {listing.address ?? listing.city}
-                            </span>
-                            <span className="text-xs text-muted-foreground">{listing.city}</span>
-                            {listing.neighborhood && (
-                              <span className="text-xs bg-muted px-1.5 py-0.5 rounded-full">
-                                {listing.neighborhood}
-                              </span>
-                            )}
+                        {/* Score badge over image */}
+                        {s !== null && (
+                          <div className={`absolute top-2 start-2 px-2 py-0.5 rounded-full text-xs font-bold shadow-md ${scoreColor(s)} ${s >= 80 ? "animate-glow" : ""}`}>
+                            {s}
                           </div>
-                          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                            {listing.price && (
-                              <span className="font-bold text-primary">
-                                ₪{listing.price.toLocaleString()}
-                                <span className="text-xs font-normal text-muted-foreground">/mo</span>
-                              </span>
-                            )}
+                        )}
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 p-3.5 flex flex-col gap-2">
+                        {/* Top row */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-sm leading-snug truncate">
+                              {listing.address ?? listing.city}
+                            </p>
+                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                              {cityInfo && (
+                                <span className={`inline-flex items-center text-[10px] font-medium px-2 py-0.5 rounded-full border ${CITY_COLOR[cityInfo.color]}`}>
+                                  {listing.city}
+                                </span>
+                              )}
+                              {listing.neighborhood && (
+                                <span className="text-[10px] bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                                  {listing.neighborhood}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {/* Actions */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={(e) => { e.stopPropagation(); saveToInbox(listing); }}
+                              title={language === "he" ? "שמור לתיבה" : "Save to Inbox"}
+                              className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
+                                saved.has(listing.source_id)
+                                  ? "bg-score-high/15 text-score-high"
+                                  : "bg-muted/80 text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-primary/10 hover:text-primary"
+                              }`}
+                            >
+                              {saved.has(listing.source_id)
+                                ? <Check className="h-3.5 w-3.5" />
+                                : <PlusCircle className="h-3.5 w-3.5" />}
+                            </motion.button>
+                            <div className="w-7 h-7 rounded-lg bg-muted/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-primary/10 hover:text-primary">
+                              <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Price + stats row */}
+                        <div className="flex items-center gap-3 flex-wrap">
+                          {listing.price && (
+                            <span className="font-bold text-base text-primary leading-none">
+                              ₪{listing.price.toLocaleString()}
+                              <span className="text-xs font-normal text-muted-foreground">/mo</span>
+                            </span>
+                          )}
+                          <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
                             {listing.rooms && (
-                              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
                                 <BedDouble className="h-3.5 w-3.5" />
                                 {listing.rooms}
                               </span>
                             )}
                             {listing.sqm && (
-                              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
                                 <Maximize className="h-3.5 w-3.5" />
                                 {listing.sqm}m²
                               </span>
                             )}
                             {listing.floor != null && (
-                              <span className="text-xs text-muted-foreground">
-                                {t("common.floor")} {listing.floor}
+                              <span className="flex items-center gap-1">
+                                <ChevronRight className="h-3 w-3 flip-rtl" />
+                                {language === "he" ? "קומה" : "Fl."} {listing.floor}
                                 {listing.total_floors ? `/${listing.total_floors}` : ""}
                               </span>
                             )}
                           </div>
-                          {listing.amenities.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {listing.amenities.slice(0, 4).map((a) => (
-                                <span key={a} className="text-xs bg-muted px-1.5 py-0.5 rounded-full">{a}</span>
-                              ))}
-                              {listing.amenities.length > 4 && (
-                                <span className="text-xs bg-muted px-1.5 py-0.5 rounded-full">
-                                  +{listing.amenities.length - 4}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          {listing.listed_at && (
-                            <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground/70">
-                              <Clock className="h-3 w-3" />
-                              {formatDistanceToNow(new Date(listing.listed_at), {
-                                addSuffix: true,
-                                locale: language === "he" ? he : undefined,
-                              })}
-                            </div>
-                          )}
                         </div>
-                      </div>
 
-                      <div className="flex flex-col items-end gap-2 shrink-0">
-                        {s !== null && (
-                          <div className={`px-2.5 py-1.5 rounded-full text-xs font-bold ${scoreColor(s)} ${s >= 80 ? "animate-glow" : ""}`}>
-                            {s}
+                        {/* Amenity chips */}
+                        {listing.amenities.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {listing.amenities.slice(0, 5).map((a) => (
+                              <span key={a} className="text-[10px] bg-muted/80 border border-border/50 px-2 py-0.5 rounded-full text-muted-foreground">
+                                {a}
+                              </span>
+                            ))}
+                            {listing.amenities.length > 5 && (
+                              <span className="text-[10px] bg-muted/80 border border-border/50 px-2 py-0.5 rounded-full text-muted-foreground">
+                                +{listing.amenities.length - 5}
+                              </span>
+                            )}
                           </div>
                         )}
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className={`h-7 w-7 ${saved.has(listing.source_id) ? "text-score-high" : "text-muted-foreground opacity-0 group-hover:opacity-100"} transition-all`}
-                          onClick={(e) => { e.stopPropagation(); saveToInbox(listing); }}
-                          title={language === "he" ? "שמור לתיבה" : "Save to Inbox"}
-                        >
-                          {saved.has(listing.source_id)
-                            ? <Check className="h-4 w-4" />
-                            : <PlusCircle className="h-4 w-4" />
-                          }
-                        </Button>
-                        <ExternalLink className="h-4 w-4 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" />
+
+                        {/* Footer: time */}
+                        {listing.listed_at && (
+                          <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60 mt-auto">
+                            <Clock className="h-3 w-3" />
+                            {formatDistanceToNow(new Date(listing.listed_at), {
+                              addSuffix: true,
+                              locale: language === "he" ? he : undefined,
+                            })}
+                            <div className="ms-auto w-1.5 h-1.5 rounded-full bg-green-500" title="Live" />
+                          </div>
+                        )}
                       </div>
                     </div>
                   </Card>
                 </motion.div>
               );
             })}
-          </AnimatePresence>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Scanning skeleton ── */}
+      <AnimatePresence>
+        {scanning && (
+          <motion.div
+            key="skeletons"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="space-y-3"
+          >
+            {Array.from({ length: 5 }).map((_, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.06 }}
+              >
+                <Card className="border-border/60 overflow-hidden">
+                  <div className="flex">
+                    <div className="w-28 sm:w-36 min-h-[120px] bg-muted animate-pulse" />
+                    <div className="flex-1 p-3.5 space-y-2.5">
+                      <div className="h-4 bg-muted rounded-md animate-pulse w-3/4" />
+                      <div className="h-3 bg-muted rounded-md animate-pulse w-1/2" />
+                      <div className="h-5 bg-muted rounded-md animate-pulse w-1/3" />
+                      <div className="flex gap-1.5">
+                        {[40, 55, 48].map((w, j) => (
+                          <div key={j} className={`h-4 bg-muted rounded-full animate-pulse`} style={{ width: w }} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
