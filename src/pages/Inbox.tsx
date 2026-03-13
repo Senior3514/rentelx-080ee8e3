@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { ListingCard } from "@/components/listings/ListingCard";
 import { AddListingModal } from "@/components/listings/AddListingModal";
 import { motion } from "framer-motion";
+import { AiSectionHelper } from "@/components/ui/ai-section-helper";
 
 type SortOption = "newest" | "score_desc" | "price_asc" | "price_desc";
 
@@ -188,6 +189,18 @@ const InboxPage = () => {
             </motion.div>
           ))}
         </div>
+      )}
+
+      {/* AI Inbox Helper */}
+      {filtered.length > 0 && (
+        <AiSectionHelper
+          context={`Inbox has ${filtered.length} listings. Top cities: ${cities.join(", ")}. Price range: ₪${Math.min(...filtered.filter(l => l.price).map(l => l.price)).toLocaleString()} - ₪${Math.max(...filtered.filter(l => l.price).map(l => l.price)).toLocaleString()}. Average score: ${Math.round(filtered.reduce((sum, l) => sum + (l.listing_scores?.reduce((m: number, s: any) => Math.max(m, s.score), 0) ?? 0), 0) / filtered.length)}.`}
+          section="Inbox"
+          suggestions={language === "he"
+            ? ["מה הדירה הכי טובה?", "סכם את כל הדירות", "השווה מחירים", "מה כדאי לבדוק?"]
+            : ["What's the best listing?", "Summarize all listings", "Compare prices", "What should I check?"]
+          }
+        />
       )}
 
       <AddListingModal open={showAdd} onOpenChange={setShowAdd} />

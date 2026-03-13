@@ -9,6 +9,7 @@ import React, { useState, useMemo } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Inbox, MapPin, BedDouble } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { AiSectionHelper } from "@/components/ui/ai-section-helper";
 
 const STAGES = ["new", "contacted", "viewing_scheduled", "viewed", "negotiating", "signed", "lost"] as const;
 
@@ -235,6 +236,16 @@ const Pipeline = () => {
           })}
         </div>
       )}
+
+      {/* AI Pipeline Helper */}
+      <AiSectionHelper
+        context={`Pipeline has ${totalCount} listings across ${STAGES.length} stages. ${STAGES.map(s => `${STAGE_LABELS[s]?.[language] || s}: ${entries.filter((e: any) => e.stage === s).length}`).join(", ")}`}
+        section="Pipeline"
+        suggestions={language === "he"
+          ? ["מה השלב הבא?", "תן טיפים למשא ומתן", "איך לתזמן ביקורים?", "מתי כדאי לחתום?"]
+          : ["What's the next step?", "Negotiation tips", "How to schedule viewings?", "When to sign?"]
+        }
+      />
     </div>
   );
 };

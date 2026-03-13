@@ -15,6 +15,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { scanYad2, scoreScannedListing, SCAN_KEY, ScannedListing } from "@/lib/scanService";
+import { AiSectionHelper } from "@/components/ui/ai-section-helper";
 import { formatDistanceToNow } from "date-fns";
 import { he } from "date-fns/locale";
 
@@ -642,6 +643,18 @@ const Watchlist = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* AI Watchlist Helper */}
+      {results.length > 0 && (
+        <AiSectionHelper
+          context={`Watchlist scan found ${results.length} listings. ${highScoreCount} with high score (80+). Average price: ${avgPrice ? `₪${avgPrice.toLocaleString()}` : "N/A"}. Cities scanned: ${selectedCities.join(", ")}. ${activeProfile ? `Active profile: ${activeProfile.name}` : "No active profile"}`}
+          section="Watchlist"
+          suggestions={language === "he"
+            ? ["מה הדירה הכי טובה?", "תסכם את הממצאים", "מגמות מחירים", "איזו שכונה הכי שווה?"]
+            : ["Best listing found?", "Summarize findings", "Price trends", "Which neighborhood?"]
+          }
+        />
+      )}
 
       {/* ── Scanning skeleton ── */}
       <AnimatePresence>

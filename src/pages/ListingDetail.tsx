@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { MapPin, BedDouble, Maximize, Building2, ArrowLeft, Plus, StickyNote, Columns3, Sparkles, X, Ban, ExternalLink, Phone, User } from "lucide-react";
 import { ImageGallery } from "@/components/listings/ImageGallery";
 import { motion } from "framer-motion";
+import { AiSectionHelper } from "@/components/ui/ai-section-helper";
 
 const ListingDetail = () => {
   const { id } = useParams();
@@ -324,6 +325,16 @@ const ListingDetail = () => {
           <Ban className="h-4 w-4" /> {t("listing.dismiss")}
         </Button>
       </div>
+
+      {/* AI Section Helper */}
+      <AiSectionHelper
+        context={`Listing: ${listing.address || ""} ${listing.city || ""}, ₪${listing.price?.toLocaleString() || "?"}/mo, ${listing.rooms || "?"} rooms, ${listing.sqm || "?"} sqm, Floor ${listing.floor ?? "?"}, Amenities: ${listing.amenities?.join(", ") || "none"}, Score: ${topScore}/100`}
+        section="Listing Detail"
+        suggestions={language === "he"
+          ? ["האם המחיר הוגן?", "מה לבדוק בביקור?", "יתרונות וחסרונות", "טיפים למו\"מ"]
+          : ["Is the price fair?", "What to check in a viewing?", "Pros and cons", "Negotiation tips"]
+        }
+      />
 
       {/* Notes */}
       <div>
