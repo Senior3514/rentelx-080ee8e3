@@ -39,7 +39,7 @@ export interface ScanParams {
 export interface ScanResult {
   listings: ScannedListing[];
   fetchedAt: string;
-  isDemo?: boolean;
+  unavailable?: boolean;
   error?: string;
 }
 

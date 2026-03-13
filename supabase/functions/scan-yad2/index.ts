@@ -15,10 +15,10 @@ function getCorsHeaders(req: Request) {
   };
 }
 
-const CITY_CODES: Record<string, { id: number; label: string }> = {
-  "tel-aviv":  { id: 5000, label: "תל אביב" },
-  "givatayim": { id: 7900, label: "גבעתיים" },
-  "ramat-gan": { id: 8300, label: "רמת גן" },
+const CITY_CODES: Record<string, { id: number; label: string; topArea: number; area: number }> = {
+  "tel-aviv":  { id: 5000, label: "תל אביב",  topArea: 2, area: 1 },
+  "givatayim": { id: 7900, label: "גבעתיים",   topArea: 2, area: 2 },
+  "ramat-gan": { id: 8300, label: "רמת גן",    topArea: 2, area: 2 },
 };
 
 interface Yad2Item {
@@ -32,6 +32,7 @@ interface Yad2Item {
   cover_image?: string; images?: Array<{ src?: string }>;
   contact_name?: string; contact_phone?: string;
   updated_at?: string; created_at?: string;
+  link_token?: string;
 }
 
 function normalizeItem(item: Yad2Item, cityLabel: string) {
@@ -40,15 +41,15 @@ function normalizeItem(item: Yad2Item, cityLabel: string) {
   const neighborhood = item.address?.neighborhood?.text ?? null;
   const address = [street, houseNum].filter(Boolean).join(" ") || null;
   const amenities: string[] = [];
-  if (item.parking)       amenities.push("חניה");
-  if (item.elevator)      amenities.push("מעלית");
-  if (item.balcony)       amenities.push("מרפסת");
+  if (item.parking)         amenities.push("חניה");
+  if (item.elevator)        amenities.push("מעלית");
+  if (item.balcony)         amenities.push("מרפסת");
   if (item.air_conditioner) amenities.push("מיזוג");
-  if (item.furniture)     amenities.push("מרוהטת");
-  if (item.safe_room)     amenities.push('ממ"ד');
-  if (item.storage)       amenities.push("מחסן");
+  if (item.furniture)       amenities.push("מרוהטת");
+  if (item.safe_room)       amenities.push('ממ"ד');
+  if (item.storage)         amenities.push("מחסן");
   return {
-    source_id: String(item.id ?? item.token ?? Math.random()),
+    source_id: String(item.id ?? item.token ?? item.link_token ?? Math.random()),
     source: "yad2" as const,
     address, neighborhood,
     city: item.city_text ?? cityLabel,
@@ -71,139 +72,158 @@ function normalizeItem(item: Yad2Item, cityLabel: string) {
   };
 }
 
-/* ── Try multiple Yad2 API endpoints ── */
-const YAD2_URLS = [
-  (cityId: number, qs: string) => `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${cityId}&${qs}`,
-  (cityId: number, qs: string) => `https://gw.yad2.co.il/realestate/rent?city=${cityId}&${qs}`,
-];
-
 const BROWSER_HEADERS = {
   "Accept": "application/json, text/plain, */*",
   "Accept-Language": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7",
   "Accept-Encoding": "gzip, deflate, br",
   "Cache-Control": "no-cache",
+  "Pragma": "no-cache",
   "Origin": "https://www.yad2.co.il",
   "Referer": "https://www.yad2.co.il/realestate/rent",
-  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  "sec-ch-ua": '"Not_A Brand";v="8", "Chromium";v="120"',
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+  "sec-ch-ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
   "sec-ch-ua-mobile": "?0",
+  "sec-ch-ua-platform": '"Windows"',
   "sec-fetch-dest": "empty",
   "sec-fetch-mode": "cors",
   "sec-fetch-site": "same-site",
+  "DNT": "1",
 };
 
-async function fetchYad2(cityId: number, cityLabel: string, params: Record<string, string>): Promise<ReturnType<typeof normalizeItem>[]> {
-  const qs = new URLSearchParams({ ...params, compact: "1" }).toString();
+/** Build all candidate Yad2 API URLs to try for a city */
+function buildUrls(city: typeof CITY_CODES[string], qs: URLSearchParams): string[] {
+  const base = qs.toString();
+  return [
+    // Feed search legacy (main endpoint)
+    `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${city.id}&${base}`,
+    // Feed search with topArea + area
+    `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?topArea=${city.topArea}&area=${city.area}&city=${city.id}&${base}`,
+    // Direct realestate endpoint
+    `https://gw.yad2.co.il/realestate/rent?city=${city.id}&${base}`,
+    // Pre-load feed index
+    `https://www.yad2.co.il/api/pre-load/getFeedIndex/realestate/rent?city=${city.id}&${base}`,
+  ];
+}
 
-  for (const urlFn of YAD2_URLS) {
+function extractItems(json: unknown): Yad2Item[] {
+  if (!json || typeof json !== "object") return [];
+  const j = json as Record<string, unknown>;
+  // Try all known response shapes
+  const candidates = [
+    (j as any)?.data?.feed?.feed_items,
+    (j as any)?.data?.listings,
+    (j as any)?.feed_items,
+    (j as any)?.data?.feed_items,
+    (j as any)?.data?.items,
+    (j as any)?.listings,
+    (j as any)?.items,
+  ];
+  for (const c of candidates) {
+    if (Array.isArray(c) && c.length > 0) return c as Yad2Item[];
+  }
+  return [];
+}
+
+async function fetchCityListings(
+  city: typeof CITY_CODES[string],
+  params: Record<string, string>,
+  timeoutMs: number,
+): Promise<ReturnType<typeof normalizeItem>[]> {
+  const qs = new URLSearchParams({ ...params, compact: "1", forceLdLoad: "true" });
+  const urls = buildUrls(city, qs);
+
+  for (const url of urls) {
     try {
-      const url = urlFn(cityId, qs);
-      const res = await fetch(url, { headers: BROWSER_HEADERS });
-      if (!res.ok) { console.warn(`Yad2 ${url} → ${res.status}`); continue; }
-      const json = await res.json();
-      const items: Yad2Item[] =
-        json?.data?.feed?.feed_items ??
-        json?.data?.listings ??
-        json?.feed_items ??
-        json?.data?.feed_items ??
-        [];
-      const valid = items.filter((item) => item.price && item.price > 0).map((item) => normalizeItem(item, cityLabel));
-      if (valid.length > 0) return valid;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const res = await fetch(url, { headers: BROWSER_HEADERS, signal: controller.signal });
+      clearTimeout(timer);
+
+      if (!res.ok) {
+        console.warn(`Yad2 ${res.status} for ${url}`);
+        continue;
+      }
+      const text = await res.text();
+      let json: unknown;
+      try { json = JSON.parse(text); } catch { continue; }
+
+      const items = extractItems(json);
+      if (items.length === 0) continue;
+
+      const valid = items
+        .filter((item) => item.price && item.price > 0)
+        .map((item) => normalizeItem(item, city.label));
+
+      if (valid.length > 0) {
+        console.log(`Yad2 success: ${valid.length} listings from ${url}`);
+        return valid;
+      }
     } catch (e) {
-      console.warn(`fetchYad2 attempt failed:`, e);
+      if ((e as Error)?.name === "AbortError") {
+        console.warn(`Yad2 timeout: ${url}`);
+      } else {
+        console.warn(`Yad2 fetch error for ${url}:`, e);
+      }
     }
   }
   return [];
 }
 
-/* ── Realistic fallback demo listings (shown when Yad2 is unreachable) ── */
-function makeDemoListings(
-  cities: string[],
-  minPrice?: number,
-  maxPrice?: number,
-  minRooms?: number,
-  maxRooms?: number
-) {
-  const now = new Date().toISOString();
-  const ALL = [
-    { source_id:"demo-1",source:"yad2"as const,address:"רוטשילד 45",neighborhood:"לב העיר",city:"תל אביב",price:7800,rooms:3,sqm:85,floor:4,total_floors:8,description:"דירה מרהיבה בלב רוטשילד, מרוהטת חלקית, שמש מלאה",amenities:["מעלית","מרפסת","מיזוג","חניה"],features:{parking:true,balcony:true,elevator:true,airConditioning:true,furnished:false,safeRoom:false,storage:false},cover_image:null,contact_name:"דן כהן",contact_phone:"052-1234567",listed_at:now},
-    { source_id:"demo-2",source:"yad2"as const,address:"הרצל 22",neighborhood:"גבעת רמב\"ם",city:"גבעתיים",price:5200,rooms:2.5,sqm:70,floor:2,total_floors:6,description:"דירת 2.5 חדרים שקטה, קרובה לפארק",amenities:["מרפסת","מיזוג"],features:{parking:false,balcony:true,elevator:false,airConditioning:true,furnished:false,safeRoom:true,storage:false},cover_image:null,contact_name:"מירה לוי",contact_phone:"054-7654321",listed_at:now},
-    { source_id:"demo-3",source:"yad2"as const,address:"ביאליק 8",neighborhood:"גבעת עליה",city:"רמת גן",price:5800,rooms:3,sqm:78,floor:3,total_floors:7,description:"דירה יפה, שיפוץ מלא 2023, קרובה לחינוך",amenities:["מעלית","מיזוג",'ממ"ד',"מחסן"],features:{parking:true,balcony:false,elevator:true,airConditioning:true,furnished:false,safeRoom:true,storage:true},cover_image:null,contact_name:"יוסי אברהם",contact_phone:"053-9876543",listed_at:now},
-    { source_id:"demo-4",source:"yad2"as const,address:"דיזנגוף 120",neighborhood:"דיזנגוף",city:"תל אביב",price:8500,rooms:3.5,sqm:95,floor:6,total_floors:10,description:"דירה פנטהאוז, נוף עוצר נשימה, מרפסת גדולה",amenities:["מעלית","מרפסת","מיזוג","חניה","מרוהטת"],features:{parking:true,balcony:true,elevator:true,airConditioning:true,furnished:true,safeRoom:false,storage:false},cover_image:null,contact_name:"שרה גולד",contact_phone:"058-1112233",listed_at:now},
-    { source_id:"demo-5",source:"yad2"as const,address:"אחד העם 55",neighborhood:"מרכז",city:"תל אביב",price:6400,rooms:2,sqm:58,floor:1,total_floors:4,description:"סטודיו גדול עם חצר פרטית, שקט ומרווח",amenities:["מרפסת","מיזוג"],features:{parking:false,balcony:true,elevator:false,airConditioning:true,furnished:false,safeRoom:false,storage:true},cover_image:null,contact_name:"עידן שמיר",contact_phone:"050-3344556",listed_at:now},
-    { source_id:"demo-6",source:"yad2"as const,address:"ז'בוטינסקי 14",neighborhood:"מרכז",city:"רמת גן",price:4900,rooms:2.5,sqm:65,floor:2,total_floors:5,description:"דירת 2.5 חדרים, שיפוץ 2022, נוח לתחבורה",amenities:["מיזוג","מרפסת"],features:{parking:false,balcony:true,elevator:false,airConditioning:true,furnished:false,safeRoom:false,storage:false},cover_image:null,contact_name:"רחל ברק",contact_phone:"052-6677889",listed_at:now},
-    { source_id:"demo-7",source:"yad2"as const,address:"קורנית 3",neighborhood:"קורנית",city:"גבעתיים",price:5600,rooms:3,sqm:80,floor:3,total_floors:6,description:"דירה מרווחת עם חדר עבודה, שקטה מאוד",amenities:["מעלית","מיזוג",'ממ"ד',"חניה"],features:{parking:true,balcony:false,elevator:true,airConditioning:true,furnished:false,safeRoom:true,storage:true},cover_image:null,contact_name:"אורי פרידמן",contact_phone:"054-5566778",listed_at:now},
-    { source_id:"demo-8",source:"yad2"as const,address:"פינסקר 7",neighborhood:"לב העיר",city:"תל אביב",price:9200,rooms:4,sqm:110,floor:7,total_floors:12,description:"דירת 4 חדרים פרימיום, עיצוב מודרני, חניה כפולה",amenities:["מעלית","מרפסת","מיזוג","חניה","מחסן","מרוהטת"],features:{parking:true,balcony:true,elevator:true,airConditioning:true,furnished:true,safeRoom:true,storage:true},cover_image:null,contact_name:"נועה כץ",contact_phone:"055-9900112",listed_at:now},
-  ];
-
-  return ALL.filter((l) => {
-    if (!cities.some((c) =>
-      l.city.includes("תל אביב") ? c === "tel-aviv" :
-      l.city.includes("גבעתיים") ? c === "givatayim" :
-      l.city.includes("רמת גן") ? c === "ramat-gan" : false
-    )) return false;
-    if (minPrice && l.price < minPrice) return false;
-    if (maxPrice && l.price > maxPrice) return false;
-    if (minRooms && l.rooms < minRooms) return false;
-    if (maxRooms && l.rooms > maxRooms) return false;
-    return true;
-  });
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
+
+  const corsHeaders = getCorsHeaders(req);
 
   try {
     const body = await req.json().catch(() => ({}));
     const raw = body as Record<string, unknown>;
     const VALID_CITIES = Object.keys(CITY_CODES);
+
     const cities = (Array.isArray(raw.cities) ? raw.cities : ["tel-aviv", "givatayim", "ramat-gan"])
       .filter((c: unknown): c is string => typeof c === "string" && VALID_CITIES.includes(c))
       .slice(0, 5);
+
     const minPrice = typeof raw.minPrice === "number" && raw.minPrice >= 0 && raw.minPrice <= 100000 ? raw.minPrice : undefined;
     const maxPrice = typeof raw.maxPrice === "number" && raw.maxPrice >= 0 && raw.maxPrice <= 100000 ? raw.maxPrice : undefined;
     const minRooms = typeof raw.minRooms === "number" && raw.minRooms >= 0.5 && raw.minRooms <= 20 ? raw.minRooms : undefined;
     const maxRooms = typeof raw.maxRooms === "number" && raw.maxRooms >= 0.5 && raw.maxRooms <= 20 ? raw.maxRooms : undefined;
 
     const params: Record<string, string> = {};
-    if (minPrice != null || maxPrice != null) params.price = `${minPrice ?? 0}-${maxPrice ?? 999999}`;
+    if (minPrice != null || maxPrice != null) params.price = `${minPrice ?? 0}-${maxPrice ?? 99999}`;
     if (minRooms != null || maxRooms != null) params.rooms = `${minRooms ?? 1}-${maxRooms ?? 10}`;
 
-    /* Try real Yad2 API with a 12s timeout */
-    let listings: ReturnType<typeof normalizeItem>[] = [];
-    let isDemo = false;
+    // Fetch from all requested cities in parallel (15s per city)
+    const cityResults = await Promise.allSettled(
+      cities
+        .filter((c) => CITY_CODES[c])
+        .map((c) => fetchCityListings(CITY_CODES[c], params, 15000))
+    );
 
-    try {
-      const fetchTimeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("timeout")), 12000)
-      );
-      const fetchReal = Promise.all(
-        cities.filter((c) => CITY_CODES[c]).map((c) => fetchYad2(CITY_CODES[c].id, CITY_CODES[c].label, params))
-      );
-      const results = await Promise.race([fetchReal, fetchTimeout]) as ReturnType<typeof normalizeItem>[][];
-      listings = results.flat().slice(0, 60);
-    } catch (e) {
-      console.warn("Yad2 API unavailable, using demo data:", e);
-    }
+    const listings = cityResults
+      .flatMap((r) => (r.status === "fulfilled" ? r.value : []))
+      .slice(0, 80);
 
-    /* Fallback to demo data when Yad2 returns nothing */
-    if (listings.length === 0) {
-      listings = makeDemoListings(cities, minPrice, maxPrice, minRooms, maxRooms);
-      isDemo = true;
-      console.log(`Serving ${listings.length} demo listings (Yad2 unavailable)`);
-    }
+    const unavailable = listings.length === 0;
 
     return new Response(
-      JSON.stringify({ listings, fetchedAt: new Date().toISOString(), isDemo }),
-      { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+      JSON.stringify({
+        listings,
+        fetchedAt: new Date().toISOString(),
+        unavailable,
+        ...(unavailable ? { error: "Yad2 API did not return listings. Please try again shortly." } : {}),
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
-    console.error("scan-yad2 fatal error:", err);
-    /* Never return 5xx — always serve demo data */
-    const fallback = makeDemoListings(["tel-aviv", "givatayim", "ramat-gan"]);
+    console.error("scan-yad2 error:", err);
     return new Response(
-      JSON.stringify({ listings: fallback, fetchedAt: new Date().toISOString(), isDemo: true }),
-      { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+      JSON.stringify({
+        listings: [],
+        fetchedAt: new Date().toISOString(),
+        unavailable: true,
+        error: "Scan service error. Please try again.",
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
