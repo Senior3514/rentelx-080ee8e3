@@ -29,8 +29,14 @@ export interface ScannedListing {
   listed_at: string;
 }
 
+export type ScanCity =
+  | "tel-aviv" | "givatayim" | "ramat-gan"
+  | "holon" | "bat-yam" | "bnei-brak"
+  | "petah-tikva" | "herzliya" | "rishon"
+  | "netanya" | "raanana" | "rehovot";
+
 export interface ScanParams {
-  cities?: Array<"tel-aviv" | "givatayim" | "ramat-gan">;
+  cities?: ScanCity[];
   minPrice?: number;
   maxPrice?: number;
   minRooms?: number;
@@ -48,7 +54,7 @@ export interface ScanResult {
 export async function scanYad2(params: ScanParams = {}): Promise<ScanResult> {
   const { data, error } = await supabase.functions.invoke("scan-yad2", {
     body: {
-      cities: params.cities ?? ["tel-aviv", "givatayim", "ramat-gan"],
+      cities: params.cities ?? (["tel-aviv", "givatayim", "ramat-gan"] as ScanCity[]),
       minPrice: params.minPrice,
       maxPrice: params.maxPrice,
       minRooms: params.minRooms,

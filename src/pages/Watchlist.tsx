@@ -14,27 +14,45 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { scanYad2, scoreScannedListing, SCAN_KEY, ScannedListing } from "@/lib/scanService";
+import { scanYad2, scoreScannedListing, SCAN_KEY, ScannedListing, ScanCity } from "@/lib/scanService";
 import { AiSectionHelper } from "@/components/ui/ai-section-helper";
 import { formatDistanceToNow } from "date-fns";
 import { he } from "date-fns/locale";
 
-const CITIES: Array<{ key: "tel-aviv" | "givatayim" | "ramat-gan"; labelEn: string; labelHe: string; color: string }> = [
-  { key: "tel-aviv",  labelEn: "Tel Aviv",  labelHe: "תל אביב",  color: "blue"   },
-  { key: "givatayim", labelEn: "Givatayim", labelHe: "גבעתיים",  color: "violet" },
-  { key: "ramat-gan", labelEn: "Ramat Gan", labelHe: "רמת גן",   color: "teal"   },
+const CITIES: Array<{ key: ScanCity; labelEn: string; labelHe: string; color: string }> = [
+  { key: "tel-aviv",    labelEn: "Tel Aviv",      labelHe: "תל אביב",      color: "blue"   },
+  { key: "givatayim",   labelEn: "Givatayim",     labelHe: "גבעתיים",      color: "violet" },
+  { key: "ramat-gan",   labelEn: "Ramat Gan",     labelHe: "רמת גן",       color: "teal"   },
+  { key: "holon",       labelEn: "Holon",         labelHe: "חולון",         color: "indigo" },
+  { key: "bat-yam",     labelEn: "Bat Yam",       labelHe: "בת ים",         color: "sky"    },
+  { key: "bnei-brak",   labelEn: "Bnei Brak",     labelHe: "בני ברק",      color: "emerald"},
+  { key: "petah-tikva", labelEn: "Petah Tikva",   labelHe: "פתח תקווה",    color: "orange" },
+  { key: "herzliya",    labelEn: "Herzliya",      labelHe: "הרצליה",        color: "pink"   },
+  { key: "rishon",      labelEn: "Rishon LeZion", labelHe: "ראשון לציון",   color: "amber"  },
 ];
 
 const CITY_COLOR: Record<string, string> = {
-  blue:   "bg-blue-500/10 border-blue-500/40 text-blue-600 dark:text-blue-400",
-  violet: "bg-violet-500/10 border-violet-500/40 text-violet-600 dark:text-violet-400",
-  teal:   "bg-teal-500/10 border-teal-500/40 text-teal-600 dark:text-teal-400",
+  blue:    "bg-blue-500/10 border-blue-500/40 text-blue-600 dark:text-blue-400",
+  violet:  "bg-violet-500/10 border-violet-500/40 text-violet-600 dark:text-violet-400",
+  teal:    "bg-teal-500/10 border-teal-500/40 text-teal-600 dark:text-teal-400",
+  indigo:  "bg-indigo-500/10 border-indigo-500/40 text-indigo-600 dark:text-indigo-400",
+  sky:     "bg-sky-500/10 border-sky-500/40 text-sky-600 dark:text-sky-400",
+  emerald: "bg-emerald-500/10 border-emerald-500/40 text-emerald-600 dark:text-emerald-400",
+  orange:  "bg-orange-500/10 border-orange-500/40 text-orange-600 dark:text-orange-400",
+  pink:    "bg-pink-500/10 border-pink-500/40 text-pink-600 dark:text-pink-400",
+  amber:   "bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400",
 };
 
 const CITY_ACTIVE: Record<string, string> = {
-  blue:   "bg-blue-500 border-blue-500 text-white shadow-blue-500/30",
-  violet: "bg-violet-500 border-violet-500 text-white shadow-violet-500/30",
-  teal:   "bg-teal-500 border-teal-500 text-white shadow-teal-500/30",
+  blue:    "bg-blue-500 border-blue-500 text-white shadow-blue-500/30",
+  violet:  "bg-violet-500 border-violet-500 text-white shadow-violet-500/30",
+  teal:    "bg-teal-500 border-teal-500 text-white shadow-teal-500/30",
+  indigo:  "bg-indigo-500 border-indigo-500 text-white shadow-indigo-500/30",
+  sky:     "bg-sky-500 border-sky-500 text-white shadow-sky-500/30",
+  emerald: "bg-emerald-500 border-emerald-500 text-white shadow-emerald-500/30",
+  orange:  "bg-orange-500 border-orange-500 text-white shadow-orange-500/30",
+  pink:    "bg-pink-500 border-pink-500 text-white shadow-pink-500/30",
+  amber:   "bg-amber-500 border-amber-500 text-white shadow-amber-500/30",
 };
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
@@ -53,7 +71,7 @@ const Watchlist = () => {
   const { t, language, direction } = useLanguage();
   const qc = useQueryClient();
 
-  const [selectedCities, setSelectedCities] = useState<Array<"tel-aviv" | "givatayim" | "ramat-gan">>(
+  const [selectedCities, setSelectedCities] = useState<ScanCity[]>(
     ["tel-aviv", "givatayim", "ramat-gan"]
   );
   const [autoScan, setAutoScan]   = useState(false);
@@ -141,7 +159,7 @@ const Watchlist = () => {
     return () => clearInterval(interval);
   }, [autoScan, doScan]);
 
-  const toggleCity = (city: "tel-aviv" | "givatayim" | "ramat-gan") => {
+  const toggleCity = (city: ScanCity) => {
     setSelectedCities((prev) =>
       prev.includes(city) ? prev.filter((c) => c !== city) : [...prev, city]
     );
@@ -487,11 +505,19 @@ const Watchlist = () => {
           >
             {results.map((listing) => {
               const s = scoreOf(listing);
-              const cityInfo = CITIES.find((c) =>
-                listing.city.includes("תל אביב") ? c.key === "tel-aviv" :
-                listing.city.includes("גבעתיים") ? c.key === "givatayim" :
-                listing.city.includes("רמת גן") ? c.key === "ramat-gan" : false
-              );
+              const CITY_HE_MAP: Record<string, ScanCity> = {
+                "תל אביב": "tel-aviv",
+                "גבעתיים": "givatayim",
+                "רמת גן": "ramat-gan",
+                "חולון": "holon",
+                "בת ים": "bat-yam",
+                "בני ברק": "bnei-brak",
+                "פתח תקווה": "petah-tikva",
+                "הרצליה": "herzliya",
+                "ראשון לציון": "rishon",
+              };
+              const cityKey = Object.entries(CITY_HE_MAP).find(([he]) => listing.city.includes(he))?.[1];
+              const cityInfo = CITIES.find((c) => c.key === cityKey);
 
               return (
                 <motion.div

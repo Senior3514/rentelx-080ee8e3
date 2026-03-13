@@ -21,18 +21,48 @@ const SYSTEM_PROMPTS: Record<string, string> = {
 You help users find apartments, negotiate rent, understand Israeli rental law, and analyze listings.
 Answer in the same language the user writes in (Hebrew or English).
 Be concise, practical, and friendly. Use bullet points when listing steps or tips.
-Focus on the Gush Dan area (Tel Aviv, Givatayim, Ramat Gan) when giving location-specific advice.`,
+Focus on the Gush Dan area (Tel Aviv, Givatayim, Ramat Gan, Holon, Bat Yam, Bnei Brak, Petah Tikva, Herzliya, Rishon LeZion) when giving location-specific advice.
+Current date: ${new Date().toISOString().slice(0, 10)}. Prices in ILS (₪).`,
 
-  analyze: `You are a rental listing analyst for the Israeli market.
-Extract key details, list pros and cons, flag red flags, and give a clear recommendation (1–10 score with explanation).
-Be concise and structured. Answer in the user's language (Hebrew or English).`,
+  analyze: `You are a rental listing analyst for the Israeli market (Gush Dan region).
+Your job:
+1. Extract and confirm all key details: address, price (₪/month), rooms, sqm, floor, amenities.
+2. List 3–5 PROS and 2–4 CONS in bullet points.
+3. Flag any RED FLAGS (unusually high/low price, missing info, suspicious contact, no photos).
+4. Give a 1–10 SCORE with a one-sentence explanation.
+5. Give a clear RECOMMENDATION: "Worth viewing", "Skip", or "Negotiate price first".
+Be structured, concise, and data-driven. Answer in the user's language (Hebrew or English).
+Use Israeli market benchmarks: Tel Aviv avg ₪6,000–₪9,000 for 2–3 rooms; Gush Dan avg ₪4,500–₪7,000.`,
 
-  summarize: `Summarize the following rental listing concisely in 2–3 sentences, highlighting price, location, size, and key amenities.
+  summarize: `Summarize the following rental listing in exactly 2–3 sentences.
+Include: price per month in ₪, location/neighborhood, size (rooms + sqm), and top 2–3 amenities.
+Be factual — only state what is mentioned in the listing, do not invent details.
 Answer in the user's language (Hebrew or English).`,
+
+  extract: `You are a data extraction engine for Israeli rental listings.
+Extract structured data from the provided listing text and return ONLY valid JSON in this exact format:
+{
+  "address": "street and number or null",
+  "neighborhood": "neighborhood name or null",
+  "city": "city name in Hebrew or null",
+  "price": number or null,
+  "rooms": number or null,
+  "sqm": number or null,
+  "floor": number or null,
+  "total_floors": number or null,
+  "description": "clean description text or null",
+  "amenities": ["list", "of", "amenities"],
+  "contact_name": "name or null",
+  "contact_phone": "phone or null"
+}
+Extract Hebrew amenities as-is (חניה, מעלית, מרפסת, מיזוג, מרוהטת, ממ"ד, מחסן, גינה, etc.).
+Do NOT invent data. If a field is not found, use null.
+Return ONLY the JSON object, no other text.`,
 };
 
 // Model priority list — tries each in order until one succeeds
 const MODELS = [
+  "anthropic/claude-3-5-haiku",
   "anthropic/claude-3-haiku",
   "google/gemini-flash-1.5",
   "meta-llama/llama-3.1-8b-instruct:free",
@@ -43,8 +73,9 @@ async function callOpenRouter(
   model: string,
   systemPrompt: string,
   messages: Array<{ role: string; content: string }>,
-  timeoutMs = 30000,
+  opts: { maxTokens?: number; temperature?: number; timeoutMs?: number } = {},
 ): Promise<string | null> {
+  const { maxTokens = 1024, temperature = 0.7, timeoutMs = 30000 } = opts;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -65,8 +96,8 @@ async function callOpenRouter(
           ...messages,
         ],
         stream: false,
-        max_tokens: 1024,
-        temperature: 0.7,
+        max_tokens: maxTokens,
+        temperature,
       }),
     });
     clearTimeout(timer);
@@ -119,10 +150,15 @@ serve(async (req) => {
     }
 
     const systemPrompt = SYSTEM_PROMPTS[type] ?? SYSTEM_PROMPTS.chat;
+    const callOpts = type === "extract"
+      ? { maxTokens: 512, temperature: 0.1 }
+      : type === "analyze"
+      ? { maxTokens: 1200, temperature: 0.4 }
+      : { maxTokens: 1024, temperature: 0.7 };
 
     // Try each model in priority order
     for (const model of MODELS) {
-      const content = await callOpenRouter(apiKey, model, systemPrompt, messages);
+      const content = await callOpenRouter(apiKey, model, systemPrompt, messages, callOpts);
       if (content) {
         console.log(`ai-assist: replied via ${model} (${content.length} chars)`);
         return new Response(

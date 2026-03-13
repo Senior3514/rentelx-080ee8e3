@@ -16,9 +16,18 @@ function getCorsHeaders(req: Request) {
 
 /* ── City codes ── */
 const CITY_CODES: Record<string, { id: number; label: string; topArea: number; area: number }> = {
-  "tel-aviv":  { id: 5000, label: "תל אביב",  topArea: 2, area: 1 },
-  "givatayim": { id: 7900, label: "גבעתיים",   topArea: 2, area: 2 },
-  "ramat-gan": { id: 8300, label: "רמת גן",    topArea: 2, area: 2 },
+  "tel-aviv":      { id: 5000, label: "תל אביב",      topArea: 2, area: 1 },
+  "givatayim":     { id: 7900, label: "גבעתיים",       topArea: 2, area: 2 },
+  "ramat-gan":     { id: 8300, label: "רמת גן",        topArea: 2, area: 2 },
+  "holon":         { id: 6200, label: "חולון",          topArea: 2, area: 2 },
+  "bat-yam":       { id: 6100, label: "בת ים",          topArea: 2, area: 2 },
+  "bnei-brak":     { id: 6300, label: "בני ברק",        topArea: 2, area: 2 },
+  "petah-tikva":   { id: 7400, label: "פתח תקווה",     topArea: 2, area: 7 },
+  "herzliya":      { id: 6900, label: "הרצליה",         topArea: 2, area: 7 },
+  "rishon":        { id: 8600, label: "ראשון לציון",    topArea: 2, area: 3 },
+  "netanya":       { id: 7000, label: "נתניה",          topArea: 2, area: 7 },
+  "raanana":       { id: 8200, label: "רעננה",          topArea: 2, area: 7 },
+  "rehovot":       { id: 8400, label: "רחובות",         topArea: 2, area: 3 },
 };
 
 /* ── Yad2 item shape (all fields optional — API shape varies) ── */
