@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface ScannedListing {
   source_id: string;
   source: "yad2";
+  source_url: string | null;
   address: string | null;
   neighborhood: string | null;
   city: string;
