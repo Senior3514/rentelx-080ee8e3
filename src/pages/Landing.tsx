@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { motion, useInView, useMotionValue, useSpring, AnimatePresence } from "framer-motion";
 import {
   Search, Zap, Columns3, Brain, Shield, Globe,
-  ArrowRight, MapPin, Sparkles,
+  ArrowRight, MapPin, Sparkles, LayoutDashboard,
   BedDouble, Maximize, ChevronRight,
   BarChart3, Cpu, Database, Network, Bell
 } from "lucide-react";
@@ -81,6 +82,7 @@ const DEMO_LISTINGS = [
 
 const Landing = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [activeListingIdx, setActiveListingIdx] = useState(0);
 
   useEffect(() => {
@@ -118,12 +120,23 @@ const Landing = () => {
           <div className="flex items-center gap-2">
             <LanguageToggle />
             <ThemeToggle />
-            <Link to="/login">
-              <Button variant="ghost" size="sm">{t("auth.login")}</Button>
-            </Link>
-            <Link to="/signup">
-              <Button size="sm" className="glow-primary">{t("auth.signup")}</Button>
-            </Link>
+            {user ? (
+              <Link to="/dashboard">
+                <Button size="sm" className="glow-primary gap-1.5">
+                  <LayoutDashboard className="h-3.5 w-3.5" />
+                  {t("nav.dashboard")}
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link to="/login">
+                  <Button variant="ghost" size="sm">{t("auth.login")}</Button>
+                </Link>
+                <Link to="/signup">
+                  <Button size="sm" className="glow-primary">{t("auth.signup")}</Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -282,7 +295,7 @@ const Landing = () => {
             {[
               { value: 7, suffix: "", label: t("landing.stats.stages") },
               { value: 100, suffix: "", label: t("landing.stats.score") },
-              { value: 2, suffix: "", label: t("landing.stats.languages") },
+              { value: 3, suffix: "", label: t("landing.stats.languages") },
             ].map((stat) => (
               <Card key={stat.label} className="p-3 text-center glass border-border/40">
                 <p className="text-2xl font-display font-bold text-primary stat-number">

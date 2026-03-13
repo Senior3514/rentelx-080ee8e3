@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import en from "./translations/en.json";
 import he from "./translations/he.json";
+import es from "./translations/es.json";
 
-export type Language = "en" | "he";
+export type Language = "en" | "he" | "es";
 export type Direction = "ltr" | "rtl";
 
 interface LanguageContextType {
@@ -12,7 +13,7 @@ interface LanguageContextType {
   setLanguage: (lang: Language) => void;
 }
 
-const translations: Record<Language, Record<string, any>> = { en, he };
+const translations: Record<Language, Record<string, any>> = { en, he, es };
 
 function getNestedValue(obj: any, path: string): string {
   return path.split(".").reduce((acc, part) => acc?.[part], obj) ?? path;
@@ -23,7 +24,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>(() => {
     const stored = localStorage.getItem("rentelx-lang");
-    return (stored === "he" || stored === "en") ? stored : "en";
+    return (stored === "he" || stored === "en" || stored === "es") ? stored : "en";
   });
 
   const direction: Direction = language === "he" ? "rtl" : "ltr";
@@ -34,7 +35,14 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const t = useCallback(
-    (key: string) => getNestedValue(translations[language], key),
+    (key: string) => {
+      const val = getNestedValue(translations[language], key);
+      // Fallback to English if key not found in current language
+      if (val === key && language !== "en") {
+        return getNestedValue(translations.en, key);
+      }
+      return val;
+    },
     [language]
   );
 

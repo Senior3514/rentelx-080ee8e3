@@ -2,11 +2,12 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MessageSquare, X, Send, Sparkles, Loader2,
-  ChevronDown, ChevronUp, Trash2, Bot
+  ChevronDown, ChevronUp, Trash2, Bot, Minimize2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { useLocation } from "react-router-dom";
 
 interface Message {
   role: "user" | "assistant";
@@ -26,18 +27,71 @@ const SUGGESTIONS_HE = [
   "מה ציון טוב לדירה?",
   "השווה גבעתיים מול רמת גן",
 ];
+const SUGGESTIONS_ES = [
+  "Qué buscar en un apartamento en Tel Aviv?",
+  "Cómo negociar el alquiler en Israel?",
+  "Qué es una buena puntuación?",
+  "Compara Givatayim vs Ramat Gan",
+];
+
+/* ─── Page context for smarter AI ─── */
+const PAGE_CONTEXT: Record<string, { en: string; he: string; es: string }> = {
+  "/dashboard": {
+    en: "User is viewing their dashboard with stats and recent listings overview.",
+    he: "המשתמש צופה בלוח הבקרה עם סטטיסטיקות וסקירת דירות אחרונות.",
+    es: "El usuario está viendo su panel con estadísticas y listados recientes.",
+  },
+  "/inbox": {
+    en: "User is browsing their saved listings inbox. Help them filter, sort, and evaluate listings.",
+    he: "המשתמש גולש בתיבת הדירות השמורות. עזור להם לסנן, למיין ולהעריך דירות.",
+    es: "El usuario navega por su bandeja de listados. Ayúdalo a filtrar y evaluar.",
+  },
+  "/pipeline": {
+    en: "User is managing their listing pipeline (Kanban board). Help with stage management.",
+    he: "המשתמש מנהל את תהליך הדירות (לוח קנבן). עזור עם ניהול שלבים.",
+    es: "El usuario gestiona su pipeline de listados (tablero Kanban).",
+  },
+  "/watchlist": {
+    en: "User is scanning Yad2 for new listings. Help with scan settings and evaluating results.",
+    he: "המשתמש סורק את יד2 לדירות חדשות. עזור עם הגדרות סריקה והערכת תוצאות.",
+    es: "El usuario escanea Yad2 para nuevos listados.",
+  },
+  "/relocation": {
+    en: "User is planning their move. Help with moving tasks, packing, and logistics.",
+    he: "המשתמש מתכנן את המעבר. עזור עם משימות מעבר, אריזה ולוגיסטיקה.",
+    es: "El usuario planifica su mudanza. Ayuda con tareas y logística.",
+  },
+  "/profiles": {
+    en: "User is managing search profiles. Help them optimize their preferences.",
+    he: "המשתמש מנהל פרופילי חיפוש. עזור לו לייעל את ההעדפות.",
+    es: "El usuario gestiona perfiles de búsqueda.",
+  },
+  "/settings": {
+    en: "User is in settings. Help with configuration and preferences.",
+    he: "המשתמש בהגדרות. עזור עם תצורה והעדפות.",
+    es: "El usuario está en configuración.",
+  },
+};
 
 export function AIChatBubble() {
   const { t, language, direction } = useLanguage();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
+  const [miniMode, setMiniMode] = useState(false); // Ultra compact FAB
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const suggestions = language === "he" ? SUGGESTIONS_HE : SUGGESTIONS_EN;
+  const suggestions = language === "he" ? SUGGESTIONS_HE : language === "es" ? SUGGESTIONS_ES : SUGGESTIONS_EN;
+
+  // Get current page context
+  const currentPage = Object.keys(PAGE_CONTEXT).find(p =>
+    location.pathname === p || location.pathname.startsWith(p + "/")
+  );
+  const pageContext = currentPage ? PAGE_CONTEXT[currentPage] : null;
 
   useEffect(() => {
     if (open && messages.length === 0) {
@@ -46,6 +100,8 @@ export function AIChatBubble() {
         ts: Date.now(),
         content: language === "he"
           ? "שלום! אני RentelX AI. אשמח לעזור לך למצוא את הדירה המושלמת 🏡"
+          : language === "es"
+          ? "Hola! Soy RentelX AI. Puedo ayudarte a encontrar el apartamento perfecto 🏡"
           : "Hi! I'm RentelX AI. I can help you find the perfect apartment, analyze listings, or answer rental questions 🏡",
       }]);
     }
@@ -70,9 +126,22 @@ export function AIChatBubble() {
     setLoading(true);
 
     try {
+      const langName = language === "he" ? "Hebrew" : language === "es" ? "Spanish" : "English";
+      const contextMsg = pageContext
+        ? `\n[Context: ${pageContext[language as keyof typeof pageContext] || pageContext.en}]`
+        : "";
+
+      const systemMessages = [
+        {
+          role: "system" as const,
+          content: `You are RentelX AI, a smart apartment rental assistant for the Israeli market (Tel Aviv, Givatayim, Ramat Gan). Respond in ${langName}. Be concise, practical, and friendly. You help users find, evaluate, and manage rental apartments.${contextMsg}`,
+        },
+        ...updated.map((m) => ({ role: m.role, content: m.content })),
+      ];
+
       const { data, error } = await supabase.functions.invoke("ai-assist", {
         body: {
-          messages: updated.map((m) => ({ role: m.role, content: m.content })),
+          messages: systemMessages,
           type: "chat",
         },
       });
@@ -80,7 +149,7 @@ export function AIChatBubble() {
       const reply =
         data?.choices?.[0]?.message?.content ??
         data?.content ??
-        (language === "he" ? "מצטער, נסו שוב." : "Sorry, try again.");
+        (language === "he" ? "מצטער, נסו שוב." : language === "es" ? "Lo siento, intenta de nuevo." : "Sorry, try again.");
       setMessages((prev) => [...prev, { role: "assistant", content: reply, ts: Date.now() }]);
     } catch {
       setMessages((prev) => [
@@ -88,13 +157,13 @@ export function AIChatBubble() {
         {
           role: "assistant",
           ts: Date.now(),
-          content: language === "he" ? "מצטער, אירעה שגיאה. נסו שוב." : "Sorry, something went wrong. Please try again.",
+          content: language === "he" ? "מצטער, אירעה שגיאה. נסו שוב." : language === "es" ? "Lo siento, ocurrió un error. Intenta de nuevo." : "Sorry, something went wrong. Please try again.",
         },
       ]);
     } finally {
       setLoading(false);
     }
-  }, [input, loading, messages, minimized, language]);
+  }, [input, loading, messages, minimized, language, pageContext]);
 
   const clearChat = () => {
     setMessages([]);
@@ -102,7 +171,7 @@ export function AIChatBubble() {
       setMessages([{
         role: "assistant",
         ts: Date.now(),
-        content: language === "he" ? "הצ׳אט נוקה. במה אוכל לעזור?" : "Chat cleared. How can I help you?",
+        content: language === "he" ? "הצ׳אט נוקה. במה אוכל לעזור?" : language === "es" ? "Chat limpiado. ¿En qué puedo ayudarte?" : "Chat cleared. How can I help you?",
       }]);
     }, 80);
   };
@@ -114,23 +183,26 @@ export function AIChatBubble() {
     <>
       {/* ── Floating FAB ── */}
       <motion.button
-        className="fixed bottom-5 end-5 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-2xl glow-primary flex items-center justify-center"
+        className={`fixed bottom-5 end-5 z-50 rounded-full bg-primary text-primary-foreground shadow-2xl glow-primary flex items-center justify-center transition-all ${
+          miniMode ? "w-10 h-10" : "w-14 h-14"
+        }`}
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => {
           if (open && !minimized) { setOpen(false); setMinimized(false); }
-          else { setOpen(true); setMinimized(false); }
+          else { setOpen(true); setMinimized(false); setMiniMode(false); }
         }}
+        onDoubleClick={() => setMiniMode(v => !v)}
         aria-label="AI Assistant"
       >
         <AnimatePresence mode="wait" initial={false}>
           {open && !minimized ? (
             <motion.span key="x" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }}>
-              <X className="h-6 w-6" />
+              <X className={miniMode ? "h-4 w-4" : "h-6 w-6"} />
             </motion.span>
           ) : (
             <motion.span key="chat" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }}>
-              <MessageSquare className="h-6 w-6" />
+              <MessageSquare className={miniMode ? "h-4 w-4" : "h-6 w-6"} />
             </motion.span>
           )}
         </AnimatePresence>
@@ -165,10 +237,10 @@ export function AIChatBubble() {
                 <p className="text-sm font-semibold">{t("app.name")} AI</p>
                 <p className="text-xs text-muted-foreground truncate">
                   {loading
-                    ? (language === "he" ? "חושב..." : "Thinking...")
+                    ? (language === "he" ? "חושב..." : language === "es" ? "Pensando..." : "Thinking...")
                     : minimized && lastAssistantMsg
                     ? lastAssistantMsg.content.slice(0, 32) + "…"
-                    : (language === "he" ? "מונע על ידי AI" : "Powered by AI")}
+                    : (language === "he" ? "חכם · קונטקסטואלי · AI" : language === "es" ? "Inteligente · Contextual · IA" : "Smart · Contextual · AI")}
                 </p>
               </div>
               <div className="flex items-center gap-1.5">
@@ -178,9 +250,18 @@ export function AIChatBubble() {
                   size="icon"
                   className="h-6 w-6 hover:bg-destructive/10 hover:text-destructive"
                   onClick={(e) => { e.stopPropagation(); clearChat(); }}
-                  title={language === "he" ? "נקה" : "Clear"}
+                  title={language === "he" ? "נקה" : language === "es" ? "Limpiar" : "Clear"}
                 >
                   <Trash2 className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => { e.stopPropagation(); setOpen(false); setMiniMode(true); }}
+                  title="Minimize to compact"
+                >
+                  <Minimize2 className="h-3 w-3" />
                 </Button>
                 <div className="text-muted-foreground">
                   {minimized ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -261,7 +342,7 @@ export function AIChatBubble() {
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
-                      placeholder={language === "he" ? "שאל שאלה..." : "Ask anything..."}
+                      placeholder={language === "he" ? "שאל שאלה..." : language === "es" ? "Haz una pregunta..." : "Ask anything..."}
                       className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground outline-none py-1"
                       maxLength={500}
                     />

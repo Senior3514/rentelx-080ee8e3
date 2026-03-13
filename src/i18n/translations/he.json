@@ -66,7 +66,8 @@
     "profiles": "פרופילים",
     "knowledgeBase": "מאגר ידע",
     "settings": "הגדרות",
-    "logout": "התנתק"
+    "logout": "התנתק",
+    "home": "דף הבית"
   },
   "auth": {
     "login": "התחברות",
@@ -228,7 +229,14 @@
     "displayName": "שם תצוגה",
     "displayNamePlaceholder": "השם שלך",
     "saved": "ההגדרות נשמרו",
-    "profileSaved": "הפרופיל עודכן"
+    "profileSaved": "הפרופיל עודכן",
+    "compactMode": "מצב דחוס",
+    "compactModeDesc": "ממשק צפוף יותר עם פחות רווחים",
+    "display": "תצוגה",
+    "themeWarm": "חם",
+    "themeOcean": "אוקיינוס",
+    "preferredCity": "עיר מועדפת",
+    "preferredCityPlaceholder": "לדוגמה: תל אביב"
   },
   "addListing": {
     "title": "הוסף דירה",
@@ -354,6 +362,68 @@
     "edit": "ערוך",
     "loading": "טוען...",
     "confirm": "אישור",
-    "back": "חזרה"
+    "back": "חזרה",
+    "export": "ייצוא",
+    "download": "הורדה"
+  },
+  "relocation": {
+    "title": "מרכז מעבר דירה",
+    "subtitle": "ניהול מבצעי · תכנון ב-30 יום · ביצוע מושלם",
+    "operational": "SYSTEM OPERATIONAL",
+    "readiness": "מוכנות תפעולית",
+    "tasks": "משימות",
+    "boxes": "קופסאות",
+    "timeline": "לוח זמנים — פריסת המשימות",
+    "completed": "הושלמו",
+    "addTask": "הוסף משימה",
+    "taskPlaceholder": "תיאור המשימה...",
+    "add": "הוסף",
+    "boxInventory": "מלאי קופסאות",
+    "searchBoxes": "חפש לפי חדר, תוכן...",
+    "addBox": "הוסף קופסה",
+    "room": "חדר",
+    "contents": "תוכן",
+    "fragile": "שביר",
+    "scanned": "נסרק",
+    "providers": "ספקי שירות קריטיים",
+    "survivalKit": "ערכת ישרדות — 48 שעות ראשונות",
+    "survivalHint": "שמרו קופסה זו בהישג יד ביום המעבר",
+    "newItem": "פריט חדש...",
+    "operationStatus": "סטטוס מבצע",
+    "p0Completed": "משימות P0 שהושלמו",
+    "boxesPacked": "קופסאות ארוזות",
+    "providersConfirmed": "ספקים מאושרים",
+    "p0Warning": "משימות P0 ביום המעבר ממתינות",
+    "weeks": {
+      "4_weeks": "4 שבועות לפני",
+      "2_weeks": "2 שבועות לפני",
+      "moving_day": "יום המעבר",
+      "after_move": "אחרי המעבר"
+    },
+    "priority": {
+      "P0": "P0 · קריטי",
+      "P1": "P1 · גבוה",
+      "P2": "P2 · רגיל"
+    },
+    "providerTypes": {
+      "movers": "חברת הובלה",
+      "internet": "אינטרנט",
+      "electricity": "חשמל",
+      "gas": "גז",
+      "water": "מים",
+      "other": "אחר"
+    },
+    "providerStatus": {
+      "not_contacted": "לא נוצר קשר",
+      "contacted": "נוצר קשר",
+      "confirmed": "מאושר ✓"
+    },
+    "noBoxes": "אין קופסאות עדיין. הוסף את הראשונה!",
+    "moveDate": "תאריך מעבר",
+    "days": "ימים",
+    "hours": "שעות",
+    "minutes": "דקות",
+    "call": "התקשר",
+    "sendEmail": "שלח מייל"
   }
 }

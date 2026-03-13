@@ -66,7 +66,8 @@
     "profiles": "Profiles",
     "knowledgeBase": "Knowledge Base",
     "settings": "Settings",
-    "logout": "Log Out"
+    "logout": "Log Out",
+    "home": "Home"
   },
   "auth": {
     "login": "Log In",
@@ -228,7 +229,14 @@
     "displayName": "Display name",
     "displayNamePlaceholder": "Your display name",
     "saved": "Settings saved",
-    "profileSaved": "Profile updated"
+    "profileSaved": "Profile updated",
+    "compactMode": "Compact mode",
+    "compactModeDesc": "Denser interface with less spacing",
+    "display": "Display",
+    "themeWarm": "Warm",
+    "themeOcean": "Ocean",
+    "preferredCity": "Preferred city",
+    "preferredCityPlaceholder": "e.g. Tel Aviv"
   },
   "addListing": {
     "title": "Add Listing",
@@ -354,6 +362,68 @@
     "edit": "Edit",
     "loading": "Loading...",
     "confirm": "Confirm",
-    "back": "Back"
+    "back": "Back",
+    "export": "Export",
+    "download": "Download"
+  },
+  "relocation": {
+    "title": "Moving Center",
+    "subtitle": "Operational management · 30-day plan · Perfect execution",
+    "operational": "SYSTEM OPERATIONAL",
+    "readiness": "OPERATIONAL READINESS",
+    "tasks": "tasks",
+    "boxes": "boxes",
+    "timeline": "Timeline — Task Deployment",
+    "completed": "completed",
+    "addTask": "Add task",
+    "taskPlaceholder": "Task description...",
+    "add": "Add",
+    "boxInventory": "Box Inventory",
+    "searchBoxes": "Search by room, contents...",
+    "addBox": "Add box",
+    "room": "Room",
+    "contents": "Contents",
+    "fragile": "Fragile",
+    "scanned": "Scanned",
+    "providers": "Service Providers",
+    "survivalKit": "Survival Kit — First 48 Hours",
+    "survivalHint": "Keep this box within reach on moving day",
+    "newItem": "New item...",
+    "operationStatus": "Operation Status",
+    "p0Completed": "P0 tasks completed",
+    "boxesPacked": "Boxes packed",
+    "providersConfirmed": "Providers confirmed",
+    "p0Warning": "P0 tasks pending on moving day",
+    "weeks": {
+      "4_weeks": "4 weeks before",
+      "2_weeks": "2 weeks before",
+      "moving_day": "Moving day",
+      "after_move": "After the move"
+    },
+    "priority": {
+      "P0": "P0 · Critical",
+      "P1": "P1 · High",
+      "P2": "P2 · Normal"
+    },
+    "providerTypes": {
+      "movers": "Moving company",
+      "internet": "Internet",
+      "electricity": "Electricity",
+      "gas": "Gas",
+      "water": "Water",
+      "other": "Other"
+    },
+    "providerStatus": {
+      "not_contacted": "Not contacted",
+      "contacted": "Contacted",
+      "confirmed": "Confirmed ✓"
+    },
+    "noBoxes": "No boxes yet. Add the first one!",
+    "moveDate": "Moving date",
+    "days": "days",
+    "hours": "hours",
+    "minutes": "minutes",
+    "call": "Call",
+    "sendEmail": "Send email"
   }
 }

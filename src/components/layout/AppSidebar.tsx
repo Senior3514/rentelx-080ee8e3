@@ -1,9 +1,9 @@
 import {
   LayoutDashboard, Inbox, Columns3, UserSearch, Settings,
-  LogOut, Sparkles, BookHeart, Scale, Truck, ChevronLeft, ChevronRight, BookOpen
+  LogOut, Sparkles, BookHeart, Scale, Truck, ChevronLeft, ChevronRight, BookOpen, Home
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -37,6 +37,7 @@ export function AppSidebar() {
   const { state, toggleSidebar } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const navigate = useNavigate();
   const { t, direction } = useLanguage();
   const { signOut } = useAuth();
 
@@ -49,8 +50,11 @@ export function AppSidebar() {
     <TooltipProvider delayDuration={200}>
       <Sidebar collapsible="icon" side={direction === "rtl" ? "right" : "left"}>
         <SidebarContent>
-          {/* ── Brand header ── */}
-          <div className={`flex items-center gap-2 py-4 ${collapsed ? "justify-center px-2" : "px-4"}`}>
+          {/* ── Brand header (clickable → home) ── */}
+          <button
+            onClick={() => navigate("/")}
+            className={`flex items-center gap-2 py-4 hover:opacity-80 transition-opacity ${collapsed ? "justify-center px-2" : "px-4"}`}
+          >
             <motion.div
               className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shrink-0 glow-primary"
               whileHover={{ scale: 1.08, rotate: 5 }}
@@ -72,7 +76,7 @@ export function AppSidebar() {
                 </motion.h2>
               )}
             </AnimatePresence>
-          </div>
+          </button>
 
           {/* ── Navigation ── */}
           <SidebarGroup>
@@ -134,6 +138,35 @@ export function AppSidebar() {
         {/* ── Footer ── */}
         <SidebarFooter>
           <div className={`flex flex-col gap-1 px-2 pb-3 ${collapsed ? "items-center" : ""}`}>
+            {/* Home link */}
+            {collapsed ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigate("/")}
+                    className="w-8 h-8 text-muted-foreground hover:text-primary"
+                  >
+                    <Home className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side={direction === "rtl" ? "left" : "right"}>
+                  {t("nav.home")}
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/")}
+                className="w-full justify-start gap-1.5 text-muted-foreground hover:text-primary transition-colors"
+              >
+                <Home className="h-4 w-4 shrink-0" />
+                <span className="text-sm">{t("nav.home")}</span>
+              </Button>
+            )}
+
             {/* Collapse toggle */}
             <Button
               variant="ghost"
