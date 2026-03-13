@@ -64,6 +64,7 @@
     "compare": "השוואה",
     "relocation": "מעבר דירה",
     "profiles": "פרופילים",
+    "knowledgeBase": "מאגר ידע",
     "settings": "הגדרות",
     "logout": "התנתק"
   },
@@ -268,6 +269,24 @@
     "title": "404",
     "message": "אופס! הדף לא נמצא",
     "backHome": "חזרה לדף הבית"
+  },
+  "knowledgeBase": {
+    "title": "מאגר ידע",
+    "subtitle": "מרכז התיעוד של הצוות שלך, מונע על ידי Notion",
+    "connectNotion": "התחבר ל-Notion",
+    "connectInstructions": "חבר את סביבת העבודה שלך ב-Notion כדי להשתמש בה כמאגר ידע. עקוב אחרי השלבים:",
+    "step1": "צור אינטגרציה ב-notion.so/my-integrations והעתק את מפתח ה-API",
+    "step2": "שתף את מסד הנתונים של Notion עם האינטגרציה",
+    "step3": "הדבק את מזהה מסד הנתונים למטה (32 תווים מכתובת ה-URL)",
+    "dbIdPlaceholder": "הדבק מזהה מסד נתונים של Notion...",
+    "connect": "התחבר",
+    "disconnect": "התנתק",
+    "searchPlaceholder": "חפש במאגר הידע...",
+    "lastEdited": "נערך לאחרונה",
+    "empty": "לא נמצאו מאמרים",
+    "emptyHint": "הוסף דפים למסד הנתונים של Notion כדי לראות אותם כאן",
+    "emptyPage": "לדף זה אין תוכן עדיין",
+    "error": "טעינת מאגר הידע נכשלה"
   },
   "common": {
     "rooms": "חדרים",
