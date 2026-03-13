@@ -180,7 +180,7 @@ export function AppSidebar() {
               <CollapseIcon className="h-4 w-4 shrink-0" />
               {!collapsed && (
                 <span className="text-xs font-medium">
-                  {direction === "he" ? "כווץ" : "Collapse"}
+                  {direction === "rtl" ? "כווץ" : "Collapse"}
                 </span>
               )}
             </Button>

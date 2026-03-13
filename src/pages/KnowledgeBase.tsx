@@ -81,7 +81,6 @@ export default function KnowledgeBase() {
     return (
       <div className="p-6 max-w-2xl mx-auto">
         <PageHeader
-          icon={Book}
           title={t("knowledgeBase.title")}
           subtitle={t("knowledgeBase.subtitle")}
         />
@@ -183,7 +182,6 @@ export default function KnowledgeBase() {
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-start justify-between gap-4 mb-6">
         <PageHeader
-          icon={Book}
           title={t("knowledgeBase.title")}
           subtitle={t("knowledgeBase.subtitle")}
         />
