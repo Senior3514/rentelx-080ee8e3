@@ -1,17 +1,17 @@
-import { LayoutDashboard, Inbox, Columns3, UserSearch, Settings, LogOut, Sparkles, BookHeart, Scale, Truck } from "lucide-react";
+import {
+  LayoutDashboard, Inbox, Columns3, UserSearch, Settings,
+  LogOut, Sparkles, BookHeart, Scale, Truck, ChevronLeft, ChevronRight
+} from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { motion } from "framer-motion";
-import { LanguageToggle } from "@/components/LanguageToggle";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -19,102 +19,169 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 const navItems = [
-  { titleKey: "nav.dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { titleKey: "nav.inbox", url: "/inbox", icon: Inbox },
-  { titleKey: "nav.pipeline", url: "/pipeline", icon: Columns3 },
-  { titleKey: "nav.watchlist", url: "/watchlist", icon: BookHeart },
-  { titleKey: "nav.compare", url: "/compare", icon: Scale },
-  { titleKey: "nav.relocation", url: "/relocation", icon: Truck },
-  { titleKey: "nav.profiles", url: "/profiles", icon: UserSearch },
-  { titleKey: "nav.settings", url: "/settings", icon: Settings },
+  { titleKey: "nav.dashboard", url: "/dashboard", icon: LayoutDashboard, color: "text-blue-500" },
+  { titleKey: "nav.inbox", url: "/inbox", icon: Inbox, color: "text-primary" },
+  { titleKey: "nav.pipeline", url: "/pipeline", icon: Columns3, color: "text-violet-500" },
+  { titleKey: "nav.watchlist", url: "/watchlist", icon: BookHeart, color: "text-rose-500" },
+  { titleKey: "nav.compare", url: "/compare", icon: Scale, color: "text-teal-500" },
+  { titleKey: "nav.relocation", url: "/relocation", icon: Truck, color: "text-orange-500" },
+  { titleKey: "nav.profiles", url: "/profiles", icon: UserSearch, color: "text-indigo-500" },
+  { titleKey: "nav.settings", url: "/settings", icon: Settings, color: "text-muted-foreground" },
 ];
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, toggleSidebar } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
   const { t, direction } = useLanguage();
   const { signOut } = useAuth();
 
+  /* ── RTL-aware collapse chevron ── */
+  const CollapseIcon = collapsed
+    ? (direction === "rtl" ? ChevronLeft : ChevronRight)
+    : (direction === "rtl" ? ChevronRight : ChevronLeft);
+
   return (
-    <Sidebar collapsible="icon" side={direction === "rtl" ? "right" : "left"}>
-      <SidebarContent>
-        {!collapsed && (
-          <div className="px-4 py-4">
+    <TooltipProvider delayDuration={200}>
+      <Sidebar collapsible="icon" side={direction === "rtl" ? "right" : "left"}>
+        <SidebarContent>
+          {/* ── Brand header ── */}
+          <div className={`flex items-center gap-2 py-4 ${collapsed ? "justify-center px-2" : "px-4"}`}>
             <motion.div
-              className="flex items-center gap-2"
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4 }}
+              className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shrink-0 glow-primary"
+              whileHover={{ scale: 1.08, rotate: 5 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 400, damping: 20 }}
             >
-              <div className="w-7 h-7 rounded-lg bg-sidebar-primary flex items-center justify-center shrink-0">
-                <Sparkles className="h-3.5 w-3.5 text-sidebar-primary-foreground" />
-              </div>
-              <h2 className="font-display font-bold text-lg text-sidebar-foreground">{t("app.name")}</h2>
+              <Sparkles className="h-4 w-4 text-primary-foreground animate-sparkle" />
             </motion.div>
+            <AnimatePresence>
+              {!collapsed && (
+                <motion.h2
+                  className="font-display font-bold text-lg text-sidebar-foreground overflow-hidden whitespace-nowrap"
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: "auto" }}
+                  exit={{ opacity: 0, width: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {t("app.name")}
+                </motion.h2>
+              )}
+            </AnimatePresence>
           </div>
-        )}
-        {collapsed && (
-          <div className="flex justify-center py-3">
-            <div className="w-7 h-7 rounded-lg bg-sidebar-primary flex items-center justify-center">
-              <Sparkles className="h-3.5 w-3.5 text-sidebar-primary-foreground" />
-            </div>
-          </div>
-        )}
 
-        <SidebarGroup>
-          <SidebarGroupLabel>{collapsed ? "" : t("app.name")}</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navItems.map((item) => {
-                const isActive = location.pathname === item.url || location.pathname.startsWith(item.url + "/");
-                return (
-                  <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton asChild>
-                      <NavLink
-                        to={item.url}
-                        end
-                        className="relative hover:bg-sidebar-accent/50 transition-colors duration-150"
-                        activeClassName="text-sidebar-primary font-medium"
-                      >
-                        {isActive && (
-                          <motion.div
-                            layoutId="active-nav"
-                            className="absolute inset-0 bg-sidebar-accent rounded-md"
-                            transition={{ type: "spring", bounce: 0.2, duration: 0.35 }}
-                          />
+          {/* ── Navigation ── */}
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {navItems.map((item) => {
+                  const isActive = location.pathname === item.url || location.pathname.startsWith(item.url + "/");
+                  return (
+                    <SidebarMenuItem key={item.url}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <SidebarMenuButton asChild>
+                            <NavLink
+                              to={item.url}
+                              end
+                              className={`relative flex items-center gap-2.5 rounded-xl px-3 py-2 transition-all duration-150 ${
+                                isActive
+                                  ? "bg-sidebar-accent text-sidebar-primary font-medium"
+                                  : "hover:bg-sidebar-accent/50 text-sidebar-foreground/80"
+                              }`}
+                              activeClassName=""
+                            >
+                              {isActive && (
+                                <motion.div
+                                  layoutId="active-nav-pill"
+                                  className="absolute inset-0 rounded-xl bg-sidebar-accent"
+                                  transition={{ type: "spring", bounce: 0.15, duration: 0.3 }}
+                                />
+                              )}
+                              <item.icon className={`relative z-10 h-4 w-4 shrink-0 ${isActive ? item.color : ""}`} />
+                              {!collapsed && (
+                                <span className="relative z-10 text-sm">{t(item.titleKey)}</span>
+                              )}
+                              {isActive && !collapsed && (
+                                <motion.div
+                                  className={`relative z-10 ms-auto w-1.5 h-1.5 rounded-full ${item.color.replace("text-", "bg-")}`}
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  transition={{ type: "spring", stiffness: 500 }}
+                                />
+                              )}
+                            </NavLink>
+                          </SidebarMenuButton>
+                        </TooltipTrigger>
+                        {collapsed && (
+                          <TooltipContent side={direction === "rtl" ? "left" : "right"}>
+                            {t(item.titleKey)}
+                          </TooltipContent>
                         )}
-                        <item.icon className="relative z-10 me-2 h-4 w-4 shrink-0" />
-                        {!collapsed && <span className="relative z-10">{t(item.titleKey)}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
+                      </Tooltip>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
 
-      <SidebarFooter>
-        <div className="flex items-center gap-1 px-2 pb-2">
-          <LanguageToggle />
-          <ThemeToggle />
-          {!collapsed && (
+        {/* ── Footer ── */}
+        <SidebarFooter>
+          <div className={`flex flex-col gap-1 px-2 pb-3 ${collapsed ? "items-center" : ""}`}>
+            {/* Collapse toggle */}
             <Button
               variant="ghost"
               size="sm"
-              onClick={signOut}
-              className="ms-auto text-muted-foreground hover:text-destructive gap-1 transition-colors"
+              onClick={toggleSidebar}
+              className={`gap-1.5 text-muted-foreground hover:text-foreground transition-colors ${collapsed ? "w-8 h-8 p-0 justify-center" : "w-full justify-start"}`}
+              title={collapsed
+                ? (t("app.name") + " " + "expand")
+                : "Collapse sidebar"}
             >
-              <LogOut className="h-4 w-4" />
-              {t("nav.logout")}
+              <CollapseIcon className="h-4 w-4 shrink-0" />
+              {!collapsed && (
+                <span className="text-xs font-medium">
+                  {direction === "he" ? "כווץ" : "Collapse"}
+                </span>
+              )}
             </Button>
-          )}
-        </div>
-      </SidebarFooter>
-    </Sidebar>
+
+            {/* Logout */}
+            {!collapsed ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={signOut}
+                className="w-full justify-start gap-1.5 text-muted-foreground hover:text-destructive transition-colors"
+              >
+                <LogOut className="h-4 w-4 shrink-0" />
+                <span className="text-sm">{t("nav.logout")}</span>
+              </Button>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={signOut}
+                    className="w-8 h-8 text-muted-foreground hover:text-destructive"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side={direction === "rtl" ? "left" : "right"}>
+                  {t("nav.logout")}
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        </SidebarFooter>
+      </Sidebar>
+    </TooltipProvider>
   );
 }
