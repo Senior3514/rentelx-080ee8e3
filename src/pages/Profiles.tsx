@@ -97,11 +97,10 @@ const Profiles = () => {
         );
         await supabase.from("listing_scores").upsert({
           listing_id: listing.id,
-          user_id: user!.id,
-          profile_id: profileData.id,
+          search_profile_id: profileData.id,
           score: score.total,
-          breakdown: score,
-        }, { onConflict: "listing_id,profile_id" });
+          breakdown: score as any,
+        } as any, { onConflict: "listing_id,search_profile_id" });
       }
     },
     onSuccess: () => {
