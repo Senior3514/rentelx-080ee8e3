@@ -120,7 +120,10 @@
       "airConditioning": "A/C",
       "storage": "Storage",
       "furnished": "Furnished",
-      "accessible": "Accessible"
+      "accessible": "Accessible",
+      "workplace": "Workplace Address (optional)",
+      "workplacePlaceholder": "e.g. Rothschild 1, Tel Aviv",
+      "workplaceHint": "We'll help you evaluate commute distance for each listing"
     },
     "profileName": "Profile name",
     "profileNamePlaceholder": "e.g. TLV Solo, Gush Dan...",
@@ -186,7 +189,9 @@
     "rooms": "Rooms",
     "size": "Size",
     "noScores": "No scores yet",
-    "photos": "Photos"
+    "photos": "Photos",
+    "viewOriginal": "View Original Listing",
+    "source": "Source"
   },
   "pipeline": {
     "title": "Pipeline",

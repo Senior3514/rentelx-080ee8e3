@@ -163,6 +163,7 @@ const Watchlist = () => {
         amenities: listing.amenities,
         contact_name: listing.contact_name,
         contact_phone: listing.contact_phone,
+        source_url: listing.source_url,
         image_urls: listing.cover_image ? [listing.cover_image] : [],
         status: "active",
       });
@@ -553,7 +554,7 @@ const Watchlist = () => {
                               className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
                                 saved.has(listing.source_id)
                                   ? "bg-score-high/15 text-score-high"
-                                  : "bg-muted/80 text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-primary/10 hover:text-primary"
+                                  : "bg-muted/80 text-muted-foreground sm:opacity-0 sm:group-hover:opacity-100 hover:bg-primary/10 hover:text-primary"
                               }`}
                             >
                               {saved.has(listing.source_id)
@@ -568,7 +569,7 @@ const Watchlist = () => {
                                 title={language === "he" ? "פתח ביד2" : "Open on Yad2"}
                                 whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.9 }}
-                                className="w-7 h-7 rounded-lg bg-muted/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/10 hover:text-primary"
+                                className="w-7 h-7 rounded-lg bg-muted/80 flex items-center justify-center sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-primary/10 hover:text-primary"
                               >
                                 <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
                               </motion.a>

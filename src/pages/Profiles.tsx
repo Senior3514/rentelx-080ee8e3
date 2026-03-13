@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { OnboardingWizard, SearchProfileDraft } from "@/components/onboarding/OnboardingWizard";
-import { Plus, Trash2, MapPin, Pencil, Search } from "lucide-react";
+import { Plus, Trash2, MapPin, Pencil, Search, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -56,6 +56,7 @@ const Profiles = () => {
         max_rooms: draft.maxRooms,
         must_haves: draft.mustHaves,
         nice_to_haves: draft.niceToHaves,
+        workplace_address: draft.workplaceAddress || null,
       });
       if (error) throw error;
     },
@@ -77,6 +78,7 @@ const Profiles = () => {
         max_rooms: draft.maxRooms,
         must_haves: draft.mustHaves,
         nice_to_haves: draft.niceToHaves,
+        workplace_address: draft.workplaceAddress || null,
       }).eq("id", id);
       if (error) throw error;
     },
@@ -123,6 +125,12 @@ const Profiles = () => {
                   <p className="text-sm text-muted-foreground mt-1">
                     ₪{p.min_price?.toLocaleString()}–₪{p.max_price?.toLocaleString()} · {p.min_rooms}–{p.max_rooms} {t("common.rooms")}
                   </p>
+                  {p.workplace_address && (
+                    <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                      <Briefcase className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{p.workplace_address}</span>
+                    </p>
+                  )}
                   {p.must_haves?.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {p.must_haves.map((mh: string) => (
@@ -183,6 +191,7 @@ const Profiles = () => {
                 maxRooms: editingProfile.max_rooms,
                 mustHaves: editingProfile.must_haves,
                 niceToHaves: editingProfile.nice_to_haves,
+                workplaceAddress: editingProfile.workplace_address || "",
               }}
             />
           )}

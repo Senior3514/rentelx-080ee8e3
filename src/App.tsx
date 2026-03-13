@@ -24,6 +24,7 @@ import Compare from "./pages/Compare";
 import Relocation from "./pages/Relocation";
 import KnowledgeBase from "./pages/KnowledgeBase";
 import NotFound from "./pages/NotFound";
+import { AccessibilityWidget } from "./components/AccessibilityWidget";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,7 @@ const App = () => (
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              <AccessibilityWidget />
             </BrowserRouter>
           </TooltipProvider>
         </AuthProvider>
