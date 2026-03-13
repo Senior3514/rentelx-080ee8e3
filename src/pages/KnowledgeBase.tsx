@@ -81,7 +81,6 @@ export default function KnowledgeBase() {
     return (
       <div className="p-6 max-w-2xl mx-auto">
         <PageHeader
-          icon={Book}
           title={t("knowledgeBase.title")}
           subtitle={t("knowledgeBase.subtitle")}
         />
