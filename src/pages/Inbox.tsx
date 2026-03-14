@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Plus, Search, Inbox as InboxIcon, Download, Scale } from "lucide-react";
+import { Plus, Search, Inbox as InboxIcon, Download, Scale, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ListingCard } from "@/components/listings/ListingCard";
 import { AddListingModal } from "@/components/listings/AddListingModal";
@@ -75,6 +75,68 @@ const InboxPage = () => {
     return result;
   }, [listings, search, sortBy, minScore, cityFilter]);
 
+  const exportPDF = () => {
+    const isRtl = language === "he";
+    const rows = filtered.map((l) => {
+      const score = l.listing_scores?.length ? Math.max(...l.listing_scores.map((s: any) => s.score)) : "—";
+      const amenities = Array.isArray(l.amenities) ? (l.amenities as string[]).join(", ") : "";
+      return `
+        <tr>
+          <td>${l.address ?? "—"}</td>
+          <td>${l.city ?? "—"}</td>
+          <td>₪${l.price?.toLocaleString() ?? "—"}</td>
+          <td>${l.rooms ?? "—"}</td>
+          <td>${l.sqm ?? "—"}</td>
+          <td>${score}</td>
+          <td style="font-size:11px">${amenities}</td>
+        </tr>`;
+    }).join("");
+
+    const html = `<!DOCTYPE html>
+<html dir="${isRtl ? "rtl" : "ltr"}" lang="${language}">
+<head>
+  <meta charset="UTF-8"/>
+  <title>${isRtl ? "ספריית דירות" : "Apartment Library"}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;600&display=swap');
+    body { font-family: 'Rubik', Arial, sans-serif; margin: 20px; color: #1a1a2e; direction: ${isRtl ? "rtl" : "ltr"}; }
+    h1 { color: #e07b45; font-size: 22px; margin-bottom: 4px; }
+    p { color: #666; font-size: 12px; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #e07b45; color: #fff; padding: 8px 10px; text-align: ${isRtl ? "right" : "left"}; }
+    td { padding: 7px 10px; border-bottom: 1px solid #eee; }
+    tr:nth-child(even) td { background: #fafaf8; }
+    @media print { body { margin: 0; } }
+  </style>
+</head>
+<body>
+  <h1>${isRtl ? "ספריית דירות — RentelX" : "Apartment Library — RentelX"}</h1>
+  <p>${isRtl ? `סה"כ ${filtered.length} דירות · ${new Date().toLocaleDateString("he-IL")}` : `${filtered.length} listings · ${new Date().toLocaleDateString()}`}</p>
+  <table>
+    <thead>
+      <tr>
+        <th>${isRtl ? "כתובת" : "Address"}</th>
+        <th>${isRtl ? "עיר" : "City"}</th>
+        <th>${isRtl ? "מחיר" : "Price"}</th>
+        <th>${isRtl ? "חדרים" : "Rooms"}</th>
+        <th>${isRtl ? "מ\"ר" : "SQM"}</th>
+        <th>${isRtl ? "ציון" : "Score"}</th>
+        <th>${isRtl ? "מאפיינים" : "Amenities"}</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+</body>
+</html>`;
+
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+      setTimeout(() => { win.print(); }, 500);
+    }
+  };
+
   const exportCSV = () => {
     const header = ["Address", "City", "Price", "Rooms", "SQM", "Floor", "Score", "Created"];
     const rows = filtered.map((l) => {
@@ -110,10 +172,16 @@ const InboxPage = () => {
             {language === "he" ? "השוואה" : "Compare"}
           </Button>
           {filtered.length > 0 && (
-            <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5">
-              <Download className="h-4 w-4" />
-              CSV
-            </Button>
+            <>
+              <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5">
+                <Download className="h-4 w-4" />
+                CSV
+              </Button>
+              <Button variant="outline" size="sm" onClick={exportPDF} className="gap-1.5">
+                <FileText className="h-4 w-4" />
+                PDF
+              </Button>
+            </>
           )}
           <Button onClick={() => setShowAdd(true)} className="gap-1.5">
             <Plus className="h-4 w-4" />

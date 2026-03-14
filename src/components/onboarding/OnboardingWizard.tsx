@@ -39,9 +39,10 @@ const initialProfile: SearchProfileDraft = {
 export interface OnboardingWizardProps {
   onComplete: (profile: SearchProfileDraft) => void;
   initialData?: Partial<SearchProfileDraft>;
+  isPending?: boolean;
 }
 
-export const OnboardingWizard = ({ onComplete, initialData }: OnboardingWizardProps) => {
+export const OnboardingWizard = ({ onComplete, initialData, isPending }: OnboardingWizardProps) => {
   const { t, direction } = useLanguage();
   const [step, setStep] = useState(0);
   const [profile, setProfile] = useState<SearchProfileDraft>({ ...initialProfile, ...initialData });
@@ -133,8 +134,13 @@ export const OnboardingWizard = ({ onComplete, initialData }: OnboardingWizardPr
             <Button
               onClick={() => onComplete(profile)}
               className="gap-1.5"
+              disabled={isPending}
             >
-              <Sparkles className="h-4 w-4" />
+              {isPending ? (
+                <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
               {t("onboarding.finish")}
             </Button>
           )}

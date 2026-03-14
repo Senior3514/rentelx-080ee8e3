@@ -58,7 +58,7 @@
   },
   "nav": {
     "dashboard": "לוח בקרה",
-    "inbox": "תיבת דואר",
+    "inbox": "ספריית דירות",
     "pipeline": "תהליך",
     "watchlist": "מעקב",
     "compare": "השוואה",
@@ -157,7 +157,7 @@
     "noData": "אין נתונים עדיין"
   },
   "inbox": {
-    "title": "תיבת דירות",
+    "title": "ספריית דירות",
     "empty": "אין דירות עדיין",
     "emptySubtitle": "הוסף את הדירה הראשונה שלך",
     "addListing": "הוסף דירה",
@@ -248,6 +248,9 @@
     "schemeSunset": "שקיעה",
     "schemeEmerald": "אמרלד",
     "schemeMidnight": "חצות",
+    "schemeCoral": "אלמוג",
+    "schemeGrape": "ענבים",
+    "schemeForest": "יער",
     "preferredCity": "עיר מועדפת",
     "preferredCityPlaceholder": "לדוגמה: תל אביב"
   },

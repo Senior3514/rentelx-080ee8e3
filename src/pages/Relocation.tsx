@@ -168,6 +168,48 @@ function buildDefaultAudit(lang: string): AuditItem[] {
 
 const DEFAULT_AUDIT = buildDefaultAudit("he");
 
+/* ─── Default Boxes by Room ─── */
+const DEFAULT_BOXES_RAW: { room_he: string; room_en: string; contents_he: string; contents_en: string; fragile: boolean }[] = [
+  // מטבח / Kitchen
+  { room_he: "מטבח", room_en: "Kitchen", contents_he: "כלי אוכל, צלחות, קערות", contents_en: "Dishes, plates, bowls", fragile: true },
+  { room_he: "מטבח", room_en: "Kitchen", contents_he: "כוסות, כוסות שתייה, כוסות ספל", contents_en: "Glasses, mugs, cups", fragile: true },
+  { room_he: "מטבח", room_en: "Kitchen", contents_he: "סכו\"ם, כלי בישול, שפכים", contents_en: "Cutlery, cooking utensils, ladles", fragile: false },
+  { room_he: "מטבח", room_en: "Kitchen", contents_he: "מכשירי חשמל קטנים: טוסטר, קומקום, בלנדר", contents_en: "Small appliances: toaster, kettle, blender", fragile: true },
+  { room_he: "מטבח", room_en: "Kitchen", contents_he: "מזון יבש, תבלינים, קופסאות שימורים", contents_en: "Dry food, spices, canned goods", fragile: false },
+  // סלון / Living Room
+  { room_he: "סלון", room_en: "Living Room", contents_he: "ספרים, אלבומים, עיצוב", contents_en: "Books, albums, decor", fragile: false },
+  { room_he: "סלון", room_en: "Living Room", contents_he: "אלקטרוניקה: שלטים, כבלים, אוזניות", contents_en: "Electronics: remotes, cables, headphones", fragile: true },
+  { room_he: "סלון", room_en: "Living Room", contents_he: "כריות, שמיכות קלות, אביזרי דקורציה", contents_en: "Pillows, light blankets, decorative items", fragile: false },
+  // חדר שינה / Bedroom
+  { room_he: "חדר שינה", room_en: "Bedroom", contents_he: "בגדים — קיץ, חולצות, מכנסיים", contents_en: "Clothes — summer, shirts, trousers", fragile: false },
+  { room_he: "חדר שינה", room_en: "Bedroom", contents_he: "בגדים — חורף, מעילים, סוודרים", contents_en: "Clothes — winter, coats, sweaters", fragile: false },
+  { room_he: "חדר שינה", room_en: "Bedroom", contents_he: "מצעים, ציפיות, כיסויי שמיכה", contents_en: "Bed sheets, pillowcases, duvet covers", fragile: false },
+  { room_he: "חדר שינה", room_en: "Bedroom", contents_he: "תכשיטים, שעונים, אביזרים אישיים", contents_en: "Jewelry, watches, personal accessories", fragile: true },
+  // חדר אמבטיה / Bathroom
+  { room_he: "חדר אמבטיה", room_en: "Bathroom", contents_he: "מגבות, שטיחי אמבטיה, גלילי נייר", contents_en: "Towels, bath mats, toilet rolls", fragile: false },
+  { room_he: "חדר אמבטיה", room_en: "Bathroom", contents_he: "תרופות, ויטמינים, ערכת עזרה ראשונה", contents_en: "Medications, vitamins, first aid kit", fragile: false },
+  { room_he: "חדר אמבטיה", room_en: "Bathroom", contents_he: "מוצרי טיפוח: שמפו, סבון, קרמים", contents_en: "Toiletries: shampoo, soap, creams", fragile: true },
+  // מחסן / Storage
+  { room_he: "מחסן", room_en: "Storage", contents_he: "כלי עבודה: מברגים, פטיש, מקדח", contents_en: "Tools: screwdrivers, hammer, drill", fragile: false },
+  { room_he: "מחסן", room_en: "Storage", contents_he: "חומרי ניקוי, שקיות, מגבים", contents_en: "Cleaning supplies, bags, mops", fragile: false },
+  // ילדים / Kids (optional)
+  { room_he: "חדר ילדים", room_en: "Kids Room", contents_he: "צעצועים, משחקים, ספרי ילדים", contents_en: "Toys, games, children's books", fragile: false },
+  { room_he: "חדר ילדים", room_en: "Kids Room", contents_he: "בגדי ילדים, פיג'מות, בגדי בית ספר", contents_en: "Kids clothes, pajamas, school clothes", fragile: false },
+  // ארגז ישרדות / First Box
+  { room_he: "ארגז ראשון", room_en: "First Box", contents_he: "ערכת ישרדות: מטענים, מסמכים, תרופות", contents_en: "Survival kit: chargers, documents, meds", fragile: false },
+];
+
+function buildDefaultBoxes(lang: string): Box[] {
+  return DEFAULT_BOXES_RAW.map((b, i) => ({
+    id: `default_box_${i + 1}`,
+    number: i + 1,
+    room: lang === "he" ? b.room_he : b.room_en,
+    contents: lang === "he" ? b.contents_he : b.contents_en,
+    fragile: b.fragile,
+    scanned: false,
+  }));
+}
+
 const SURVIVAL_KIT_DATA = [
   { he: "מטענים: לפטופים, טלפונים, שעונים, סוללות + מפצל/כבל מאריך", en: "Chargers: laptops, phones, watches, batteries + power strip" },
   { he: "Wi-Fi: נתב, ספק כוח, כבלי Ethernet, פרטי התחברות, Hotspot", en: "Wi-Fi: router, power supply, Ethernet cables, login details, Hotspot" },
@@ -293,6 +335,7 @@ const Relocation = () => {
     setNewProfileDate("");
     // Initialize default data for new profile
     saveState(id, "tasks", buildDefaultTasks(language));
+    saveState(id, "boxes", buildDefaultBoxes(language));
     saveState(id, "survival", buildSurvivalKit(language));
     saveState(id, "audit", buildDefaultAudit(language));
     saveState(id, "move_date", date);
@@ -303,7 +346,7 @@ const Relocation = () => {
     saveActiveProfileId(id);
     // Force reload state for new profile
     setTasks(loadState(id, "tasks", DEFAULT_TASKS));
-    setBoxes(loadState(id, "boxes", [] as Box[]));
+    setBoxes(loadState(id, "boxes", buildDefaultBoxes(language)));
     setProviders(loadState(id, "providers", [] as Provider[]));
     setSurvivalKit(loadState(id, "survival", SURVIVAL_KIT_DEFAULT));
     setAudit(loadState(id, "audit", DEFAULT_AUDIT));
@@ -330,7 +373,7 @@ const Relocation = () => {
 
   const [activeView, setActiveView] = useState<View>("dashboard");
   const [tasks, setTasks] = useState<Task[]>(() => loadState(pid, "tasks", DEFAULT_TASKS));
-  const [boxes, setBoxes] = useState<Box[]>(() => loadState(pid, "boxes", [] as Box[]));
+  const [boxes, setBoxes] = useState<Box[]>(() => loadState(pid, "boxes", buildDefaultBoxes(language)));
   const [providers, setProviders] = useState<Provider[]>(() => loadState(pid, "providers", [] as Provider[]));
   const [survivalKit, setSurvivalKit] = useState<string[]>(() => loadState(pid, "survival", SURVIVAL_KIT_DEFAULT));
   const [audit, setAudit] = useState<AuditItem[]>(() => loadState(pid, "audit", DEFAULT_AUDIT));

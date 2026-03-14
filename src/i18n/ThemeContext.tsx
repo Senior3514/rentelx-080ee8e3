@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 
 type Theme = "light" | "dark" | "system";
-type ColorScheme = "default" | "ocean" | "sunset" | "emerald" | "midnight";
+type ColorScheme = "default" | "ocean" | "sunset" | "emerald" | "midnight" | "coral" | "grape" | "forest";
 
 interface ThemeContextType {
   theme: Theme;
@@ -14,7 +14,7 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const VALID_THEMES: Theme[] = ["light", "dark", "system"];
-const VALID_SCHEMES: ColorScheme[] = ["default", "ocean", "sunset", "emerald", "midnight"];
+const VALID_SCHEMES: ColorScheme[] = ["default", "ocean", "sunset", "emerald", "midnight", "coral", "grape", "forest"];
 
 function getSystemTheme(): "light" | "dark" {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
