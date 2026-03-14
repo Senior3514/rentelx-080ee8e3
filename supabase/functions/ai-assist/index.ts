@@ -137,55 +137,102 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
   const BROWSER_HEADERS: Record<string, string> = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     "Cache-Control": "no-cache",
+    "Pragma": "no-cache",
+    "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"Windows"',
+    "sec-fetch-dest": "document",
+    "sec-fetch-mode": "navigate",
+    "sec-fetch-site": "none",
+    "sec-fetch-user": "?1",
+    "Upgrade-Insecure-Requests": "1",
   };
 
   // For Facebook, add mobile user agent to get simpler HTML
   const isFacebook = url.includes("facebook.com") || url.includes("fb.com");
   if (isFacebook) {
-    BROWSER_HEADERS["User-Agent"] = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36";
+    BROWSER_HEADERS["User-Agent"] = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36";
   }
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
+  // For Yad2 — use the API-like headers
+  const isYad2 = url.includes("yad2.co.il");
+  if (isYad2) {
+    BROWSER_HEADERS["Origin"] = "https://www.yad2.co.il";
+    BROWSER_HEADERS["Referer"] = "https://www.yad2.co.il/";
+  }
 
-  try {
-    const res = await fetch(url, {
-      headers: BROWSER_HEADERS,
-      signal: controller.signal,
-      redirect: "follow",
-    });
-    clearTimeout(timer);
+  // Try fetching with retries
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20000);
 
-    if (!res.ok) {
-      console.warn(`[fetch-url] HTTP ${res.status} from ${url}`);
+    try {
+      const res = await fetch(url, {
+        headers: BROWSER_HEADERS,
+        signal: controller.signal,
+        redirect: "follow",
+      });
+      clearTimeout(timer);
+
+      if (!res.ok) {
+        console.warn(`[fetch-url] HTTP ${res.status} from ${url} (attempt ${attempt + 1})`);
+        if (attempt === 0) {
+          await new Promise(r => setTimeout(r, 1000));
+          continue;
+        }
+        return null;
+      }
+
+      const html = await res.text();
+
+      // Extract images from og:image, meta tags, and img elements
+      const images: string[] = [];
+      // og:image — support both attribute orders
+      const ogImagePatterns = [
+        /(?:property|name)=["']og:image["'][^>]*content=["']([^"']+)["']/gi,
+        /content=["']([^"']+)["'][^>]*(?:property|name)=["']og:image["']/gi,
+      ];
+      for (const pattern of ogImagePatterns) {
+        for (const m of html.matchAll(pattern)) {
+          if (m[1] && !m[1].includes("placeholder") && !images.includes(m[1])) images.push(m[1]);
+        }
+      }
+      const imgSrcMatches = html.matchAll(/<img[^>]+(?:src|data-src)=["']([^"']+)["']/gi);
+      for (const m of imgSrcMatches) {
+        if (m[1] && m[1].startsWith("http") && !m[1].includes("logo") && !m[1].includes("icon") && !m[1].includes("avatar") && !m[1].includes("emoji") && !images.includes(m[1])) {
+          images.push(m[1]);
+        }
+      }
+
+      // Also check for data-image, background-image patterns
+      const bgImageMatches = html.matchAll(/background-image:\s*url\(['"]?(https?:\/\/[^'")\s]+)['"]?\)/gi);
+      for (const m of bgImageMatches) {
+        if (m[1] && !images.includes(m[1])) images.push(m[1]);
+      }
+
+      // Strip HTML to get clean text content
+      const text = htmlToText(html);
+      if (text.length < 30) {
+        console.warn(`[fetch-url] Very short content (${text.length} chars) from ${url}`);
+        if (attempt === 0) {
+          await new Promise(r => setTimeout(r, 1500));
+          continue;
+        }
+      }
+      return { text: text.slice(0, 15000), images: images.slice(0, 15) };
+    } catch (e) {
+      clearTimeout(timer);
+      console.warn(`[fetch-url] Error fetching ${url} (attempt ${attempt + 1}):`, (e as Error)?.message);
+      if (attempt === 0) {
+        await new Promise(r => setTimeout(r, 1000));
+        continue;
+      }
       return null;
     }
-
-    const html = await res.text();
-
-    // Extract images from og:image, meta tags, and img elements
-    const images: string[] = [];
-    const ogImageMatches = html.matchAll(/(?:property|name)=["']og:image["']\s+content=["']([^"']+)["']/gi);
-    for (const m of ogImageMatches) {
-      if (m[1] && !m[1].includes("placeholder")) images.push(m[1]);
-    }
-    const imgSrcMatches = html.matchAll(/<img[^>]+(?:src|data-src)=["']([^"']+)["']/gi);
-    for (const m of imgSrcMatches) {
-      if (m[1] && m[1].startsWith("http") && !m[1].includes("logo") && !m[1].includes("icon") && !m[1].includes("avatar") && !m[1].includes("emoji")) {
-        images.push(m[1]);
-      }
-    }
-
-    // Strip HTML to get clean text content
-    const text = htmlToText(html);
-    return { text: text.slice(0, 12000), images: images.slice(0, 10) };
-  } catch (e) {
-    clearTimeout(timer);
-    console.warn(`[fetch-url] Error fetching ${url}:`, (e as Error)?.message);
-    return null;
   }
+  return null;
 }
 
 /* ── Convert HTML to readable text ── */
@@ -301,25 +348,37 @@ serve(async (req) => {
         if (fetched && fetched.text.length > 50) {
           console.log(`[ai-assist] Fetched ${fetched.text.length} chars, ${fetched.images.length} images from ${url}`);
           // Replace the user message with one that includes the actual content
+          const sourceHint = url.includes("facebook") ? "Facebook"
+            : url.includes("yad2") ? "Yad2"
+            : url.includes("madlan") ? "Madlan"
+            : url.includes("homeless") ? "Homeless"
+            : "rental listing website";
           enrichedMessages = [{
             role: "user",
             content: [
-              `Extract rental listing data from the following page content.`,
+              `Extract rental listing data from the following ${sourceHint} page content.`,
               `SOURCE URL: ${url}`,
               fetched.images.length > 0 ? `\nIMAGES FOUND ON PAGE:\n${fetched.images.join("\n")}` : "",
               `\n--- PAGE CONTENT START ---\n${fetched.text}\n--- PAGE CONTENT END ---`,
               `\nExtract ONLY data that appears in the content above. Return JSON only.`,
+              `IMPORTANT: For price, look for numbers near ₪, ש"ח, שקל, NIS, שכירות, rent, or להשכרה.`,
+              `For rooms, look for חדרים, חד', rooms, or X.5 patterns.`,
+              `For images, include ALL image URLs found on the page that look like listing photos.`,
             ].join("\n"),
           }];
         } else {
           console.warn(`[ai-assist] Could not fetch URL content (${fetched?.text.length ?? 0} chars). Sending URL for best-effort extraction.`);
           // If fetch failed, still tell the AI we couldn't get the content
+          const sourceHint = url.includes("facebook") ? "Facebook Marketplace / Groups"
+            : url.includes("yad2") ? "Yad2"
+            : url.includes("madlan") ? "Madlan"
+            : "a rental listing website";
           enrichedMessages = [{
             role: "user",
             content: [
               `I tried to fetch this rental listing URL but could not retrieve the page content: ${url}`,
               ``,
-              `The URL appears to be from: ${url.includes("facebook") ? "Facebook Marketplace / Groups" : url.includes("yad2") ? "Yad2" : "a rental listing website"}`,
+              `The URL appears to be from: ${sourceHint}`,
               ``,
               `Based ONLY on what can be inferred from the URL structure (if any listing ID or parameters are visible), return what you can.`,
               `For any data that cannot be determined from the URL alone, you MUST use null.`,

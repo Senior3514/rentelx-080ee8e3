@@ -102,6 +102,104 @@
 }
 
 @layer base {
+  /* ═══ Color Scheme: Ocean ═══ */
+  .scheme-ocean {
+    --primary: 200 65% 48%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 180 55% 42%;
+    --accent-foreground: 0 0% 100%;
+    --ring: 200 65% 48%;
+    --sidebar-primary: 200 65% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-ring: 200 65% 48%;
+    --gradient-hero: linear-gradient(135deg, hsl(200, 65%, 48%), hsl(180, 55%, 42%));
+  }
+  .dark.scheme-ocean {
+    --primary: 200 70% 55%;
+    --primary-foreground: 220 30% 8%;
+    --accent: 180 60% 50%;
+    --accent-foreground: 220 30% 8%;
+    --ring: 200 70% 55%;
+    --sidebar-primary: 200 70% 55%;
+    --sidebar-primary-foreground: 220 30% 8%;
+    --sidebar-ring: 200 70% 55%;
+    --gradient-hero: linear-gradient(135deg, hsl(200, 70%, 55%), hsl(180, 60%, 50%));
+  }
+
+  /* ═══ Color Scheme: Sunset ═══ */
+  .scheme-sunset {
+    --primary: 340 65% 52%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 25 80% 55%;
+    --accent-foreground: 0 0% 100%;
+    --ring: 340 65% 52%;
+    --sidebar-primary: 340 65% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-ring: 340 65% 52%;
+    --gradient-hero: linear-gradient(135deg, hsl(340, 65%, 52%), hsl(25, 80%, 55%));
+  }
+  .dark.scheme-sunset {
+    --primary: 340 70% 60%;
+    --primary-foreground: 222 30% 8%;
+    --accent: 25 75% 58%;
+    --accent-foreground: 222 30% 8%;
+    --ring: 340 70% 60%;
+    --sidebar-primary: 340 70% 60%;
+    --sidebar-primary-foreground: 222 30% 8%;
+    --sidebar-ring: 340 70% 60%;
+    --gradient-hero: linear-gradient(135deg, hsl(340, 70%, 60%), hsl(25, 75%, 58%));
+  }
+
+  /* ═══ Color Scheme: Emerald ═══ */
+  .scheme-emerald {
+    --primary: 160 55% 38%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 140 50% 45%;
+    --accent-foreground: 0 0% 100%;
+    --ring: 160 55% 38%;
+    --sidebar-primary: 160 55% 38%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-ring: 160 55% 38%;
+    --gradient-hero: linear-gradient(135deg, hsl(160, 55%, 38%), hsl(140, 50%, 45%));
+  }
+  .dark.scheme-emerald {
+    --primary: 160 60% 48%;
+    --primary-foreground: 222 30% 8%;
+    --accent: 140 55% 52%;
+    --accent-foreground: 222 30% 8%;
+    --ring: 160 60% 48%;
+    --sidebar-primary: 160 60% 48%;
+    --sidebar-primary-foreground: 222 30% 8%;
+    --sidebar-ring: 160 60% 48%;
+    --gradient-hero: linear-gradient(135deg, hsl(160, 60%, 48%), hsl(140, 55%, 52%));
+  }
+
+  /* ═══ Color Scheme: Midnight ═══ */
+  .scheme-midnight {
+    --primary: 260 55% 52%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 280 50% 48%;
+    --accent-foreground: 0 0% 100%;
+    --ring: 260 55% 52%;
+    --sidebar-primary: 260 55% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-ring: 260 55% 52%;
+    --gradient-hero: linear-gradient(135deg, hsl(260, 55%, 52%), hsl(280, 50%, 48%));
+  }
+  .dark.scheme-midnight {
+    --primary: 260 60% 62%;
+    --primary-foreground: 222 30% 8%;
+    --accent: 280 55% 58%;
+    --accent-foreground: 222 30% 8%;
+    --ring: 260 60% 62%;
+    --sidebar-primary: 260 60% 62%;
+    --sidebar-primary-foreground: 222 30% 8%;
+    --sidebar-ring: 260 60% 62%;
+    --gradient-hero: linear-gradient(135deg, hsl(260, 60%, 62%), hsl(280, 55%, 58%));
+  }
+}
+
+@layer base {
   * {
     @apply border-border;
   }

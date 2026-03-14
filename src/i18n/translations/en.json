@@ -235,6 +235,12 @@
     "display": "Display",
     "themeWarm": "Warm",
     "themeOcean": "Ocean",
+    "colorScheme": "Color Scheme",
+    "schemeDefault": "Default",
+    "schemeOcean": "Ocean",
+    "schemeSunset": "Sunset",
+    "schemeEmerald": "Emerald",
+    "schemeMidnight": "Midnight",
     "preferredCity": "Preferred city",
     "preferredCityPlaceholder": "e.g. Tel Aviv"
   },
