@@ -146,15 +146,15 @@ function extractItems(json: unknown): Yad2Item[] {
   return [];
 }
 
-/* ── Browser headers (desktop Chrome 122) ── */
+/* ── Browser headers (desktop Chrome 124) ── */
 const DESKTOP_HEADERS = {
   "Accept": "application/json, text/plain, */*",
   "Accept-Language": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7",
   "Cache-Control": "no-cache",
   "Origin": "https://www.yad2.co.il",
   "Referer": "https://www.yad2.co.il/realestate/rent",
-  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-  "sec-ch-ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
   "sec-ch-ua-mobile": "?0",
   "sec-ch-ua-platform": '"Windows"',
   "sec-fetch-dest": "empty",
@@ -166,8 +166,8 @@ const DESKTOP_HEADERS = {
 const MOBILE_HEADERS = {
   "Accept": "application/json",
   "Accept-Language": "he-IL,he;q=0.9",
-  "User-Agent": "Yad2/9.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Mobile/21A329",
-  "x-app-version": "9.0",
+  "User-Agent": "Yad2/10.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) Mobile/21E236",
+  "x-app-version": "10.0",
   "x-platform": "ios",
 };
 
@@ -206,6 +206,7 @@ async function fetchCityListings(
   const attempts: Array<{ url: string; headers: Record<string, string> }> = [
     { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
     { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?topArea=${topArea}&area=${area}&city=${id}&${qs}`, headers: DESKTOP_HEADERS },
+    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&propertyGroup=apartments&${qs}`, headers: DESKTOP_HEADERS },
     { url: `https://mobile-api.yad2.co.il/api/2/feed/realestate/rent?city=${id}&${qs}`, headers: MOBILE_HEADERS },
   ];
 

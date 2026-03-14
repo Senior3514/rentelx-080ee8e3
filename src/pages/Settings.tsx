@@ -9,14 +9,14 @@ import { Switch } from "@/components/ui/switch";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { LogOut, Globe, Sun, Moon, Monitor, Flame, Waves, Minimize2, FileDown } from "lucide-react";
+import { LogOut, Globe, Sun, Moon, Monitor, Minimize2, FileDown, Palette } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
 const Settings = () => {
   const { user, signOut } = useAuth();
   const { t, language, setLanguage } = useLanguage();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, colorScheme, setColorScheme } = useTheme();
   const qc = useQueryClient();
 
   const { data: profile } = useQuery({
@@ -226,6 +226,38 @@ const Settings = () => {
               )}
               <Icon className="relative z-10 h-4 w-4" />
               <span className="relative z-10">{label}</span>
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      {/* Color Scheme */}
+      <Card className="p-4 space-y-3">
+        <h3 className="font-semibold flex items-center gap-1.5">
+          <Palette className="h-4 w-4" /> {t("settings.colorScheme")}
+        </h3>
+        <div className="grid grid-cols-5 gap-2">
+          {([
+            { value: "default" as const, label: t("settings.schemeDefault"), colors: ["hsl(16,65%,52%)", "hsl(38,75%,55%)"] },
+            { value: "ocean" as const, label: t("settings.schemeOcean"), colors: ["hsl(200,65%,48%)", "hsl(180,55%,42%)"] },
+            { value: "sunset" as const, label: t("settings.schemeSunset"), colors: ["hsl(340,65%,52%)", "hsl(25,80%,55%)"] },
+            { value: "emerald" as const, label: t("settings.schemeEmerald"), colors: ["hsl(160,55%,38%)", "hsl(140,50%,45%)"] },
+            { value: "midnight" as const, label: t("settings.schemeMidnight"), colors: ["hsl(260,55%,52%)", "hsl(280,50%,48%)"] },
+          ]).map((scheme) => (
+            <button
+              key={scheme.value}
+              onClick={() => setColorScheme(scheme.value)}
+              className={`relative flex flex-col items-center gap-1.5 p-2 rounded-lg border transition-all ${
+                colorScheme === scheme.value
+                  ? "border-primary ring-2 ring-primary/30 shadow-sm"
+                  : "border-border hover:border-primary/40"
+              }`}
+            >
+              <div
+                className="w-8 h-8 rounded-full"
+                style={{ background: `linear-gradient(135deg, ${scheme.colors[0]}, ${scheme.colors[1]})` }}
+              />
+              <span className="text-[10px] font-medium text-center leading-tight">{scheme.label}</span>
             </button>
           ))}
         </div>

@@ -10,7 +10,7 @@ import {
   Bell, BellOff, RefreshCw, MapPin, BedDouble, Maximize,
   Clock, ExternalLink, Sparkles, BookHeart, Zap, PlusCircle,
   Check, Radio, Filter, WifiOff, RotateCcw, TrendingUp,
-  Building2, Star, ChevronRight
+  Building2, Star, ChevronRight, ChevronLeft
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -81,6 +81,8 @@ const Watchlist = () => {
   const [error, setError]         = useState<string | null>(null);
   const [unavailable, setUnavailable] = useState(false);
   const [saved, setSaved]         = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
 
   const { data: activeProfile } = useQuery({
     queryKey: ["active_profile", user?.id],
@@ -105,6 +107,7 @@ const Watchlist = () => {
     setScanning(true);
     setError(null);
     setUnavailable(false);
+    setCurrentPage(1);
     try {
       let result = await scanYad2({
         cities: selectedCities,
@@ -223,6 +226,13 @@ const Watchlist = () => {
   const avgPrice = results.length
     ? Math.round(results.filter((l) => l.price).reduce((s, l) => s + (l.price ?? 0), 0) / results.filter((l) => l.price).length)
     : null;
+
+  // Pagination
+  const totalPages = Math.ceil(results.length / ITEMS_PER_PAGE);
+  const paginatedResults = results.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-up" dir={direction}>
@@ -509,17 +519,17 @@ const Watchlist = () => {
         </Card>
       )}
 
-      {/* ── Results grid ── */}
+      {/* ── Results grid (paginated) ── */}
       <AnimatePresence>
         {results.length > 0 && !scanning && (
           <motion.div
-            key="results"
+            key={`results-page-${currentPage}`}
             variants={containerVariants}
             initial="hidden"
             animate="show"
             className="space-y-3"
           >
-            {results.map((listing) => {
+            {paginatedResults.map((listing) => {
               const s = scoreOf(listing);
               const CITY_HE_MAP: Record<string, ScanCity> = {
                 "תל אביב": "tel-aviv",
@@ -686,6 +696,63 @@ const Watchlist = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── Pagination Controls ── */}
+      {totalPages > 1 && !scanning && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex items-center justify-center gap-2"
+        >
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="gap-1"
+          >
+            <ChevronLeft className="h-4 w-4 flip-rtl" />
+            {language === "he" ? "הקודם" : "Previous"}
+          </Button>
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+              .map((page, idx, arr) => {
+                const showEllipsis = idx > 0 && page - arr[idx - 1] > 1;
+                return (
+                  <span key={page} className="contents">
+                    {showEllipsis && <span className="px-1 text-muted-foreground">...</span>}
+                    <button
+                      onClick={() => setCurrentPage(page)}
+                      className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${
+                        currentPage === page
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  </span>
+                );
+              })}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="gap-1"
+          >
+            {language === "he" ? "הבא" : "Next"}
+            <ChevronRight className="h-4 w-4 flip-rtl" />
+          </Button>
+          <span className="text-xs text-muted-foreground ms-2">
+            {language === "he"
+              ? `${(currentPage - 1) * ITEMS_PER_PAGE + 1}–${Math.min(currentPage * ITEMS_PER_PAGE, results.length)} מתוך ${results.length}`
+              : `${(currentPage - 1) * ITEMS_PER_PAGE + 1}–${Math.min(currentPage * ITEMS_PER_PAGE, results.length)} of ${results.length}`}
+          </span>
+        </motion.div>
+      )}
 
       {/* AI Watchlist Helper */}
       {results.length > 0 && (

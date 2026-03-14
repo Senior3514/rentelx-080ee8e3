@@ -235,6 +235,12 @@
     "display": "תצוגה",
     "themeWarm": "חם",
     "themeOcean": "אוקיינוס",
+    "colorScheme": "ערכת צבעים",
+    "schemeDefault": "ברירת מחדל",
+    "schemeOcean": "אוקיינוס",
+    "schemeSunset": "שקיעה",
+    "schemeEmerald": "אמרלד",
+    "schemeMidnight": "חצות",
     "preferredCity": "עיר מועדפת",
     "preferredCityPlaceholder": "לדוגמה: תל אביב"
   },
