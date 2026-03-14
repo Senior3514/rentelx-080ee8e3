@@ -367,6 +367,16 @@ const Watchlist = () => {
                 {activeProfile.min_rooms}+ {t("common.rooms")}
               </Badge>
             )}
+            {activeProfile.workplace_address && (
+              <Badge variant="outline" className="text-xs">
+                🏢 {activeProfile.workplace_address}
+              </Badge>
+            )}
+            {activeProfile.desired_area && (
+              <Badge variant="outline" className="text-xs">
+                📍 {activeProfile.desired_area}
+              </Badge>
+            )}
           </div>
         )}
       </Card>

@@ -151,7 +151,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
         const scores = profiles.map((p) => {
           const breakdown = scoreListing(
             { city: data.city, price: data.price, rooms: data.rooms, amenities: data.amenities },
-            { cities: p.cities, min_price: p.min_price, max_price: p.max_price, min_rooms: p.min_rooms, max_rooms: p.max_rooms, must_haves: p.must_haves, nice_to_haves: p.nice_to_haves }
+            { cities: p.cities, min_price: p.min_price, max_price: p.max_price, min_rooms: p.min_rooms, max_rooms: p.max_rooms, must_haves: p.must_haves, nice_to_haves: p.nice_to_haves, workplace_address: p.workplace_address, current_address: p.current_address, desired_area: p.desired_area }
           );
           return { listing_id: data.id, search_profile_id: p.id, score: breakdown.total, breakdown: JSON.parse(JSON.stringify(breakdown)) };
         });
