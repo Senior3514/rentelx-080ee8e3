@@ -20,9 +20,9 @@ import { AiSectionHelper } from "@/components/ui/ai-section-helper";
 
 /* ─── Score Legend ─── */
 const SCORE_LEGEND = {
-  en: { high: "Excellent match", medium: "Good match", low: "Low match", city: "City", price: "Price", rooms: "Rooms", amenities: "Amenities" },
-  he: { high: "התאמה מעולה", medium: "התאמה טובה", low: "התאמה נמוכה", city: "עיר", price: "מחיר", rooms: "חדרים", amenities: "מאפיינים" },
-  es: { high: "Excelente coincidencia", medium: "Buena coincidencia", low: "Baja coincidencia", city: "Ciudad", price: "Precio", rooms: "Habitaciones", amenities: "Comodidades" },
+  en: { high: "Excellent match", medium: "Good match", low: "Low match", city: "City", price: "Price", rooms: "Rooms", amenities: "Amenities", location: "Location" },
+  he: { high: "התאמה מעולה", medium: "התאמה טובה", low: "התאמה נמוכה", city: "עיר", price: "מחיר", rooms: "חדרים", amenities: "מאפיינים", location: "מיקום" },
+  es: { high: "Excelente coincidencia", medium: "Buena coincidencia", low: "Baja coincidencia", city: "Ciudad", price: "Precio", rooms: "Habitaciones", amenities: "Comodidades", location: "Ubicación" },
 };
 
 const ListingDetail = () => {

@@ -64,16 +64,21 @@ CRITICAL RULES:
 - Extract ONLY data that exists in the provided text. NEVER guess or invent data.
 - If a field is not found in the text, use null.
 
-AMENITIES — Extract ALL of these when mentioned (in Hebrew or English):
-  סורגים (window bars), מזגן/מיזוג (AC), ממ"ד (safe room), מעלית (elevator),
+AMENITIES — Extract ALL of these when mentioned (in Hebrew or English).
+  This is CRITICAL — the user needs to know exactly what the apartment has/doesn't have:
+  סורגים (window bars), מזגן/מיזוג/מזגן מרכזי (AC/central AC), ממ"ד/ממד (safe room), מעלית (elevator),
   מרפסת (balcony), חניה (parking), מחסן (storage), גינה (garden),
   דוד שמש (solar water heater), גישה לנכים (disabled access),
-  מרוהטת/ריהוט (furnished), משופצת (renovated), מזגן טורנדו (tornado AC),
-  בויילר (boiler), דלת פלדלת (security door), סורגים חשמליים (electric bars),
+  מרוהטת/ריהוט (furnished), משופצת/שיפוץ (renovated), מזגן טורנדו (tornado AC),
+  בויילר (boiler), דלת פלדלת/דלת פלדה (security door), סורגים חשמליים (electric bars),
   מיקום שקט (quiet location), חניה תת-קרקעית (underground parking),
   גז מרכזי (central gas), תריסים חשמליים (electric shutters),
-  מרפסת שמש (sun balcony), ארונות קיר (built-in closets)
-  Keep the original Hebrew terms as they appear.
+  מרפסת שמש (sun balcony), ארונות קיר/ארון קיר (built-in closets),
+  מכונת כביסה (washing machine), מייבש כביסה (dryer),
+  מערכת אזעקה (alarm system), אינטרקום (intercom),
+  דלתות פנדור (pandoor doors), משופצת חדש (newly renovated),
+  ריצוף חדש (new flooring), אמבטיה (bathtub), מקלחון (shower stall)
+  Keep the original Hebrew terms as they appear. If the listing says "יש/אין" (has/doesn't have), extract accordingly.
 
 FACEBOOK-SPECIFIC RULES:
 - Facebook posts often have listing data in free text form within the description or title.
@@ -282,44 +287,51 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
 
   // ── Facebook: try multiple URL variants (mbasic, mobile, original) ──
   if (isFacebook) {
-    const fbHeaders = {
-      ...BROWSER_HEADERS,
-      "User-Agent": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
-    };
+    // Try different user agents for Facebook
+    const fbUserAgents = [
+      "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+      "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
+      "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+    ];
 
     const fbUrls = getFacebookUrls(url);
     let bestResult: { text: string; images: string[]; ogMeta: Record<string, string> } | null = null;
 
     for (const fbUrl of fbUrls) {
-      console.log(`[fetch-url] Trying Facebook URL: ${fbUrl}`);
-      const html = await fetchSingleUrl(fbUrl, fbHeaders);
-      if (!html) {
-        await new Promise(r => setTimeout(r, 800));
-        continue;
-      }
-
-      const images = extractImagesFromHtml(html);
-      const ogMeta = extractOgMeta(html);
-      const text = htmlToText(html);
-
-      // Check if this result has useful content (not just a login page)
-      const isLoginPage = html.includes("login_form") || html.includes("/login/") ||
-        (text.length < 200 && !ogMeta.description && !ogMeta.title);
-
-      if (!isLoginPage && text.length > 100) {
-        console.log(`[fetch-url] Got ${text.length} chars from ${fbUrl}`);
-        return { text: text.slice(0, 15000), images: images.slice(0, 15) };
-      }
-
-      // Even if it's a login page, OG meta tags may have useful data
-      if (ogMeta.description || ogMeta.title) {
-        const metaText = buildFacebookMetaText(ogMeta, text);
-        if (!bestResult || metaText.length > bestResult.text.length) {
-          bestResult = { text: metaText, images, ogMeta };
+      for (const ua of fbUserAgents) {
+        const fbHeaders = { ...BROWSER_HEADERS, "User-Agent": ua };
+        console.log(`[fetch-url] Trying Facebook URL: ${fbUrl} with UA: ${ua.slice(0, 30)}...`);
+        const html = await fetchSingleUrl(fbUrl, fbHeaders);
+        if (!html) {
+          await new Promise(r => setTimeout(r, 500));
+          continue;
         }
-      }
 
-      await new Promise(r => setTimeout(r, 800));
+        const images = extractImagesFromHtml(html);
+        const ogMeta = extractOgMeta(html);
+        const text = htmlToText(html);
+
+        // Check if this result has useful content (not just a login page)
+        const isLoginPage = html.includes("login_form") || html.includes("/login/") ||
+          (text.length < 200 && !ogMeta.description && !ogMeta.title);
+
+        if (!isLoginPage && text.length > 100) {
+          console.log(`[fetch-url] Got ${text.length} chars from ${fbUrl}`);
+          return { text: text.slice(0, 15000), images: images.slice(0, 15) };
+        }
+
+        // Even if it's a login page, OG meta tags may have useful data
+        if (ogMeta.description || ogMeta.title) {
+          const metaText = buildFacebookMetaText(ogMeta, text);
+          if (!bestResult || metaText.length > bestResult.text.length) {
+            bestResult = { text: metaText, images, ogMeta };
+          }
+        }
+
+        await new Promise(r => setTimeout(r, 500));
+        // If we got OG data with this UA, no need to try more UAs for this URL
+        if (bestResult && bestResult.text.length > 100) break;
+      }
     }
 
     // Return the best result we got (even if partial from OG meta)

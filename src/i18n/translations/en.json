@@ -124,7 +124,14 @@
       "accessible": "Accessible",
       "workplace": "Workplace Address (optional)",
       "workplacePlaceholder": "e.g. Rothschild 1, Tel Aviv",
-      "workplaceHint": "We'll help you evaluate commute distance for each listing"
+      "workplaceHint": "We'll help you evaluate commute distance for each listing",
+      "currentAddress": "Current Address (optional)",
+      "currentAddressPlaceholder": "e.g. Herzl 5, Holon",
+      "desiredArea": "Preferred Area to Move To (optional)",
+      "desiredAreaPlaceholder": "e.g. Florentin, Old North...",
+      "safeRoom": "Safe Room",
+      "bars": "Window Bars",
+      "solarHeater": "Solar Heater"
     },
     "profileName": "Profile name",
     "profileNamePlaceholder": "e.g. TLV Solo, Gush Dan...",

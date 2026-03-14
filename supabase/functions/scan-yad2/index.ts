@@ -39,6 +39,17 @@ interface Yad2Item {
   description_text?: string; info_text?: string;
   air_conditioner?: boolean; parking?: boolean; elevator?: boolean;
   balcony?: boolean; furniture?: boolean | string; safe_room?: boolean; storage?: boolean;
+  bars?: boolean; window_bars?: boolean;
+  boiler?: boolean; solar_water_heater?: boolean;
+  security_door?: boolean; pandoor?: boolean;
+  electric_shutters?: boolean;
+  central_gas?: boolean;
+  built_in_closets?: boolean; closets?: boolean;
+  renovated?: boolean;
+  garden?: boolean;
+  disabled_access?: boolean;
+  underground_parking?: boolean;
+  sun_balcony?: boolean;
   cover_image?: string; images?: Array<{ src?: string }>;
   contact_name?: string; contact_phone?: string;
   updated_at?: string; created_at?: string;
@@ -49,6 +60,10 @@ interface Yad2Item {
   img_url?: string;
   images_urls?: string[];
   media?: { images?: Array<{ src?: string; url?: string }> };
+  // Additional fields from newer API versions
+  additional_info?: Record<string, boolean>;
+  features?: Record<string, boolean | string>;
+  amenities_list?: string[];
 }
 
 function normalizeItem(item: Yad2Item, cityLabel: string) {
@@ -62,13 +77,37 @@ function normalizeItem(item: Yad2Item, cityLabel: string) {
   const source_url = tokenId ? `https://www.yad2.co.il/item/${tokenId}` : null;
 
   const amenities: string[] = [];
-  if (item.parking)         amenities.push("חניה");
-  if (item.elevator)        amenities.push("מעלית");
-  if (item.balcony)         amenities.push("מרפסת");
-  if (item.air_conditioner) amenities.push("מיזוג");
-  if (item.furniture)       amenities.push("מרוהטת");
-  if (item.safe_room)       amenities.push('ממ"ד');
-  if (item.storage)         amenities.push("מחסן");
+  if (item.parking || item.underground_parking)  amenities.push("חניה");
+  if (item.underground_parking)                  amenities.push("חניה תת-קרקעית");
+  if (item.elevator)                             amenities.push("מעלית");
+  if (item.balcony)                              amenities.push("מרפסת");
+  if (item.sun_balcony)                          amenities.push("מרפסת שמש");
+  if (item.air_conditioner)                      amenities.push("מיזוג");
+  if (item.furniture)                            amenities.push("מרוהטת");
+  if (item.safe_room)                            amenities.push('ממ"ד');
+  if (item.storage)                              amenities.push("מחסן");
+  if (item.bars || item.window_bars)             amenities.push("סורגים");
+  if (item.boiler || item.solar_water_heater)    amenities.push("דוד שמש");
+  if (item.security_door || item.pandoor)        amenities.push("דלת פלדלת");
+  if (item.electric_shutters)                    amenities.push("תריסים חשמליים");
+  if (item.central_gas)                          amenities.push("גז מרכזי");
+  if (item.built_in_closets || item.closets)     amenities.push("ארונות קיר");
+  if (item.renovated)                            amenities.push("משופצת");
+  if (item.garden)                               amenities.push("גינה");
+  if (item.disabled_access)                      amenities.push("גישה לנכים");
+  // Also check additional_info and features objects
+  if (item.additional_info) {
+    const ai = item.additional_info;
+    if ((ai.bars || ai.window_bars) && !amenities.includes("סורגים"))          amenities.push("סורגים");
+    if ((ai.boiler || ai.solar_water_heater) && !amenities.includes("דוד שמש")) amenities.push("דוד שמש");
+    if ((ai.pandoor || ai.security_door) && !amenities.includes("דלת פלדלת"))   amenities.push("דלת פלדלת");
+    if (ai.renovated && !amenities.includes("משופצת"))                          amenities.push("משופצת");
+  }
+  if (item.amenities_list) {
+    for (const a of item.amenities_list) {
+      if (!amenities.includes(a)) amenities.push(a);
+    }
+  }
 
   // Extract best available cover image
   const coverImage = item.cover_image
@@ -207,6 +246,8 @@ async function fetchCityListings(
     { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
     { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?topArea=${topArea}&area=${area}&city=${id}&${qs}`, headers: DESKTOP_HEADERS },
     { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&propertyGroup=apartments&${qs}`, headers: DESKTOP_HEADERS },
+    { url: `https://gw.yad2.co.il/search/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
+    { url: `https://gw.yad2.co.il/api/feed/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
     { url: `https://mobile-api.yad2.co.il/api/2/feed/realestate/rent?city=${id}&${qs}`, headers: MOBILE_HEADERS },
   ];
 

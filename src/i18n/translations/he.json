@@ -124,7 +124,14 @@
       "accessible": "נגישות",
       "workplace": "כתובת מקום עבודה (אופציונלי)",
       "workplacePlaceholder": "לדוגמה: רוטשילד 1, תל אביב",
-      "workplaceHint": "נעזור לך להעריך מרחק נסיעה לכל דירה"
+      "workplaceHint": "נעזור לך להעריך מרחק נסיעה לכל דירה",
+      "currentAddress": "כתובת נוכחית (אופציונלי)",
+      "currentAddressPlaceholder": "לדוגמה: הרצל 5, חולון",
+      "desiredArea": "אזור מועדף למעבר (אופציונלי)",
+      "desiredAreaPlaceholder": "לדוגמה: פלורנטין, הצפון הישן...",
+      "safeRoom": "ממ\"ד",
+      "bars": "סורגים",
+      "solarHeater": "דוד שמש"
     },
     "profileName": "שם הפרופיל",
     "profileNamePlaceholder": "לדוגמה: תל אביב סולו, גוש דן...",

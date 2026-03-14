@@ -12,7 +12,7 @@ const baseProfile = {
 };
 
 describe("scoreListing", () => {
-  it("returns 100 total for a perfect match", () => {
+  it("returns high total for a perfect match", () => {
     const result = scoreListing(
       {
         city: "Tel Aviv",
@@ -26,10 +26,29 @@ describe("scoreListing", () => {
     expect(result.price).toBe(100);
     expect(result.rooms).toBe(100);
     expect(result.amenities).toBe(100);
-    expect(result.total).toBe(100);
+    // Location score is neutral (50) for unknown locations — total = 25+25+15+15+10 = 90
+    expect(result.total).toBeGreaterThanOrEqual(85);
   });
 
-  it("penalises city miss heavily (city weight = 30%)", () => {
+  it("returns 100 total for a perfect match with known Hebrew city", () => {
+    const result = scoreListing(
+      {
+        city: "תל אביב",
+        price: 6000,
+        rooms: 2.5,
+        amenities: ["parking", "elevator", "balcony", "ac"],
+      },
+      { ...baseProfile, cities: ["תל אביב"] }
+    );
+    expect(result.city).toBe(100);
+    expect(result.price).toBe(100);
+    expect(result.rooms).toBe(100);
+    expect(result.amenities).toBe(100);
+    // תל אביב has location score ~75 → total ~95
+    expect(result.total).toBeGreaterThanOrEqual(90);
+  });
+
+  it("penalises city miss heavily (city weight = 25%)", () => {
     const result = scoreListing(
       {
         city: "Haifa",

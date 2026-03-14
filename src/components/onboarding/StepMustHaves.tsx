@@ -4,6 +4,7 @@ import type { SearchProfileDraft } from "./OnboardingWizard";
 import {
   Car, ArrowUpFromLine, Sun, PawPrint,
   Wind, Package, Sofa, Accessibility, Briefcase,
+  Navigation, Home, Shield, Thermometer,
 } from "lucide-react";
 
 interface StepMustHavesProps {
@@ -20,6 +21,9 @@ const amenities = [
   { id: "storage", icon: Package, key: "onboarding.step3.storage" },
   { id: "furnished", icon: Sofa, key: "onboarding.step3.furnished" },
   { id: "accessible", icon: Accessibility, key: "onboarding.step3.accessible" },
+  { id: "safeRoom", icon: Shield, key: "onboarding.step3.safeRoom" },
+  { id: "bars", icon: Shield, key: "onboarding.step3.bars" },
+  { id: "solarHeater", icon: Thermometer, key: "onboarding.step3.solarHeater" },
 ];
 
 type AmenityState = "none" | "must" | "nice";
@@ -75,8 +79,36 @@ export const StepMustHaves = ({ profile, onChange }: StepMustHavesProps) => {
         />
       </div>
 
+      {/* Current address */}
+      <div className="mb-4">
+        <label className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
+          <Home className="h-4 w-4 text-primary" />
+          {t("onboarding.step3.currentAddress")}
+        </label>
+        <Input
+          value={profile.currentAddress}
+          onChange={(e) => onChange({ ...profile, currentAddress: e.target.value })}
+          placeholder={t("onboarding.step3.currentAddressPlaceholder")}
+          maxLength={200}
+        />
+      </div>
+
+      {/* Desired area */}
+      <div className="mb-4">
+        <label className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
+          <Navigation className="h-4 w-4 text-primary" />
+          {t("onboarding.step3.desiredArea")}
+        </label>
+        <Input
+          value={profile.desiredArea}
+          onChange={(e) => onChange({ ...profile, desiredArea: e.target.value })}
+          placeholder={t("onboarding.step3.desiredAreaPlaceholder")}
+          maxLength={200}
+        />
+      </div>
+
       {/* Workplace address (optional) */}
-      <div className="mb-6">
+      <div className="mb-4">
         <label className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
           <Briefcase className="h-4 w-4 text-primary" />
           {t("onboarding.step3.workplace")}
