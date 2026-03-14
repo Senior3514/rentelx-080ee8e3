@@ -73,11 +73,11 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
     for (let i = 0; i < files.length && imageFiles.length + newFiles.length < MAX_IMAGES; i++) {
       const file = files[i];
       if (!ACCEPTED_TYPES.includes(file.type)) {
-        toast.error(language === "he" ? "רק תמונות JPG, PNG, WebP" : "Only JPG, PNG, WebP images");
+        toast.error(t("addListingExtra.imageTypeError"));
         continue;
       }
       if (file.size > MAX_FILE_SIZE) {
-        toast.error(language === "he" ? "תמונה גדולה מדי (מקס 5MB)" : "Image too large (max 5MB)");
+        toast.error(t("addListingExtra.imageSizeError"));
         continue;
       }
       newFiles.push(file);
@@ -193,7 +193,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
         else if (key === "sqm") errs[key] = t("addListing.sqmRange");
         else if (key === "floor") errs[key] = t("addListing.floorRange");
         else if (key === "contact_phone") errs[key] = t("addListing.phoneInvalid");
-        else if (key === "source_url") errs[key] = language === "he" ? "כתובת URL לא תקינה" : "Invalid URL";
+        else if (key === "source_url") errs[key] = t("addListingExtra.invalidSourceUrl");
         else errs[key] = t("addListing.textTooLong");
       });
       setFormErrors(errs);
@@ -294,20 +294,12 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
           setExtractionPartial(true);
         }
         setUrlExtracted(extracted);
-        toast.success(
-          language === "he"
-            ? "הנתונים נשלפו בהצלחה! בדקו ושמרו."
-            : "Data extracted successfully! Review and save."
-        );
+        toast.success(t("addListingExtra.extractSuccess"));
         return extracted;
       }
 
       // If AI truly returned nothing, provide helpful message but don't block
-      toast.warning(
-        language === "he"
-          ? "השליפה החזירה תוצאות חלקיות. ניתן להשלים ידנית ולשמור."
-          : "Extraction returned partial results. You can complete manually and save."
-      );
+      toast.warning(t("addListingExtra.extractPartial"));
       // Set minimal extracted data so user can still save with the URL
       const minimal = {
         address: null, neighborhood: null, city: null,
@@ -320,11 +312,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
       return minimal;
     } catch (err) {
       console.error("URL extraction error:", err);
-      toast.error(
-        language === "he"
-          ? "שגיאה בשליפת הנתונים. נסו שוב."
-          : "Error extracting data. Please try again."
-      );
+      toast.error(t("addListingExtra.extractError"));
       return null;
     } finally {
       setUrlFetching(false);
@@ -425,19 +413,19 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                 >
                   <Globe className="h-3.5 w-3.5 text-primary" />
                   <span>
-                    {language === "he" ? "מקור: " : "Source: "}
+                    {t("addListingExtra.sourceLabel")}:
                     <strong className="text-foreground capitalize">{detectSource(url)}</strong>
                   </span>
                   <Sparkles className="h-3 w-3 text-primary ms-auto" />
                   <span className="text-primary">
-                    {language === "he" ? "AI ישלוף את הנתונים" : "AI will extract data"}
+                    {t("addListingExtra.aiWillExtract")}
                   </span>
                 </motion.div>
               )}
 
               {!urlExtracted && !urlFetching && (
                 <p className="text-xs text-muted-foreground">
-                  {language === "he" ? "הדביקו קישור מיד2, פייסבוק, או כל אתר נדל\"ן — ה-AI ישלוף את כל הפרטים אוטומטית מתוכן הדף" : "Paste a link from Yad2, Facebook, or any real estate site — AI will extract all details from the actual page content"}
+                  {t("addListingExtra.urlHint")}
                 </p>
               )}
 
@@ -452,12 +440,12 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                   >
                     <div className="flex items-center gap-2 text-sm text-primary font-medium">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      {language === "he" ? "שולף נתונים מהדף..." : "Fetching page content..."}
+                      {t("addListingExtra.fetchingData")}
                     </div>
                     <div className="text-xs text-muted-foreground space-y-1">
-                      <p>{language === "he" ? "1. מוריד את תוכן הדף" : "1. Downloading page content"}</p>
-                      <p>{language === "he" ? "2. מנתח ומחלץ פרטי דירה" : "2. Analyzing & extracting listing data"}</p>
-                      <p>{language === "he" ? "3. מזהה תמונות ופרטי קשר" : "3. Identifying images & contact info"}</p>
+                      <p>1. {t("addListingExtra.fetchStep1")}</p>
+                      <p>2. {t("addListingExtra.fetchStep2")}</p>
+                      <p>3. {t("addListingExtra.fetchStep3")}</p>
                     </div>
                   </motion.div>
                 )}
@@ -474,7 +462,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                   >
                     <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
                       <CheckCircle2 className="h-3.5 w-3.5" />
-                      {language === "he" ? "נתונים שנשלפו מהדף בהצלחה" : "Data Extracted from Page"}
+                      {t("addListingExtra.dataExtracted")}
                     </div>
 
                     {/* Partial extraction warning */}
@@ -482,9 +470,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                       <div className="flex items-start gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 rounded-lg px-3 py-2">
                         <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                         <span>
-                          {language === "he"
-                            ? "חלק מהנתונים חסרים — ניתן להשלים ידנית לאחר השמירה"
-                            : "Some data is missing — you can complete it manually after saving"}
+                          {t("addListingExtra.dataMissing")}
                         </span>
                       </div>
                     )}
@@ -494,7 +480,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                       <div className="space-y-1.5">
                         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium">
                           <ImageIcon className="h-3 w-3" />
-                          {language === "he" ? `${urlExtracted.image_urls.length} תמונות נמצאו` : `${urlExtracted.image_urls.length} images found`}
+                          {urlExtracted.image_urls.length} {t("addListingExtra.imagesFound")}
                         </div>
                         <div className="flex gap-1.5 overflow-x-auto pb-1">
                           {urlExtracted.image_urls.slice(0, 4).map((imgUrl: string, i: number) => (
@@ -551,7 +537,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                         <div className="flex items-center gap-1.5">
                           <Building2 className="h-3 w-3 text-muted-foreground shrink-0" />
                           <span>
-                            {language === "he" ? "קומה" : "Floor"} {urlExtracted.floor}
+                            {t("common.floor")} {urlExtracted.floor}
                             {urlExtracted.total_floors ? `/${urlExtracted.total_floors}` : ""}
                           </span>
                         </div>
@@ -609,7 +595,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                     onClick={() => { setUrlExtracted(null); setExtractionPartial(false); }}
                     disabled={isLoading}
                   >
-                    {language === "he" ? "שלוף מחדש" : "Re-extract"}
+                    {t("addListingExtra.reExtract")}
                   </Button>
                   <Button
                     type="button"
@@ -620,12 +606,12 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                     {insertMutation.isPending ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        {language === "he" ? "שומר..." : "Saving..."}
+                        {t("addListingExtra.saving")}
                       </>
                     ) : (
                       <>
                         <CheckCircle2 className="h-4 w-4" />
-                        {language === "he" ? "שמור לתיבה" : "Save to Inbox"}
+                        {t("addListingExtra.saveToInbox")}
                       </>
                     )}
                   </Button>
@@ -700,10 +686,10 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                     </div>
                     <div className="text-center">
                       <p className="text-sm font-medium text-foreground">
-                        {language === "he" ? "העלו תמונות" : "Upload Photos"}
+                        {t("addListingExtra.uploadPhotos")}
                       </p>
                       <p className="text-xs">
-                        {language === "he" ? `עד ${MAX_IMAGES} תמונות · JPG, PNG, WebP` : `Up to ${MAX_IMAGES} images · JPG, PNG, WebP`}
+                        {t("addListingExtra.uploadPhotosDesc").replace("{max}", String(MAX_IMAGES))}
                       </p>
                     </div>
                   </motion.button>
@@ -779,7 +765,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
               <div className="relative">
                 <Link2 className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
-                  placeholder={language === "he" ? "קישור לדירה (אופציונלי)" : "Listing URL (optional)"}
+                  placeholder={t("addListingExtra.listingUrl")}
                   {...f("source_url")}
                   className="ps-8 text-sm"
                 />
@@ -798,8 +784,8 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
                     {uploading
-                      ? (language === "he" ? "מעלה תמונות..." : "Uploading images...")
-                      : (language === "he" ? "שומר..." : "Saving...")}
+                      ? t("addListingExtra.uploadingImages")
+                      : t("addListingExtra.saving")}
                   </>
                 ) : (
                   t("addListing.submit")

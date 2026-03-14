@@ -174,13 +174,13 @@ export function AppSidebar() {
               onClick={toggleSidebar}
               className={`gap-1.5 text-muted-foreground hover:text-foreground transition-colors ${collapsed ? "w-8 h-8 p-0 justify-center" : "w-full justify-start"}`}
               title={collapsed
-                ? (t("app.name") + " " + "expand")
-                : "Collapse sidebar"}
+                ? t("sidebar.expand")
+                : t("sidebar.collapse")}
             >
               <CollapseIcon className="h-4 w-4 shrink-0" />
               {!collapsed && (
                 <span className="text-xs font-medium">
-                  {direction === "rtl" ? "כווץ" : "Collapse"}
+                  {t("sidebar.collapse")}
                 </span>
               )}
             </Button>

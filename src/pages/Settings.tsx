@@ -108,7 +108,7 @@ const Settings = () => {
         .eq("status", "active");
 
       if (!listings?.length) {
-        toast.info(language === "he" ? "אין נתונים לייצוא" : "No data to export");
+        toast.info(t("settingsExtra.noDataToExport"));
         return;
       }
 
@@ -124,7 +124,7 @@ const Settings = () => {
       a.download = `rentelx-all-data-${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success(language === "he" ? "הנתונים יוצאו בהצלחה" : "Data exported successfully");
+      toast.success(t("settingsExtra.exportSuccess"));
     } catch {
       toast.error("Export failed");
     }
@@ -265,7 +265,7 @@ const Settings = () => {
           <FileDown className="h-4 w-4" /> {t("common.export")}
         </h3>
         <p className="text-xs text-muted-foreground">
-          {language === "he" ? "ייצא את כל הנתונים שלך כקובץ CSV" : language === "es" ? "Exporta todos tus datos como archivo CSV" : "Export all your data as a CSV file"}
+          {t("settingsExtra.exportDesc")}
         </p>
         <Button variant="outline" size="sm" onClick={handleExportData} className="gap-1.5">
           <FileDown className="h-3.5 w-3.5" /> CSV

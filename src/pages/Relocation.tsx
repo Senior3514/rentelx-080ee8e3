@@ -102,100 +102,125 @@ function saveState<T>(profileId: string, key: string, val: T) {
   localStorage.setItem(`${getStorageKey(profileId)}_${key}`, JSON.stringify(val));
 }
 
-/* ─── Default data (Hebrew) ─── */
-const DEFAULT_TASKS: Task[] = [
-  // ─── 4 Weeks Before ───
-  { id: "t1",  week: "4_weeks",    title: "הזמן חברת הובלה ואשר תאריך",         priority: "P0", status: "pending" },
-  { id: "t2",  week: "4_weeks",    title: "הודע לבעל הדירה ותאם עזיבה רשמית",   priority: "P0", status: "pending" },
-  { id: "t3",  week: "4_weeks",    title: "הזמן חומרי אריזה (קרטונים, סרט, ניילון מבעבע)", priority: "P1", status: "pending" },
-  { id: "t4",  week: "4_weeks",    title: "ערוך רשימת פריטים לתרומה/מכירה",     priority: "P2", status: "pending" },
-  { id: "t5",  week: "4_weeks",    title: "צלם תיעוד מצב הדירה הישנה (לפני)",   priority: "P0", status: "pending" },
-  { id: "t6",  week: "4_weeks",    title: "עדכן כתובת בבנק וכרטיסי אשראי",      priority: "P0", status: "pending" },
-  { id: "t7",  week: "4_weeks",    title: "עדכן כתובת בחברות ביטוח",            priority: "P1", status: "pending" },
-  // ─── 2 Weeks Before ───
-  { id: "t8",  week: "2_weeks",    title: "הזמן אינטרנט לדירה החדשה",           priority: "P0", status: "pending" },
-  { id: "t9",  week: "2_weeks",    title: "ארוז פריטים שאינם בשימוש יומי",      priority: "P0", status: "pending" },
-  { id: "t10", week: "2_weeks",    title: "ארוז ספרים, תמונות, עיצוב ודקורציה", priority: "P1", status: "pending" },
-  { id: "t11", week: "2_weeks",    title: "עדכן כתובת — דואר ישראל / הפניית דואר", priority: "P1", status: "pending" },
-  { id: "t12", week: "2_weeks",    title: "עדכן כתובת — ביטוח לאומי / קופות חולים", priority: "P1", status: "pending" },
-  { id: "t13", week: "2_weeks",    title: "עדכן שירותי סטרימינג ומשלוחים",      priority: "P2", status: "pending" },
-  { id: "t14", week: "2_weeks",    title: "הודע למעסיק/בי\"ס/גנים על שינוי כתובת", priority: "P2", status: "pending" },
-  // ─── Moving Day ───
-  { id: "t15", week: "moving_day", title: "בדוק את הדירה הישנה לפני עזיבה סופית", priority: "P0", status: "pending" },
-  { id: "t16", week: "moving_day", title: "שמור ערכת הישרדות 48 שעות בהישג יד",  priority: "P0", status: "pending" },
-  { id: "t17", week: "moving_day", title: "מסור מפתחות לבעל הדירה הישנה",        priority: "P0", status: "pending" },
-  { id: "t18", week: "moving_day", title: "פרוק ארגזים לפי חדרים (חפש לפי מספר)", priority: "P1", status: "pending" },
-  { id: "t19", week: "moving_day", title: "צלם תיעוד מצב הדירה החדשה (בכניסה)",  priority: "P0", status: "pending" },
-  // ─── After Move — Post-Move Audit ───
-  { id: "t20", week: "after_move", title: "חבר חשמל, מים, גז בדירה החדשה",      priority: "P0", status: "pending" },
-  { id: "t21", week: "after_move", title: "בדוק Wi-Fi ואינטרנט — חבר נתב",       priority: "P0", status: "pending" },
-  { id: "t22", week: "after_move", title: "פרוק ערכת הישרדות וארגז ראשוני",       priority: "P0", status: "pending" },
-  { id: "t23", week: "after_move", title: "פרוק קופסאות לפי חדרים (חפש לפי מספר)", priority: "P1", status: "pending" },
-  { id: "t24", week: "after_move", title: "עדכן כתובת — משרד הפנים / רשות האוכלוסין", priority: "P1", status: "pending" },
-  { id: "t25", week: "after_move", title: "עדכן מנויים: חדר כושר, חוגים, תוכנות",  priority: "P2", status: "pending" },
-  { id: "t26", week: "after_move", title: "בצע System Check: כל החשבונות/מנויים עודכנו?", priority: "P1", status: "pending" },
+/* ─── Default data (language-keyed) ─── */
+const DEFAULT_TASKS_DATA: Record<string, { id: string; week: Week; he: string; en: string; priority: Priority }[]> = {
+  "4_weeks": [
+    { id: "t1",  week: "4_weeks", he: "הזמן חברת הובלה ואשר תאריך", en: "Book moving company & confirm date", priority: "P0" },
+    { id: "t2",  week: "4_weeks", he: "הודע לבעל הדירה ותאם עזיבה רשמית", en: "Notify landlord & schedule move-out", priority: "P0" },
+    { id: "t3",  week: "4_weeks", he: "הזמן חומרי אריזה (קרטונים, סרט, ניילון מבעבע)", en: "Order packing materials (boxes, tape, bubble wrap)", priority: "P1" },
+    { id: "t4",  week: "4_weeks", he: "ערוך רשימת פריטים לתרומה/מכירה", en: "List items to donate/sell", priority: "P2" },
+    { id: "t5",  week: "4_weeks", he: "צלם תיעוד מצב הדירה הישנה (לפני)", en: "Photo-document old apartment condition (before)", priority: "P0" },
+    { id: "t6",  week: "4_weeks", he: "עדכן כתובת בבנק וכרטיסי אשראי", en: "Update address at bank & credit cards", priority: "P0" },
+    { id: "t7",  week: "4_weeks", he: "עדכן כתובת בחברות ביטוח", en: "Update address with insurance companies", priority: "P1" },
+  ],
+  "2_weeks": [
+    { id: "t8",  week: "2_weeks", he: "הזמן אינטרנט לדירה החדשה", en: "Order internet for new apartment", priority: "P0" },
+    { id: "t9",  week: "2_weeks", he: "ארוז פריטים שאינם בשימוש יומי", en: "Pack items not used daily", priority: "P0" },
+    { id: "t10", week: "2_weeks", he: "ארוז ספרים, תמונות, עיצוב ודקורציה", en: "Pack books, photos, decor", priority: "P1" },
+    { id: "t11", week: "2_weeks", he: "עדכן כתובת — דואר ישראל / הפניית דואר", en: "Update address — postal service / mail forwarding", priority: "P1" },
+    { id: "t12", week: "2_weeks", he: "עדכן כתובת — ביטוח לאומי / קופות חולים", en: "Update address — national insurance / health fund", priority: "P1" },
+    { id: "t13", week: "2_weeks", he: "עדכן שירותי סטרימינג ומשלוחים", en: "Update streaming & delivery services", priority: "P2" },
+    { id: "t14", week: "2_weeks", he: "הודע למעסיק/בי\"ס/גנים על שינוי כתובת", en: "Notify employer/school about address change", priority: "P2" },
+  ],
+  "moving_day": [
+    { id: "t15", week: "moving_day", he: "בדוק את הדירה הישנה לפני עזיבה סופית", en: "Check old apartment before final departure", priority: "P0" },
+    { id: "t16", week: "moving_day", he: "שמור ערכת הישרדות 48 שעות בהישג יד", en: "Keep 48-hour survival kit within reach", priority: "P0" },
+    { id: "t17", week: "moving_day", he: "מסור מפתחות לבעל הדירה הישנה", en: "Hand over keys to old landlord", priority: "P0" },
+    { id: "t18", week: "moving_day", he: "פרוק ארגזים לפי חדרים (חפש לפי מספר)", en: "Unpack boxes by room (search by number)", priority: "P1" },
+    { id: "t19", week: "moving_day", he: "צלם תיעוד מצב הדירה החדשה (בכניסה)", en: "Photo-document new apartment condition (entry)", priority: "P0" },
+  ],
+  "after_move": [
+    { id: "t20", week: "after_move", he: "חבר חשמל, מים, גז בדירה החדשה", en: "Connect electricity, water, gas in new apartment", priority: "P0" },
+    { id: "t21", week: "after_move", he: "בדוק Wi-Fi ואינטרנט — חבר נתב", en: "Check Wi-Fi & internet — connect router", priority: "P0" },
+    { id: "t22", week: "after_move", he: "פרוק ערכת הישרדות וארגז ראשוני", en: "Unpack survival kit & first box", priority: "P0" },
+    { id: "t23", week: "after_move", he: "פרוק קופסאות לפי חדרים (חפש לפי מספר)", en: "Unpack boxes by room (search by number)", priority: "P1" },
+    { id: "t24", week: "after_move", he: "עדכן כתובת — משרד הפנים / רשות האוכלוסין", en: "Update address — interior ministry / population authority", priority: "P1" },
+    { id: "t25", week: "after_move", he: "עדכן מנויים: חדר כושר, חוגים, תוכנות", en: "Update subscriptions: gym, classes, software", priority: "P2" },
+    { id: "t26", week: "after_move", he: "בצע System Check: כל החשבונות/מנויים עודכנו?", en: "System Check: all accounts/subscriptions updated?", priority: "P1" },
+  ],
+};
+
+function buildDefaultTasks(lang: string): Task[] {
+  return Object.values(DEFAULT_TASKS_DATA).flat().map(t => ({
+    id: t.id, week: t.week, title: lang === "he" ? t.he : t.en, priority: t.priority, status: "pending" as TaskStatus,
+  }));
+}
+
+// Keep backward-compatible default for initial load
+const DEFAULT_TASKS = buildDefaultTasks("he");
+
+const AUDIT_DATA = [
+  { id: "a1",  he: "עדכון כתובת בבנק/ים",                           en: "Update address at bank(s)" },
+  { id: "a2",  he: "עדכון כתובת בכרטיסי אשראי",                    en: "Update address on credit cards" },
+  { id: "a3",  he: "עדכון כתובת בחברות ביטוח",                     en: "Update address with insurance companies" },
+  { id: "a4",  he: "עדכון כתובת בדואר ישראל / הפניית דואר",        en: "Update postal service / mail forwarding" },
+  { id: "a5",  he: "עדכון כתובת — סלולר ואינטרנט",                 en: "Update address — mobile & internet" },
+  { id: "a6",  he: "עדכון כתובת — בתי ספר/גנים וחוגים",           en: "Update address — schools & activities" },
+  { id: "a7",  he: "עדכון כתובת — ביטוח לאומי / קופת חולים",      en: "Update address — national insurance / health fund" },
+  { id: "a8",  he: "עדכון כתובת — רשות המסים / שלטון מקומי",       en: "Update address — tax authority / local government" },
+  { id: "a9",  he: "עדכון כתובת — משרד הפנים / רשות האוכלוסין",   en: "Update address — interior ministry" },
+  { id: "a10", he: "בדיקת כל המנויים — נטפליקס, ספוטיפיי, אמזון",  en: "Check all subscriptions — Netflix, Spotify, Amazon" },
 ];
 
-const DEFAULT_AUDIT: AuditItem[] = [
-  { id: "a1",  title: "עדכון כתובת בבנק/ים",                           done: false },
-  { id: "a2",  title: "עדכון כתובת בכרטיסי אשראי",                    done: false },
-  { id: "a3",  title: "עדכון כתובת בחברות ביטוח",                     done: false },
-  { id: "a4",  title: "עדכון כתובת בדואר ישראל / הפניית דואר",        done: false },
-  { id: "a5",  title: "עדכון כתובת — סלולר ואינטרנט",                 done: false },
-  { id: "a6",  title: "עדכון כתובת — בתי ספר/גנים וחוגים",           done: false },
-  { id: "a7",  title: "עדכון כתובת — ביטוח לאומי / קופת חולים",      done: false },
-  { id: "a8",  title: "עדכון כתובת — רשות המסים / שלטון מקומי",       done: false },
-  { id: "a9",  title: "עדכון כתובת — משרד הפנים / רשות האוכלוסין",   done: false },
-  { id: "a10", title: "בדיקת כל המנויים — נטפליקס, ספוטיפיי, אמזון",  done: false },
+function buildDefaultAudit(lang: string): AuditItem[] {
+  return AUDIT_DATA.map(a => ({ id: a.id, title: lang === "he" ? a.he : a.en, done: false }));
+}
+
+const DEFAULT_AUDIT = buildDefaultAudit("he");
+
+const SURVIVAL_KIT_DATA = [
+  { he: "מטענים: לפטופים, טלפונים, שעונים, סוללות + מפצל/כבל מאריך", en: "Chargers: laptops, phones, watches, batteries + power strip" },
+  { he: "Wi-Fi: נתב, ספק כוח, כבלי Ethernet, פרטי התחברות, Hotspot", en: "Wi-Fi: router, power supply, Ethernet cables, login details, Hotspot" },
+  { he: "מסמכים: חוזה/מפתח, ת\"ז/דרכונים, ביטוח, מסמכי ילדים", en: "Documents: lease/keys, IDs/passports, insurance, kids' docs" },
+  { he: "כלי עבודה: מברג, סכין יפני, סרט הדבקה, טושים, אזיקונים", en: "Tools: screwdriver, utility knife, tape, markers, zip ties" },
+  { he: "מטבח מהיר: קומקום, כוסות, צלחות, סכו\"ם, מגבות נייר", en: "Quick kitchen: kettle, cups, plates, cutlery, paper towels" },
+  { he: "לילה ראשון: מצעים, שמיכות, פיג'מות, מטעני לילה, אטמי אוזניים", en: "First night: sheets, blankets, pajamas, night chargers, earplugs" },
+  { he: "היגיינה: מברשות שיניים, סבון, שמפו, נייר טואלט, מגבונים", en: "Hygiene: toothbrushes, soap, shampoo, toilet paper, wipes" },
+  { he: "ילדים: בקבוק/מוצץ/צעצוע מעבר, בגדי החלפה, חטיפים", en: "Kids: bottle/pacifier/comfort toy, change of clothes, snacks" },
+  { he: "תרופות: קבועות + משככי כאבים + ערכת עזרה ראשונה", en: "Medicine: regular meds + painkillers + first aid kit" },
+  { he: "ניקיון מהיר: ספריי, ספוג, שקיות זבל", en: "Quick clean: spray, sponge, garbage bags" },
 ];
 
-const SURVIVAL_KIT_DEFAULT = [
-  "מטענים: לפטופים, טלפונים, שעונים, סוללות + מפצל/כבל מאריך",
-  "Wi-Fi: נתב, ספק כוח, כבלי Ethernet, פרטי התחברות, Hotspot",
-  "מסמכים: חוזה/מפתח, ת\"ז/דרכונים, ביטוח, מסמכי ילדים",
-  "כלי עבודה: מברג, סכין יפני, סרט הדבקה, טושים, אזיקונים",
-  "מטבח מהיר: קומקום, כוסות, צלחות, סכו\"ם, מגבות נייר",
-  "לילה ראשון: מצעים, שמיכות, פיג'מות, מטעני לילה, אטמי אוזניים",
-  "היגיינה: מברשות שיניים, סבון, שמפו, נייר טואלט, מגבונים",
-  "ילדים: בקבוק/מוצץ/צעצוע מעבר, בגדי החלפה, חטיפים",
-  "תרופות: קבועות + משככי כאבים + ערכת עזרה ראשונה",
-  "ניקיון מהיר: ספריי, ספוג, שקיות זבל",
-];
+function buildSurvivalKit(lang: string): string[] {
+  return SURVIVAL_KIT_DATA.map(s => lang === "he" ? s.he : s.en);
+}
 
-const WEEK_META: Record<Week, { label: string; color: string; icon: React.ElementType }> = {
-  "4_weeks":    { label: "4 שבועות לפני", color: "from-blue-500 to-blue-600",     icon: Target },
-  "2_weeks":    { label: "2 שבועות לפני", color: "from-amber-500 to-orange-500",  icon: Clock },
-  "moving_day": { label: "יום המעבר",      color: "from-red-500 to-rose-600",      icon: Zap },
-  "after_move": { label: "אחרי המעבר",     color: "from-green-500 to-emerald-500", icon: CheckCircle2 },
+const SURVIVAL_KIT_DEFAULT = buildSurvivalKit("he");
+
+const WEEK_COLORS: Record<Week, { color: string; icon: React.ElementType }> = {
+  "4_weeks":    { color: "from-blue-500 to-blue-600",     icon: Target },
+  "2_weeks":    { color: "from-amber-500 to-orange-500",  icon: Clock },
+  "moving_day": { color: "from-red-500 to-rose-600",      icon: Zap },
+  "after_move": { color: "from-green-500 to-emerald-500", icon: CheckCircle2 },
 };
 
-const PRIORITY_META: Record<Priority, { label: string; color: string }> = {
-  P0: { label: "P0 · קריטי", color: "bg-red-500/20 text-red-400 border-red-500/30" },
-  P1: { label: "P1 · גבוה",   color: "bg-amber-500/20 text-amber-400 border-amber-500/30" },
-  P2: { label: "P2 · רגיל",   color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+const PRIORITY_COLORS: Record<Priority, string> = {
+  P0: "bg-red-500/20 text-red-400 border-red-500/30",
+  P1: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+  P2: "bg-blue-500/20 text-blue-400 border-blue-500/30",
 };
 
-const PROVIDER_META: Record<ProviderType, { label: string; icon: React.ElementType; color: string }> = {
-  movers:      { label: "חברת הובלה", icon: Truck,       color: "from-violet-500 to-violet-600" },
-  internet:    { label: "אינטרנט",    icon: Wifi,        color: "from-blue-500 to-blue-600" },
-  electricity: { label: "חשמל",       icon: Bolt,        color: "from-yellow-500 to-amber-500" },
-  gas:         { label: "גז",         icon: Activity,    color: "from-orange-500 to-red-500" },
-  water:       { label: "מים",        icon: Droplets,    color: "from-cyan-500 to-blue-500" },
-  other:       { label: "אחר",        icon: Building2,   color: "from-gray-500 to-gray-600" },
+const PROVIDER_ICONS: Record<ProviderType, { icon: React.ElementType; color: string }> = {
+  movers:      { icon: Truck,       color: "from-violet-500 to-violet-600" },
+  internet:    { icon: Wifi,        color: "from-blue-500 to-blue-600" },
+  electricity: { icon: Bolt,        color: "from-yellow-500 to-amber-500" },
+  gas:         { icon: Activity,    color: "from-orange-500 to-red-500" },
+  water:       { icon: Droplets,    color: "from-cyan-500 to-blue-500" },
+  other:       { icon: Building2,   color: "from-gray-500 to-gray-600" },
 };
 
-const STATUS_META: Record<Provider["status"], { label: string; color: string }> = {
-  not_contacted: { label: "לא נוצר קשר", color: "bg-muted text-muted-foreground" },
-  contacted:     { label: "נוצר קשר",    color: "bg-amber-500/20 text-amber-400" },
-  confirmed:     { label: "מאושר ✓",     color: "bg-green-500/20 text-green-400" },
+const STATUS_COLORS: Record<Provider["status"], string> = {
+  not_contacted: "bg-muted text-muted-foreground",
+  contacted:     "bg-amber-500/20 text-amber-400",
+  confirmed:     "bg-green-500/20 text-green-400",
 };
 
-const VIEW_META: Record<View, { label: string; icon: React.ElementType }> = {
-  dashboard: { label: "חמ\"ל", icon: LayoutDashboard },
-  tasks:     { label: "משימות",  icon: ListTodo },
-  boxes:     { label: "ארגזים",  icon: Package },
-  providers: { label: "ספקים",   icon: Users },
-  audit:     { label: "בדיקת סיום", icon: BookOpen },
+const VIEW_ICONS: Record<View, React.ElementType> = {
+  dashboard: LayoutDashboard,
+  tasks:     ListTodo,
+  boxes:     Package,
+  providers: Users,
+  audit:     BookOpen,
 };
 
 function uid() { return Math.random().toString(36).slice(2); }
@@ -256,7 +281,8 @@ const Relocation = () => {
   const createProfile = useCallback((name: string, date: string) => {
     if (profiles.length >= MAX_PROFILES) return;
     const id = uid();
-    const profile: MovingProfile = { id, name: name.trim() || (language === "he" ? `מעבר ${profiles.length + 1}` : `Move ${profiles.length + 1}`), moveDate: date, createdAt: new Date().toISOString() };
+    const defaultName = `${t("relocation.moveName")} ${profiles.length + 1}`;
+    const profile: MovingProfile = { id, name: name.trim() || defaultName, moveDate: date, createdAt: new Date().toISOString() };
     const updated = [...profiles, profile];
     setProfilesState(updated);
     saveProfiles(updated);
@@ -266,11 +292,11 @@ const Relocation = () => {
     setNewProfileName("");
     setNewProfileDate("");
     // Initialize default data for new profile
-    saveState(id, "tasks", DEFAULT_TASKS);
-    saveState(id, "survival", SURVIVAL_KIT_DEFAULT);
-    saveState(id, "audit", DEFAULT_AUDIT);
+    saveState(id, "tasks", buildDefaultTasks(language));
+    saveState(id, "survival", buildSurvivalKit(language));
+    saveState(id, "audit", buildDefaultAudit(language));
     saveState(id, "move_date", date);
-  }, [profiles, language]);
+  }, [profiles, language, t]);
 
   const switchProfile = useCallback((id: string) => {
     setActiveProfileIdState(id);
@@ -416,28 +442,26 @@ const Relocation = () => {
             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
               <Truck className="h-8 w-8 text-primary" />
             </div>
-            <h1 className="text-2xl font-display font-bold">{language === "he" ? "מרכז מעבר דירה" : "Moving Center"}</h1>
+            <h1 className="text-2xl font-display font-bold">{t("relocation.title")}</h1>
             <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-              {language === "he"
-                ? "הגדירו את תאריך המעבר ושם לפרופיל. ניתן ליצור עד 3 מרכזי שליטה למעברים שונים."
-                : "Set your moving date and profile name. You can create up to 3 moving centers for different moves."}
+              {t("relocation.profileSetupDesc")}
             </p>
           </div>
           <Card className="p-5 space-y-4">
             <div>
               <label className="text-sm font-medium mb-1.5 block">
-                {language === "he" ? "שם המעבר" : "Move name"}
+                {t("relocation.moveName")}
               </label>
               <Input
                 value={newProfileName}
                 onChange={(e) => setNewProfileName(e.target.value)}
-                placeholder={language === "he" ? "לדוגמה: מעבר לתל אביב" : "e.g. Moving to Tel Aviv"}
+                placeholder={t("relocation.moveNamePlaceholder")}
                 maxLength={50}
               />
             </div>
             <div>
               <label className="text-sm font-medium mb-1.5 block">
-                {language === "he" ? "תאריך מעבר משוער" : "Estimated moving date"}
+                {t("relocation.estimatedDate")}
               </label>
               <input
                 type="date"
@@ -451,7 +475,7 @@ const Relocation = () => {
               className="w-full gap-2 glow-primary"
             >
               <Zap className="h-4 w-4" />
-              {language === "he" ? "צור מרכז שליטה" : "Create Moving Center"}
+              {t("relocation.createCenter")}
             </Button>
           </Card>
         </motion.div>
@@ -496,7 +520,7 @@ const Relocation = () => {
             onClick={() => setShowProfileSetup(true)}
           >
             <Plus className="h-3.5 w-3.5" />
-            {language === "he" ? "מרכז חדש" : "New Center"}
+            {t("relocation.newCenter")}
           </Button>
         )}
         {activeProfile && profiles.length > 1 && (
@@ -505,7 +529,7 @@ const Relocation = () => {
             size="icon"
             className="h-8 w-8 text-muted-foreground hover:text-destructive ms-auto"
             onClick={() => deleteProfile(activeProfile.id)}
-            title={language === "he" ? "מחק מרכז" : "Delete center"}
+            title={t("relocation.deleteCenter")}
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
@@ -518,7 +542,7 @@ const Relocation = () => {
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
             <Card className="p-4 border-primary/30 bg-primary/5 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold">{language === "he" ? "מרכז שליטה חדש" : "New Moving Center"}</h3>
+                <h3 className="text-sm font-bold">{t("relocation.newMovingCenter")}</h3>
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowProfileSetup(false)}>
                   <span className="text-lg leading-none">&times;</span>
                 </Button>
@@ -527,7 +551,7 @@ const Relocation = () => {
                 <Input
                   value={newProfileName}
                   onChange={(e) => setNewProfileName(e.target.value)}
-                  placeholder={language === "he" ? "שם המעבר" : "Move name"}
+                  placeholder={t("relocation.moveName")}
                   className="flex-1 min-w-[140px] h-9 text-sm"
                   maxLength={50}
                 />
@@ -539,13 +563,11 @@ const Relocation = () => {
                 />
                 <Button size="sm" onClick={() => createProfile(newProfileName, newProfileDate)} className="h-9 gap-1.5">
                   <Plus className="h-3.5 w-3.5" />
-                  {language === "he" ? "צור" : "Create"}
+                  {t("relocation.create")}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                {language === "he"
-                  ? `${MAX_PROFILES - profiles.length} מרכזים נוספים אפשריים`
-                  : `${MAX_PROFILES - profiles.length} more center(s) available`}
+                {MAX_PROFILES - profiles.length} {t("relocation.centersAvailable")}
               </p>
             </Card>
           </motion.div>
@@ -580,9 +602,9 @@ const Relocation = () => {
               {moveDate && (
                 <div className="flex items-center gap-3">
                   {[
-                    { val: countdown.days, label: "ימים" },
-                    { val: countdown.hours, label: "שעות" },
-                    { val: countdown.mins, label: "דקות" },
+                    { val: countdown.days, label: t("relocation.days") },
+                    { val: countdown.hours, label: t("relocation.hours") },
+                    { val: countdown.mins, label: t("relocation.minutes") },
                   ].map((c) => (
                     <div key={c.label} className="text-center">
                       <motion.p
@@ -628,8 +650,8 @@ const Relocation = () => {
       {/* ─── Tab Navigation ─── */}
       <div className="flex gap-1 bg-muted/30 p-1 rounded-xl border border-border/40 overflow-x-auto">
         {VIEWS.map((v) => {
-          const meta = VIEW_META[v];
-          const Icon = meta.icon;
+          const Icon = VIEW_ICONS[v];
+          const viewLabel = t(`relocation.views.${v}`);
           const isActive = activeView === v;
           // Badge counts
           let badge = 0;
@@ -648,7 +670,7 @@ const Relocation = () => {
               }`}
             >
               <Icon className="h-3.5 w-3.5" />
-              {meta.label}
+              {viewLabel}
               {badge > 0 && !isActive && (
                 <span className="absolute -top-0.5 -end-0.5 w-3.5 h-3.5 rounded-full bg-red-500 text-white text-[9px] flex items-center justify-center font-bold">
                   {badge > 9 ? "9+" : badge}
@@ -682,8 +704,8 @@ const Relocation = () => {
                     <AlertTriangle className="h-3.5 w-3.5 text-red-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold">P0 פתוח</p>
-                    <p className="text-xs text-muted-foreground">מה חייב להיסגר עכשיו</p>
+                    <p className="text-sm font-bold">{t("relocation.p0Open")}</p>
+                    <p className="text-xs text-muted-foreground">{t("relocation.p0OpenDesc")}</p>
                   </div>
                   {p0OpenTasks.length > 0 && (
                     <span className="ms-auto text-xs font-bold text-red-400 bg-red-500/20 px-2 py-0.5 rounded-full">
@@ -695,7 +717,7 @@ const Relocation = () => {
                   {p0OpenTasks.length === 0 ? (
                     <div className="text-center py-4">
                       <CheckCircle2 className="h-8 w-8 text-score-high mx-auto mb-1" />
-                      <p className="text-xs text-muted-foreground">כל משימות P0 הושלמו! 🎉</p>
+                      <p className="text-xs text-muted-foreground">{t("relocation.allP0Done")}</p>
                     </div>
                   ) : (
                     p0OpenTasks.slice(0, 5).map((task) => (
@@ -715,14 +737,14 @@ const Relocation = () => {
                           {task.title}
                         </span>
                         <span className="text-[9px] text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded-full shrink-0">
-                          {WEEK_META[task.week].label.split(" ").slice(0,2).join(" ")}
+                          {t(`relocation.weeks.${task.week}`)}
                         </span>
                       </button>
                     ))
                   )}
                   {p0OpenTasks.length > 5 && (
                     <button onClick={() => setActiveView("tasks")} className="text-xs text-primary hover:underline w-full text-center pt-1">
-                      + {p0OpenTasks.length - 5} משימות נוספות →
+                      + {p0OpenTasks.length - 5} {t("relocation.moreTasks")} →
                     </button>
                   )}
                 </div>
@@ -735,8 +757,8 @@ const Relocation = () => {
                     <Package className="h-3.5 w-3.5 text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold">ארגזים לפתיחה</p>
-                    <p className="text-xs text-muted-foreground">מה צריך להגיע ראשון</p>
+                    <p className="text-sm font-bold">{t("relocation.boxesToOpen")}</p>
+                    <p className="text-xs text-muted-foreground">{t("relocation.boxesToOpenDesc")}</p>
                   </div>
                   {boxes.filter(b => !b.scanned).length > 0 && (
                     <span className="ms-auto text-xs font-bold text-blue-400 bg-blue-500/20 px-2 py-0.5 rounded-full">
@@ -748,9 +770,9 @@ const Relocation = () => {
                   {boxes.length === 0 ? (
                     <div className="text-center py-4">
                       <Package className="h-8 w-8 text-muted-foreground/40 mx-auto mb-1" />
-                      <p className="text-xs text-muted-foreground">אין ארגזים עדיין</p>
+                      <p className="text-xs text-muted-foreground">{t("relocation.noBoxesYet")}</p>
                       <button onClick={() => setActiveView("boxes")} className="text-xs text-primary hover:underline mt-1">
-                        + הוסף ארגזים
+                        + {t("relocation.addBoxes")}
                       </button>
                     </div>
                   ) : (
@@ -771,7 +793,7 @@ const Relocation = () => {
                   )}
                   {boxes.filter(b => !b.scanned).length > 5 && (
                     <button onClick={() => setActiveView("boxes")} className="text-xs text-primary hover:underline w-full text-center pt-1">
-                      + {boxes.filter(b => !b.scanned).length - 5} ארגזים נוספים →
+                      + {boxes.filter(b => !b.scanned).length - 5} {t("relocation.moreBoxes")} →
                     </button>
                   )}
                 </div>
@@ -784,8 +806,8 @@ const Relocation = () => {
                     <Users className="h-3.5 w-3.5 text-violet-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold">ספקים לטיפול</p>
-                    <p className="text-xs text-muted-foreground">מה דורש שיחה/אישור</p>
+                    <p className="text-sm font-bold">{t("relocation.providersToHandle")}</p>
+                    <p className="text-xs text-muted-foreground">{t("relocation.providersToHandleDesc")}</p>
                   </div>
                   {urgentProviders.filter(p => p.name).length > 0 && (
                     <span className="ms-auto text-xs font-bold text-violet-400 bg-violet-500/20 px-2 py-0.5 rounded-full">
@@ -797,35 +819,35 @@ const Relocation = () => {
                   {providers.length === 0 ? (
                     <div className="text-center py-4">
                       <Users className="h-8 w-8 text-muted-foreground/40 mx-auto mb-1" />
-                      <p className="text-xs text-muted-foreground">אין ספקים עדיין</p>
+                      <p className="text-xs text-muted-foreground">{t("relocation.noProvidersYet")}</p>
                       <button onClick={() => setActiveView("providers")} className="text-xs text-primary hover:underline mt-1">
-                        + הוסף ספקים
+                        + {t("relocation.addProviders")}
                       </button>
                     </div>
                   ) : (
                     urgentProviders.filter(p => p.name).slice(0, 5).map((p) => {
-                      const meta = PROVIDER_META[p.type];
-                      const Icon = meta.icon;
+                      const dashProvMeta = PROVIDER_ICONS[p.type];
+                      const DashProvIcon = dashProvMeta.icon;
                       return (
                         <button
                           key={p.id}
                           onClick={() => cycleProviderStatus(p.id)}
                           className="w-full flex items-center gap-2 text-start"
                         >
-                          <div className={`w-6 h-6 rounded-md bg-gradient-to-br ${meta.color} flex items-center justify-center shrink-0`}>
-                            <Icon className="h-3 w-3 text-white" />
+                          <div className={`w-6 h-6 rounded-md bg-gradient-to-br ${dashProvMeta.color} flex items-center justify-center shrink-0`}>
+                            <DashProvIcon className="h-3 w-3 text-white" />
                           </div>
-                          <span className="text-xs flex-1 leading-snug">{p.name || meta.label}</span>
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${STATUS_META[p.status].color}`}>
-                            {STATUS_META[p.status].label}
+                          <span className="text-xs flex-1 leading-snug">{p.name || t(`relocation.providerTypes.${p.type}`)}</span>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${STATUS_COLORS[p.status]}`}>
+                            {t(`relocation.providerStatus.${p.status}`)}
                           </span>
                         </button>
                       );
                     })
                   )}
-                  {!providers.some(p => !p.name) && providers.length < Object.keys(PROVIDER_META).length && (
+                  {!providers.some(p => !p.name) && providers.length < Object.keys(PROVIDER_ICONS).length && (
                     <button onClick={() => setActiveView("providers")} className="text-xs text-primary hover:underline w-full text-center pt-1">
-                      + הוסף ספק חדש
+                      + {t("relocation.addNewProvider")}
                     </button>
                   )}
                 </div>
@@ -838,9 +860,9 @@ const Relocation = () => {
               <Card className="p-4 border-primary/40 bg-primary/5">
                 <h2 className="text-sm font-display font-bold mb-3 flex items-center gap-2 text-primary">
                   <BookMarked className="h-4 w-4" />
-                  ערכת ישרדות — 48 שעות ראשונות
+                  {t("relocation.survivalKit")}
                 </h2>
-                <p className="text-xs text-muted-foreground mb-3">שמרו קופסה זו בהישג יד ביום המעבר</p>
+                <p className="text-xs text-muted-foreground mb-3">{t("relocation.survivalHint")}</p>
                 <div className="space-y-1">
                   {survivalKit.slice(0, 6).map((item, i) => (
                     <div key={i} className="flex items-center gap-2">
@@ -849,7 +871,7 @@ const Relocation = () => {
                     </div>
                   ))}
                   {survivalKit.length > 6 && (
-                    <p className="text-xs text-muted-foreground ps-5">+ {survivalKit.length - 6} פריטים נוספים...</p>
+                    <p className="text-xs text-muted-foreground ps-5">+ {survivalKit.length - 6} {t("relocation.moreItems")}...</p>
                   )}
                 </div>
               </Card>
@@ -858,13 +880,13 @@ const Relocation = () => {
               <Card className="p-4 border-border/60 space-y-3">
                 <h3 className="text-sm font-display font-bold flex items-center gap-2">
                   <Activity className="h-4 w-4 text-primary" />
-                  סטטוס מבצע
+                  {t("relocation.operationStatus")}
                 </h3>
                 {[
-                  { label: "משימות P0 שהושלמו", value: tasks.filter((t) => t.priority === "P0" && t.status === "completed").length, total: tasks.filter((t) => t.priority === "P0").length || 1, color: "bg-red-500" },
-                  { label: "ארגזים שנפתחו", value: scannedBoxes, total: totalBoxes || 1, color: "bg-blue-500" },
-                  { label: "ספקים מאושרים", value: providers.filter((p) => p.status === "confirmed").length, total: providers.length || 1, color: "bg-green-500" },
-                  { label: "בדיקת סיום (Post-Audit)", value: auditDone, total: audit.length || 1, color: "bg-violet-500" },
+                  { label: t("relocation.p0Completed"), value: tasks.filter((t) => t.priority === "P0" && t.status === "completed").length, total: tasks.filter((t) => t.priority === "P0").length || 1, color: "bg-red-500" },
+                  { label: t("relocation.openedBoxes"), value: scannedBoxes, total: totalBoxes || 1, color: "bg-blue-500" },
+                  { label: t("relocation.providersConfirmed"), value: providers.filter((p) => p.status === "confirmed").length, total: providers.length || 1, color: "bg-green-500" },
+                  { label: t("relocation.postAudit"), value: auditDone, total: audit.length || 1, color: "bg-violet-500" },
                 ].map((stat) => (
                   <div key={stat.label} className="space-y-1">
                     <div className="flex justify-between text-xs text-muted-foreground">
@@ -889,7 +911,7 @@ const Relocation = () => {
                     className="flex-1 gap-1.5 h-8 text-xs"
                   >
                     <FileDown className="h-3.5 w-3.5" />
-                    ייצא CSV
+                    {t("relocation.exportCsv")}
                   </Button>
                 </div>
               </Card>
@@ -901,9 +923,9 @@ const Relocation = () => {
                 <Card className="p-3 border-destructive/40 bg-destructive/5">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
-                    <p className="text-xs text-destructive font-medium">משימות P0 ביום המעבר ממתינות — לחץ כאן לצפייה</p>
+                    <p className="text-xs text-destructive font-medium">{t("relocation.p0MovingDayWarning")}</p>
                     <Button size="sm" variant="ghost" className="ms-auto h-7 text-xs" onClick={() => setActiveView("tasks")}>
-                      צפה →
+                      {t("relocation.viewAction")} →
                     </Button>
                   </div>
                 </Card>
@@ -927,10 +949,11 @@ const Relocation = () => {
               <div className="lg:col-span-2 space-y-3">
                 <h2 className="text-base font-display font-bold flex items-center gap-2">
                   <Target className="h-4 w-4 text-primary" />
-                  לוח זמנים — פריסת המשימות
+                  {t("relocation.timeline")}
                 </h2>
                 {WEEKS.map((week) => {
-                  const meta = WEEK_META[week];
+                  const weekMeta = WEEK_COLORS[week];
+                  const WeekIcon = weekMeta.icon;
                   const weekTasks = tasks.filter((t) => t.week === week);
                   const weekDone = weekTasks.filter((t) => t.status === "completed").length;
                   const isOpen = expandedWeeks.has(week);
@@ -940,17 +963,17 @@ const Relocation = () => {
                         className="w-full p-3 flex items-center gap-3 hover:bg-muted/30 transition-colors"
                         onClick={() => toggleWeek(week)}
                       >
-                        <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${meta.color} flex items-center justify-center shrink-0`}>
-                          <meta.icon className="h-4 w-4 text-white" />
+                        <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${weekMeta.color} flex items-center justify-center shrink-0`}>
+                          <WeekIcon className="h-4 w-4 text-white" />
                         </div>
                         <div className="flex-1 text-start">
-                          <p className="text-sm font-semibold">{meta.label}</p>
-                          <p className="text-xs text-muted-foreground">{weekDone}/{weekTasks.length} הושלמו</p>
+                          <p className="text-sm font-semibold">{t(`relocation.weeks.${week}`)}</p>
+                          <p className="text-xs text-muted-foreground">{weekDone}/{weekTasks.length} {t("relocation.completed")}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
                             <motion.div
-                              className={`h-full rounded-full bg-gradient-to-r ${meta.color}`}
+                              className={`h-full rounded-full bg-gradient-to-r ${weekMeta.color}`}
                               animate={{ width: weekTasks.length ? `${(weekDone / weekTasks.length) * 100}%` : "0%" }}
                               transition={{ duration: 0.5 }}
                             />
@@ -992,7 +1015,7 @@ const Relocation = () => {
                                     <span className={`flex-1 text-sm ${task.status === "completed" ? "line-through text-muted-foreground" : ""}`}>
                                       {task.title}
                                     </span>
-                                    <span className={`text-xs px-1.5 py-0.5 rounded-full border font-mono ${PRIORITY_META[task.priority].color}`}>
+                                    <span className={`text-xs px-1.5 py-0.5 rounded-full border font-mono ${PRIORITY_COLORS[task.priority]}`}>
                                       {task.priority}
                                     </span>
                                     <button onClick={() => deleteTask(task.id)} className="opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1011,13 +1034,13 @@ const Relocation = () => {
 
                 {/* Add task */}
                 <Card className="p-3 border-border/60 border-dashed">
-                  <p className="text-xs text-muted-foreground font-semibold mb-2">+ הוסף משימה</p>
+                  <p className="text-xs text-muted-foreground font-semibold mb-2">+ {t("relocation.addTask")}</p>
                   <div className="flex gap-2 flex-wrap">
                     <Input
                       value={newTask}
                       onChange={(e) => setNewTask(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && addTask()}
-                      placeholder="תיאור המשימה..."
+                      placeholder={t("relocation.taskPlaceholder")}
                       className="flex-1 min-w-[160px] h-8 text-sm"
                     />
                     <select
@@ -1025,19 +1048,19 @@ const Relocation = () => {
                       onChange={(e) => setNewTaskWeek(e.target.value as Week)}
                       className="h-8 bg-muted/50 border border-border/60 rounded-md text-xs px-2"
                     >
-                      {WEEKS.map((w) => <option key={w} value={w}>{WEEK_META[w].label}</option>)}
+                      {WEEKS.map((w) => <option key={w} value={w}>{t(`relocation.weeks.${w}`)}</option>)}
                     </select>
                     <select
                       value={newTaskPri}
                       onChange={(e) => setNewTaskPri(e.target.value as Priority)}
                       className="h-8 bg-muted/50 border border-border/60 rounded-md text-xs px-2"
                     >
-                      <option value="P0">P0 קריטי</option>
-                      <option value="P1">P1 גבוה</option>
-                      <option value="P2">P2 רגיל</option>
+                      <option value="P0">{t("relocation.priority.P0")}</option>
+                      <option value="P1">{t("relocation.priority.P1")}</option>
+                      <option value="P2">{t("relocation.priority.P2")}</option>
                     </select>
                     <Button size="sm" onClick={addTask} className="h-8 gap-1">
-                      <Plus className="h-3.5 w-3.5" /> הוסף
+                      <Plus className="h-3.5 w-3.5" /> {t("relocation.add")}
                     </Button>
                   </div>
                 </Card>
@@ -1048,7 +1071,7 @@ const Relocation = () => {
                 <Card className="p-4 border-primary/40 bg-primary/5 sticky top-4">
                   <h2 className="text-sm font-display font-bold mb-3 flex items-center gap-2 text-primary">
                     <BookMarked className="h-4 w-4" />
-                    ערכת ישרדות — 48 שעות
+                    {t("relocation.survivalKit")}
                   </h2>
                   <div className="space-y-1.5">
                     <AnimatePresence>
@@ -1078,7 +1101,7 @@ const Relocation = () => {
                       value={newKitItem}
                       onChange={(e) => setNewKitItem(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && addKitItem()}
-                      placeholder="פריט חדש..."
+                      placeholder={t("relocation.newItem")}
                       className="h-7 text-xs flex-1"
                     />
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={addKitItem}>
@@ -1104,7 +1127,7 @@ const Relocation = () => {
           >
             <h2 className="text-base font-display font-bold flex items-center gap-2">
               <Package className="h-4 w-4 text-primary" />
-              מלאי קופסאות
+              {t("relocation.boxInventory")}
             </h2>
 
             <div className="relative">
@@ -1112,7 +1135,7 @@ const Relocation = () => {
               <Input
                 value={boxSearch}
                 onChange={(e) => setBoxSearch(e.target.value)}
-                placeholder="חפש לפי חדר, תוכן..."
+                placeholder={t("relocation.searchBoxes")}
                 className="ps-9"
               />
             </div>
@@ -1134,8 +1157,8 @@ const Relocation = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-semibold">{box.room}</span>
-                          {box.fragile && <Badge variant="outline" className="text-xs border-amber-500/40 text-amber-500">⚠ שביר</Badge>}
-                          {box.scanned && <Badge variant="outline" className="text-xs border-green-500/40 text-green-500">✓ נפתח</Badge>}
+                          {box.fragile && <Badge variant="outline" className="text-xs border-amber-500/40 text-amber-500">⚠ {t("relocation.fragile")}</Badge>}
+                          {box.scanned && <Badge variant="outline" className="text-xs border-green-500/40 text-green-500">✓ {t("relocation.scanned")}</Badge>}
                         </div>
                         {box.contents && <p className="text-xs text-muted-foreground mt-0.5 truncate">{box.contents}</p>}
                       </div>
@@ -1153,22 +1176,22 @@ const Relocation = () => {
               </AnimatePresence>
 
               {filteredBoxes.length === 0 && !boxSearch && (
-                <p className="text-sm text-muted-foreground text-center py-6">אין קופסאות עדיין. הוסף את הראשונה!</p>
+                <p className="text-sm text-muted-foreground text-center py-6">{t("relocation.noBoxes")}</p>
               )}
             </div>
 
             {/* Add box */}
             <Card className="p-3 border-border/60 border-dashed">
-              <p className="text-xs text-muted-foreground font-semibold mb-2">+ הוסף קופסה</p>
+              <p className="text-xs text-muted-foreground font-semibold mb-2">+ {t("relocation.addBox")}</p>
               <div className="flex gap-2 flex-wrap">
-                <Input value={newBoxRoom} onChange={(e) => setNewBoxRoom(e.target.value)} placeholder="חדר (ל דוגמה: מטבח)" className="flex-1 min-w-[120px] h-8 text-sm" />
-                <Input value={newBoxContents} onChange={(e) => setNewBoxContents(e.target.value)} placeholder="תוכן" className="flex-1 min-w-[120px] h-8 text-sm" />
+                <Input value={newBoxRoom} onChange={(e) => setNewBoxRoom(e.target.value)} placeholder={t("relocation.boxRoom")} className="flex-1 min-w-[120px] h-8 text-sm" />
+                <Input value={newBoxContents} onChange={(e) => setNewBoxContents(e.target.value)} placeholder={t("relocation.contents")} className="flex-1 min-w-[120px] h-8 text-sm" />
                 <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                   <input type="checkbox" checked={newBoxFragile} onChange={(e) => setNewBoxFragile(e.target.checked)} className="rounded" />
-                  שביר
+                  {t("relocation.fragile")}
                 </label>
                 <Button size="sm" onClick={addBox} className="h-8 gap-1">
-                  <Plus className="h-3.5 w-3.5" /> הוסף
+                  <Plus className="h-3.5 w-3.5" /> {t("relocation.add")}
                 </Button>
               </div>
             </Card>
@@ -1188,49 +1211,50 @@ const Relocation = () => {
           >
             <h2 className="text-base font-display font-bold flex items-center gap-2">
               <Building2 className="h-4 w-4 text-primary" />
-              ספקי שירות קריטיים
+              {t("relocation.providers")}
             </h2>
 
             <div className="space-y-3">
               <AnimatePresence>
                 {providers.map((p) => {
-                  const meta = PROVIDER_META[p.type];
+                  const provMeta = PROVIDER_ICONS[p.type];
+                  const ProvIcon = provMeta.icon;
                   return (
                     <motion.div key={p.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                       <Card className="p-3 border-border/60 group">
                         <div className="flex items-center gap-3 mb-2">
-                          <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${meta.color} flex items-center justify-center shrink-0`}>
-                            <meta.icon className="h-4 w-4 text-white" />
+                          <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${provMeta.color} flex items-center justify-center shrink-0`}>
+                            <ProvIcon className="h-4 w-4 text-white" />
                           </div>
-                          <span className="text-sm font-semibold">{meta.label}</span>
+                          <span className="text-sm font-semibold">{t(`relocation.providerTypes.${p.type}`)}</span>
                           <button
                             onClick={() => cycleProviderStatus(p.id)}
-                            className={`ms-auto text-xs px-2 py-0.5 rounded-full cursor-pointer ${STATUS_META[p.status].color}`}
+                            className={`ms-auto text-xs px-2 py-0.5 rounded-full cursor-pointer ${STATUS_COLORS[p.status]}`}
                           >
-                            {STATUS_META[p.status].label}
+                            {t(`relocation.providerStatus.${p.status}`)}
                           </button>
                           <button onClick={() => deleteProvider(p.id)} className="opacity-0 group-hover:opacity-100 transition-opacity">
                             <Trash2 className="h-3.5 w-3.5 text-destructive" />
                           </button>
                         </div>
                         <div className="grid grid-cols-3 gap-2">
-                          <Input value={p.name} onChange={(e) => updateProvider(p.id, "name", e.target.value)} placeholder="שם ספק" className="h-7 text-xs" />
-                          <Input value={p.phone} onChange={(e) => updateProvider(p.id, "phone", e.target.value)} placeholder="טלפון" className="h-7 text-xs" dir="ltr" />
-                          <Input value={p.email} onChange={(e) => updateProvider(p.id, "email", e.target.value)} placeholder="אימייל" className="h-7 text-xs" dir="ltr" />
+                          <Input value={p.name} onChange={(e) => updateProvider(p.id, "name", e.target.value)} placeholder={t("relocation.providerName")} className="h-7 text-xs" />
+                          <Input value={p.phone} onChange={(e) => updateProvider(p.id, "phone", e.target.value)} placeholder={t("relocation.phone")} className="h-7 text-xs" dir="ltr" />
+                          <Input value={p.email} onChange={(e) => updateProvider(p.id, "email", e.target.value)} placeholder={t("auth.email")} className="h-7 text-xs" dir="ltr" />
                         </div>
                         {(p.phone || p.email) && (
                           <div className="flex gap-2 mt-2">
                             {p.phone && (
                               <a href={`tel:${p.phone}`}>
                                 <Button size="sm" variant="outline" className="h-7 gap-1 text-xs">
-                                  <Phone className="h-3 w-3" /> התקשר
+                                  <Phone className="h-3 w-3" /> {t("relocation.call")}
                                 </Button>
                               </a>
                             )}
                             {p.email && (
                               <a href={`mailto:${p.email}`}>
                                 <Button size="sm" variant="outline" className="h-7 gap-1 text-xs">
-                                  <Mail className="h-3 w-3" /> שלח מייל
+                                  <Mail className="h-3 w-3" /> {t("relocation.sendEmail")}
                                 </Button>
                               </a>
                             )}
@@ -1243,14 +1267,15 @@ const Relocation = () => {
               </AnimatePresence>
 
               <div className="flex flex-wrap gap-2">
-                {(Object.keys(PROVIDER_META) as ProviderType[]).map((type) => {
-                  const meta = PROVIDER_META[type];
+                {(Object.keys(PROVIDER_ICONS) as ProviderType[]).map((type) => {
+                  const provBtnMeta = PROVIDER_ICONS[type];
+                  const ProvBtnIcon = provBtnMeta.icon;
                   const alreadyAdded = providers.some((p) => p.type === type);
                   if (alreadyAdded) return null;
                   return (
                     <Button key={type} size="sm" variant="outline" onClick={() => addProvider(type)} className="gap-1.5 text-xs h-8">
-                      <meta.icon className="h-3.5 w-3.5" />
-                      + {meta.label}
+                      <ProvBtnIcon className="h-3.5 w-3.5" />
+                      + {t(`relocation.providerTypes.${type}`)}
                     </Button>
                   );
                 })}
@@ -1273,7 +1298,7 @@ const Relocation = () => {
             <div className="flex items-center justify-between">
               <h2 className="text-base font-display font-bold flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-primary" />
-                Post‑Move Audit — System Checks
+                {t("relocation.postMoveAudit")}
               </h2>
               <span className="text-sm font-bold text-primary">{auditDone}/{audit.length}</span>
             </div>
@@ -1308,7 +1333,7 @@ const Relocation = () => {
                         {item.title}
                       </span>
                       {item.done && (
-                        <Badge variant="outline" className="text-xs border-green-500/40 text-green-500 shrink-0">✓ עודכן</Badge>
+                        <Badge variant="outline" className="text-xs border-green-500/40 text-green-500 shrink-0">✓ {t("relocation.updated")}</Badge>
                       )}
                     </Card>
                   </motion.div>
@@ -1323,8 +1348,8 @@ const Relocation = () => {
                 className="text-center py-6 space-y-2"
               >
                 <div className="text-4xl">🎉</div>
-                <p className="font-display font-bold text-lg text-score-high">כל העדכונים הושלמו!</p>
-                <p className="text-sm text-muted-foreground">המעבר הושלם בהצלחה. ברוכים הבאים לבית החדש!</p>
+                <p className="font-display font-bold text-lg text-score-high">{t("relocation.allUpdatesComplete")}</p>
+                <p className="text-sm text-muted-foreground">{t("relocation.welcomeNewHome")}</p>
               </motion.div>
             )}
           </motion.div>
