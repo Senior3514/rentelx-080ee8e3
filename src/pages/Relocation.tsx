@@ -54,20 +54,52 @@ interface AuditItem {
   done: boolean;
 }
 
-/* ─── Storage helpers ─── */
-const STORAGE_KEY = "rentelx_relocation_v1";
+/* ─── Moving Center Profile ─── */
+interface MovingProfile {
+  id: string;
+  name: string;
+  moveDate: string;
+  createdAt: string;
+}
 
-function loadState<T>(key: string, fallback: T): T {
+const MAX_PROFILES = 3;
+const PROFILES_STORAGE_KEY = "rentelx_relocation_profiles_v1";
+
+function loadProfiles(): MovingProfile[] {
   try {
-    const raw = localStorage.getItem(`${STORAGE_KEY}_${key}`);
+    const raw = localStorage.getItem(PROFILES_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveProfiles(profiles: MovingProfile[]) {
+  localStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(profiles));
+}
+
+function loadActiveProfileId(): string | null {
+  return localStorage.getItem("rentelx_relocation_active_profile") || null;
+}
+
+function saveActiveProfileId(id: string) {
+  localStorage.setItem("rentelx_relocation_active_profile", id);
+}
+
+/* ─── Storage helpers ─── */
+function getStorageKey(profileId: string) {
+  return `rentelx_relocation_v2_${profileId}`;
+}
+
+function loadState<T>(profileId: string, key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(`${getStorageKey(profileId)}_${key}`);
     return raw ? JSON.parse(raw) : fallback;
   } catch {
     return fallback;
   }
 }
 
-function saveState<T>(key: string, val: T) {
-  localStorage.setItem(`${STORAGE_KEY}_${key}`, JSON.stringify(val));
+function saveState<T>(profileId: string, key: string, val: T) {
+  localStorage.setItem(`${getStorageKey(profileId)}_${key}`, JSON.stringify(val));
 }
 
 /* ─── Default data (Hebrew) ─── */
@@ -206,12 +238,76 @@ function exportTasksCsv(tasks: Task[], filename: string) {
 /* ─── Main Component ─── */
 const Relocation = () => {
   const { direction, t, language } = useLanguage();
+
+  // Profile management state
+  const [profiles, setProfilesState] = useState<MovingProfile[]>(() => loadProfiles());
+  const [activeProfileId, setActiveProfileIdState] = useState<string | null>(() => {
+    const saved = loadActiveProfileId();
+    const profs = loadProfiles();
+    return saved && profs.some(p => p.id === saved) ? saved : (profs[0]?.id ?? null);
+  });
+  const [showProfileSetup, setShowProfileSetup] = useState(() => loadProfiles().length === 0);
+  const [newProfileName, setNewProfileName] = useState("");
+  const [newProfileDate, setNewProfileDate] = useState("");
+
+  const activeProfile = profiles.find(p => p.id === activeProfileId) ?? null;
+  const pid = activeProfileId ?? "default";
+
+  const createProfile = useCallback((name: string, date: string) => {
+    if (profiles.length >= MAX_PROFILES) return;
+    const id = uid();
+    const profile: MovingProfile = { id, name: name.trim() || (language === "he" ? `מעבר ${profiles.length + 1}` : `Move ${profiles.length + 1}`), moveDate: date, createdAt: new Date().toISOString() };
+    const updated = [...profiles, profile];
+    setProfilesState(updated);
+    saveProfiles(updated);
+    setActiveProfileIdState(id);
+    saveActiveProfileId(id);
+    setShowProfileSetup(false);
+    setNewProfileName("");
+    setNewProfileDate("");
+    // Initialize default data for new profile
+    saveState(id, "tasks", DEFAULT_TASKS);
+    saveState(id, "survival", SURVIVAL_KIT_DEFAULT);
+    saveState(id, "audit", DEFAULT_AUDIT);
+    saveState(id, "move_date", date);
+  }, [profiles, language]);
+
+  const switchProfile = useCallback((id: string) => {
+    setActiveProfileIdState(id);
+    saveActiveProfileId(id);
+    // Force reload state for new profile
+    setTasks(loadState(id, "tasks", DEFAULT_TASKS));
+    setBoxes(loadState(id, "boxes", [] as Box[]));
+    setProviders(loadState(id, "providers", [] as Provider[]));
+    setSurvivalKit(loadState(id, "survival", SURVIVAL_KIT_DEFAULT));
+    setAudit(loadState(id, "audit", DEFAULT_AUDIT));
+    setMoveDate(loadState(id, "move_date", ""));
+  }, []);
+
+  const deleteProfile = useCallback((id: string) => {
+    const updated = profiles.filter(p => p.id !== id);
+    setProfilesState(updated);
+    saveProfiles(updated);
+    // Clean up storage
+    ["tasks", "boxes", "providers", "survival", "audit", "move_date"].forEach(key => {
+      localStorage.removeItem(`${getStorageKey(id)}_${key}`);
+    });
+    if (activeProfileId === id) {
+      if (updated.length > 0) {
+        switchProfile(updated[0].id);
+      } else {
+        setActiveProfileIdState(null);
+        setShowProfileSetup(true);
+      }
+    }
+  }, [profiles, activeProfileId, switchProfile]);
+
   const [activeView, setActiveView] = useState<View>("dashboard");
-  const [tasks, setTasks] = useState<Task[]>(() => loadState("tasks", DEFAULT_TASKS));
-  const [boxes, setBoxes] = useState<Box[]>(() => loadState("boxes", [] as Box[]));
-  const [providers, setProviders] = useState<Provider[]>(() => loadState("providers", [] as Provider[]));
-  const [survivalKit, setSurvivalKit] = useState<string[]>(() => loadState("survival", SURVIVAL_KIT_DEFAULT));
-  const [audit, setAudit] = useState<AuditItem[]>(() => loadState("audit", DEFAULT_AUDIT));
+  const [tasks, setTasks] = useState<Task[]>(() => loadState(pid, "tasks", DEFAULT_TASKS));
+  const [boxes, setBoxes] = useState<Box[]>(() => loadState(pid, "boxes", [] as Box[]));
+  const [providers, setProviders] = useState<Provider[]>(() => loadState(pid, "providers", [] as Provider[]));
+  const [survivalKit, setSurvivalKit] = useState<string[]>(() => loadState(pid, "survival", SURVIVAL_KIT_DEFAULT));
+  const [audit, setAudit] = useState<AuditItem[]>(() => loadState(pid, "audit", DEFAULT_AUDIT));
   const [boxSearch, setBoxSearch] = useState("");
   const [newBoxRoom, setNewBoxRoom] = useState("");
   const [newBoxContents, setNewBoxContents] = useState("");
@@ -221,15 +317,15 @@ const Relocation = () => {
   const [newTaskPri, setNewTaskPri] = useState<Priority>("P1");
   const [newKitItem, setNewKitItem] = useState("");
   const [expandedWeeks, setExpandedWeeks] = useState<Set<Week>>(new Set(["4_weeks", "2_weeks", "moving_day", "after_move"]));
-  const [moveDate, setMoveDate] = useState(() => loadState("move_date", ""));
+  const [moveDate, setMoveDate] = useState(() => loadState(pid, "move_date", ""));
 
-  // Persist all state
-  useEffect(() => { saveState("tasks", tasks); }, [tasks]);
-  useEffect(() => { saveState("boxes", boxes); }, [boxes]);
-  useEffect(() => { saveState("providers", providers); }, [providers]);
-  useEffect(() => { saveState("survival", survivalKit); }, [survivalKit]);
-  useEffect(() => { saveState("move_date", moveDate); }, [moveDate]);
-  useEffect(() => { saveState("audit", audit); }, [audit]);
+  // Persist all state (scoped to profile)
+  useEffect(() => { if (activeProfileId) saveState(activeProfileId, "tasks", tasks); }, [tasks, activeProfileId]);
+  useEffect(() => { if (activeProfileId) saveState(activeProfileId, "boxes", boxes); }, [boxes, activeProfileId]);
+  useEffect(() => { if (activeProfileId) saveState(activeProfileId, "providers", providers); }, [providers, activeProfileId]);
+  useEffect(() => { if (activeProfileId) saveState(activeProfileId, "survival", survivalKit); }, [survivalKit, activeProfileId]);
+  useEffect(() => { if (activeProfileId) saveState(activeProfileId, "move_date", moveDate); }, [moveDate, activeProfileId]);
+  useEffect(() => { if (activeProfileId) saveState(activeProfileId, "audit", audit); }, [audit, activeProfileId]);
 
   const countdown = useCountdown(moveDate || new Date(Date.now() + 30 * 86400000).toISOString());
 
@@ -311,8 +407,150 @@ const Relocation = () => {
   /* ── Tab nav ── */
   const VIEWS: View[] = ["dashboard", "tasks", "boxes", "providers", "audit"];
 
+  // Profile setup screen
+  if (showProfileSetup && profiles.length === 0) {
+    return (
+      <div className="max-w-lg mx-auto py-12 px-4 animate-fade-up">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+          <div className="text-center space-y-2">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+              <Truck className="h-8 w-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-display font-bold">{language === "he" ? "מרכז מעבר דירה" : "Moving Center"}</h1>
+            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+              {language === "he"
+                ? "הגדירו את תאריך המעבר ושם לפרופיל. ניתן ליצור עד 3 מרכזי שליטה למעברים שונים."
+                : "Set your moving date and profile name. You can create up to 3 moving centers for different moves."}
+            </p>
+          </div>
+          <Card className="p-5 space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">
+                {language === "he" ? "שם המעבר" : "Move name"}
+              </label>
+              <Input
+                value={newProfileName}
+                onChange={(e) => setNewProfileName(e.target.value)}
+                placeholder={language === "he" ? "לדוגמה: מעבר לתל אביב" : "e.g. Moving to Tel Aviv"}
+                maxLength={50}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">
+                {language === "he" ? "תאריך מעבר משוער" : "Estimated moving date"}
+              </label>
+              <input
+                type="date"
+                value={newProfileDate}
+                onChange={(e) => setNewProfileDate(e.target.value)}
+                className="w-full h-10 bg-muted/50 border border-border/60 rounded-lg px-3 text-sm"
+              />
+            </div>
+            <Button
+              onClick={() => createProfile(newProfileName, newProfileDate)}
+              className="w-full gap-2 glow-primary"
+            >
+              <Zap className="h-4 w-4" />
+              {language === "he" ? "צור מרכז שליטה" : "Create Moving Center"}
+            </Button>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto space-y-5 animate-fade-up">
+
+      {/* ─── Profile Selector ─── */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {profiles.map((p) => (
+          <motion.button
+            key={p.id}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => switchProfile(p.id)}
+            className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
+              activeProfileId === p.id
+                ? "bg-primary/10 border-primary/40 text-primary shadow-sm"
+                : "bg-muted/30 border-border/40 text-muted-foreground hover:border-primary/30"
+            }`}
+          >
+            <Truck className="h-3.5 w-3.5" />
+            <span>{p.name}</span>
+            {p.moveDate && (
+              <span className="text-[10px] opacity-70">
+                {new Date(p.moveDate).toLocaleDateString(language === "he" ? "he-IL" : "en-US", { day: "numeric", month: "short" })}
+              </span>
+            )}
+            {activeProfileId === p.id && (
+              <motion.div layoutId="active-profile" className="absolute inset-0 bg-primary/5 rounded-xl border border-primary/30" />
+            )}
+          </motion.button>
+        ))}
+        {profiles.length < MAX_PROFILES && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-xs h-9 rounded-xl border-dashed"
+            onClick={() => setShowProfileSetup(true)}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {language === "he" ? "מרכז חדש" : "New Center"}
+          </Button>
+        )}
+        {activeProfile && profiles.length > 1 && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-destructive ms-auto"
+            onClick={() => deleteProfile(activeProfile.id)}
+            title={language === "he" ? "מחק מרכז" : "Delete center"}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        )}
+      </div>
+
+      {/* Profile creation mini-form (inline when adding more profiles) */}
+      <AnimatePresence>
+        {showProfileSetup && profiles.length > 0 && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
+            <Card className="p-4 border-primary/30 bg-primary/5 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold">{language === "he" ? "מרכז שליטה חדש" : "New Moving Center"}</h3>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowProfileSetup(false)}>
+                  <span className="text-lg leading-none">&times;</span>
+                </Button>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <Input
+                  value={newProfileName}
+                  onChange={(e) => setNewProfileName(e.target.value)}
+                  placeholder={language === "he" ? "שם המעבר" : "Move name"}
+                  className="flex-1 min-w-[140px] h-9 text-sm"
+                  maxLength={50}
+                />
+                <input
+                  type="date"
+                  value={newProfileDate}
+                  onChange={(e) => setNewProfileDate(e.target.value)}
+                  className="h-9 bg-background border border-border/60 rounded-lg px-3 text-sm"
+                />
+                <Button size="sm" onClick={() => createProfile(newProfileName, newProfileDate)} className="h-9 gap-1.5">
+                  <Plus className="h-3.5 w-3.5" />
+                  {language === "he" ? "צור" : "Create"}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {language === "he"
+                  ? `${MAX_PROFILES - profiles.length} מרכזים נוספים אפשריים`
+                  : `${MAX_PROFILES - profiles.length} more center(s) available`}
+              </p>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ─── Header / Mission Control ─── */}
       <div className="glass rounded-2xl p-5 border border-border/60 relative overflow-hidden">
