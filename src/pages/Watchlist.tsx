@@ -182,7 +182,7 @@ const Watchlist = () => {
         contact_name: listing.contact_name,
         contact_phone: listing.contact_phone,
         source_url: listing.source_url,
-        image_urls: listing.cover_image ? [listing.cover_image] : [],
+        image_urls: listing.image_urls?.length ? listing.image_urls : (listing.cover_image ? [listing.cover_image] : []),
         status: "active",
       });
       if (insertErr) throw insertErr;

@@ -285,7 +285,7 @@
   },
   "knowledgeBase": {
     "title": "Knowledge Base",
-    "subtitle": "Your team's documentation hub, powered by Notion",
+    "subtitle": "Guides, help & knowledge base — all in one place",
     "connectNotion": "Connect to Notion",
     "connectInstructions": "Connect your Notion workspace to use it as your team's knowledge base. Follow these steps:",
     "step1": "Create a Notion integration at notion.so/my-integrations and copy the API key",
@@ -294,12 +294,14 @@
     "dbIdPlaceholder": "Paste Notion database ID...",
     "connect": "Connect",
     "disconnect": "Disconnect",
-    "searchPlaceholder": "Search knowledge base...",
+    "searchPlaceholder": "Search guides, help...",
     "lastEdited": "Last edited",
     "empty": "No articles found",
     "emptyHint": "Add pages to your Notion database to see them here",
     "emptyPage": "This page has no content yet",
-    "error": "Failed to load knowledge base"
+    "error": "Failed to load knowledge base",
+    "guidesHelp": "Guides & Help",
+    "noResults": "No results found"
   },
   "compare": {
     "title": "Compare Listings",

@@ -285,7 +285,7 @@
   },
   "knowledgeBase": {
     "title": "Base de Conocimiento",
-    "subtitle": "El centro de documentacion de tu equipo, impulsado por Notion",
+    "subtitle": "Guias, ayuda y base de conocimiento — todo en un lugar",
     "connectNotion": "Conectar con Notion",
     "connectInstructions": "Conecta tu espacio de trabajo de Notion para usarlo como base de conocimiento. Sigue estos pasos:",
     "step1": "Crea una integracion en notion.so/my-integrations y copia la clave API",
@@ -294,12 +294,14 @@
     "dbIdPlaceholder": "Pegar ID de base de datos de Notion...",
     "connect": "Conectar",
     "disconnect": "Desconectar",
-    "searchPlaceholder": "Buscar en la base de conocimiento...",
+    "searchPlaceholder": "Buscar guias, ayuda...",
     "lastEdited": "Ultima edicion",
     "empty": "No se encontraron articulos",
     "emptyHint": "Agrega paginas a tu base de datos de Notion para verlas aqui",
     "emptyPage": "Esta pagina no tiene contenido aun",
-    "error": "Error al cargar la base de conocimiento"
+    "error": "Error al cargar la base de conocimiento",
+    "guidesHelp": "Guias y Ayuda",
+    "noResults": "No se encontraron resultados"
   },
   "compare": {
     "title": "Comparar Listados",
