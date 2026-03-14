@@ -178,6 +178,10 @@ const Landing = () => {
                   <span className="w-1.5 h-1.5 rounded-full bg-score-high animate-bounce-subtle" />
                   Yad2 Live
                 </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce-subtle" />
+                  Facebook
+                </span>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-accent/10 text-accent border border-accent/20">
                   AI Scoring
                 </span>
@@ -225,7 +229,7 @@ const Landing = () => {
 
               {/* Nodes row */}
               <div className="flex items-start justify-between gap-2 mb-6">
-                <WorkflowNode icon={Database} label="Yad2 / URL" color="hsl(220, 65%, 55%)" delay={0} />
+                <WorkflowNode icon={Database} label="Yad2 / FB / URL" color="hsl(220, 65%, 55%)" delay={0} />
                 <div className="flex-1 relative h-14 flex items-center mt-0">
                   <div className="w-full h-0.5 bg-border/60 rounded relative overflow-hidden">
                     <FlowDot delay={0} color="hsl(var(--primary))" />

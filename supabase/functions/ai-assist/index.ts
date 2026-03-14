@@ -63,13 +63,35 @@ Return ONLY valid JSON in this exact format:
 CRITICAL RULES:
 - Extract ONLY data that exists in the provided text. NEVER guess or invent data.
 - If a field is not found in the text, use null.
-- Extract Hebrew amenities as-is (חניה, מעלית, מרפסת, מיזוג, ממ"ד, מרוהטת, מחסן, גינה, ריהוט, etc.).
-- For Facebook posts: extract phone numbers, price, rooms count, location from the post text.
-- For Yad2: extract all structured data fields.
-- Extract image URLs when found (og:image meta tags, img src attributes, data-src).
-- Phone numbers: look for Israeli patterns (05X-XXXXXXX, 0X-XXXXXXX, +972...).
-- Price: look for numbers near ₪, ש"ח, שקל, NIS, or "שכירות" / "rent" / "להשכרה".
-- Rooms: look for "חדרים", "חד'", "rooms", or X.5 patterns.
+
+AMENITIES — Extract ALL of these when mentioned (in Hebrew or English):
+  סורגים (window bars), מזגן/מיזוג (AC), ממ"ד (safe room), מעלית (elevator),
+  מרפסת (balcony), חניה (parking), מחסן (storage), גינה (garden),
+  דוד שמש (solar water heater), גישה לנכים (disabled access),
+  מרוהטת/ריהוט (furnished), משופצת (renovated), מזגן טורנדו (tornado AC),
+  בויילר (boiler), דלת פלדלת (security door), סורגים חשמליים (electric bars),
+  מיקום שקט (quiet location), חניה תת-קרקעית (underground parking),
+  גז מרכזי (central gas), תריסים חשמליים (electric shutters),
+  מרפסת שמש (sun balcony), ארונות קיר (built-in closets)
+  Keep the original Hebrew terms as they appear.
+
+FACEBOOK-SPECIFIC RULES:
+- Facebook posts often have listing data in free text form within the description or title.
+- Look for price patterns: numbers followed by ₪, ש"ח, שקל, NIS, or near words like שכירות, rent, להשכרה, לחודש.
+- Look for room count: NUMBER + חדרים, חד', rooms, or X.5 patterns.
+- Look for floor info: קומה + NUMBER, floor + NUMBER, NUMBER/NUMBER (floor/total).
+- Look for sqm: NUMBER + מ"ר, מטר, sqm, m².
+- Look for address: street names (רחוב, רח'), neighborhoods, or city names.
+- Extract phone numbers: Israeli patterns 05X-XXXXXXX, 0X-XXXXXXX, +972, or raw digits like 0501234567.
+- Extract the poster's name as contact_name if visible.
+- Even partial data from Facebook OG tags (title, description) is valuable — extract what you can.
+
+YAD2 RULES:
+- Extract all structured data fields including exact amenities list.
+- Floor format is often "קומה X מתוך Y" — extract both floor and total_floors.
+
+GENERAL:
+- Extract image URLs when found (og:image meta tags, img src attributes).
 - Return ONLY the JSON object, no other text.`,
 };
 
@@ -132,6 +154,106 @@ async function callOpenRouter(
   }
 }
 
+/* ── Extract images from HTML ── */
+function extractImagesFromHtml(html: string): string[] {
+  const images: string[] = [];
+  // og:image — support both attribute orders
+  const ogImagePatterns = [
+    /(?:property|name)=["']og:image(?::url)?["'][^>]*content=["']([^"']+)["']/gi,
+    /content=["']([^"']+)["'][^>]*(?:property|name)=["']og:image(?::url)?["']/gi,
+  ];
+  for (const pattern of ogImagePatterns) {
+    for (const m of html.matchAll(pattern)) {
+      if (m[1] && !m[1].includes("placeholder") && !images.includes(m[1])) images.push(m[1]);
+    }
+  }
+  const imgSrcMatches = html.matchAll(/<img[^>]+(?:src|data-src)=["']([^"']+)["']/gi);
+  for (const m of imgSrcMatches) {
+    if (m[1] && m[1].startsWith("http") && !m[1].includes("logo") && !m[1].includes("icon") && !m[1].includes("avatar") && !m[1].includes("emoji") && !m[1].includes("static") && !m[1].includes("rsrc.php") && !images.includes(m[1])) {
+      images.push(m[1]);
+    }
+  }
+  // background-image patterns
+  const bgImageMatches = html.matchAll(/background-image:\s*url\(['"]?(https?:\/\/[^'")\s]+)['"]?\)/gi);
+  for (const m of bgImageMatches) {
+    if (m[1] && !images.includes(m[1])) images.push(m[1]);
+  }
+  return images;
+}
+
+/* ── Extract Open Graph meta tags from HTML ── */
+function extractOgMeta(html: string): Record<string, string> {
+  const meta: Record<string, string> = {};
+  const patterns = [
+    /(?:property|name)=["']og:([^"']+)["'][^>]*content=["']([^"']+)["']/gi,
+    /content=["']([^"']+)["'][^>]*(?:property|name)=["']og:([^"']+)["']/gi,
+  ];
+  for (const m of html.matchAll(patterns[0])) {
+    if (m[1] && m[2]) meta[m[1].toLowerCase()] = m[2];
+  }
+  for (const m of html.matchAll(patterns[1])) {
+    if (m[1] && m[2]) meta[m[2].toLowerCase()] = m[1];
+  }
+  // Also extract standard meta tags
+  const metaPatterns = /name=["'](?:description|keywords)["'][^>]*content=["']([^"']+)["']/gi;
+  for (const m of html.matchAll(metaPatterns)) {
+    if (m[1]) meta["meta_description"] = m[1];
+  }
+  return meta;
+}
+
+/* ── Convert Facebook share URL to mbasic URL for better scraping ── */
+function getFacebookUrls(url: string): string[] {
+  const urls: string[] = [];
+
+  // Try mbasic.facebook.com version (simplest HTML, best for scraping)
+  try {
+    const parsed = new URL(url);
+    // Convert share URLs: facebook.com/share/XXX
+    if (parsed.pathname.startsWith("/share/")) {
+      // Try mbasic version of share URL
+      urls.push(`https://mbasic.facebook.com${parsed.pathname}`);
+      // Also try mobile version
+      urls.push(`https://m.facebook.com${parsed.pathname}`);
+    }
+    // For standard post/group URLs
+    const mbasicUrl = url.replace(/www\.facebook\.com/, "mbasic.facebook.com").replace(/m\.facebook\.com/, "mbasic.facebook.com");
+    if (!urls.includes(mbasicUrl)) urls.push(mbasicUrl);
+    // Also try mobile version
+    const mobileUrl = url.replace(/www\.facebook\.com/, "m.facebook.com").replace(/mbasic\.facebook\.com/, "m.facebook.com");
+    if (!urls.includes(mobileUrl)) urls.push(mobileUrl);
+    // Original URL as fallback
+    if (!urls.includes(url)) urls.push(url);
+  } catch {
+    urls.push(url);
+  }
+
+  return urls;
+}
+
+/* ── Fetch a single URL and return HTML ── */
+async function fetchSingleUrl(url: string, headers: Record<string, string>): Promise<string | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  try {
+    const res = await fetch(url, {
+      headers,
+      signal: controller.signal,
+      redirect: "follow",
+    });
+    clearTimeout(timer);
+    if (!res.ok) {
+      console.warn(`[fetch-url] HTTP ${res.status} from ${url}`);
+      return null;
+    }
+    return await res.text();
+  } catch (e) {
+    clearTimeout(timer);
+    console.warn(`[fetch-url] Error fetching ${url}:`, (e as Error)?.message);
+    return null;
+  }
+}
+
 /* ── Fetch actual web page content from URL ── */
 async function fetchUrlContent(url: string): Promise<{ text: string; images: string[] } | null> {
   const BROWSER_HEADERS: Record<string, string> = {
@@ -150,89 +272,110 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
     "Upgrade-Insecure-Requests": "1",
   };
 
-  // For Facebook, add mobile user agent to get simpler HTML
   const isFacebook = url.includes("facebook.com") || url.includes("fb.com");
-  if (isFacebook) {
-    BROWSER_HEADERS["User-Agent"] = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36";
-  }
-
-  // For Yad2 — use the API-like headers
   const isYad2 = url.includes("yad2.co.il");
+
   if (isYad2) {
     BROWSER_HEADERS["Origin"] = "https://www.yad2.co.il";
     BROWSER_HEADERS["Referer"] = "https://www.yad2.co.il/";
   }
 
-  // Try fetching with retries
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 20000);
+  // ── Facebook: try multiple URL variants (mbasic, mobile, original) ──
+  if (isFacebook) {
+    const fbHeaders = {
+      ...BROWSER_HEADERS,
+      "User-Agent": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+    };
 
-    try {
-      const res = await fetch(url, {
-        headers: BROWSER_HEADERS,
-        signal: controller.signal,
-        redirect: "follow",
-      });
-      clearTimeout(timer);
+    const fbUrls = getFacebookUrls(url);
+    let bestResult: { text: string; images: string[]; ogMeta: Record<string, string> } | null = null;
 
-      if (!res.ok) {
-        console.warn(`[fetch-url] HTTP ${res.status} from ${url} (attempt ${attempt + 1})`);
-        if (attempt === 0) {
-          await new Promise(r => setTimeout(r, 1000));
-          continue;
-        }
-        return null;
-      }
-
-      const html = await res.text();
-
-      // Extract images from og:image, meta tags, and img elements
-      const images: string[] = [];
-      // og:image — support both attribute orders
-      const ogImagePatterns = [
-        /(?:property|name)=["']og:image["'][^>]*content=["']([^"']+)["']/gi,
-        /content=["']([^"']+)["'][^>]*(?:property|name)=["']og:image["']/gi,
-      ];
-      for (const pattern of ogImagePatterns) {
-        for (const m of html.matchAll(pattern)) {
-          if (m[1] && !m[1].includes("placeholder") && !images.includes(m[1])) images.push(m[1]);
-        }
-      }
-      const imgSrcMatches = html.matchAll(/<img[^>]+(?:src|data-src)=["']([^"']+)["']/gi);
-      for (const m of imgSrcMatches) {
-        if (m[1] && m[1].startsWith("http") && !m[1].includes("logo") && !m[1].includes("icon") && !m[1].includes("avatar") && !m[1].includes("emoji") && !images.includes(m[1])) {
-          images.push(m[1]);
-        }
-      }
-
-      // Also check for data-image, background-image patterns
-      const bgImageMatches = html.matchAll(/background-image:\s*url\(['"]?(https?:\/\/[^'")\s]+)['"]?\)/gi);
-      for (const m of bgImageMatches) {
-        if (m[1] && !images.includes(m[1])) images.push(m[1]);
-      }
-
-      // Strip HTML to get clean text content
-      const text = htmlToText(html);
-      if (text.length < 30) {
-        console.warn(`[fetch-url] Very short content (${text.length} chars) from ${url}`);
-        if (attempt === 0) {
-          await new Promise(r => setTimeout(r, 1500));
-          continue;
-        }
-      }
-      return { text: text.slice(0, 15000), images: images.slice(0, 15) };
-    } catch (e) {
-      clearTimeout(timer);
-      console.warn(`[fetch-url] Error fetching ${url} (attempt ${attempt + 1}):`, (e as Error)?.message);
-      if (attempt === 0) {
-        await new Promise(r => setTimeout(r, 1000));
+    for (const fbUrl of fbUrls) {
+      console.log(`[fetch-url] Trying Facebook URL: ${fbUrl}`);
+      const html = await fetchSingleUrl(fbUrl, fbHeaders);
+      if (!html) {
+        await new Promise(r => setTimeout(r, 800));
         continue;
       }
-      return null;
+
+      const images = extractImagesFromHtml(html);
+      const ogMeta = extractOgMeta(html);
+      const text = htmlToText(html);
+
+      // Check if this result has useful content (not just a login page)
+      const isLoginPage = html.includes("login_form") || html.includes("/login/") ||
+        (text.length < 200 && !ogMeta.description && !ogMeta.title);
+
+      if (!isLoginPage && text.length > 100) {
+        console.log(`[fetch-url] Got ${text.length} chars from ${fbUrl}`);
+        return { text: text.slice(0, 15000), images: images.slice(0, 15) };
+      }
+
+      // Even if it's a login page, OG meta tags may have useful data
+      if (ogMeta.description || ogMeta.title) {
+        const metaText = buildFacebookMetaText(ogMeta, text);
+        if (!bestResult || metaText.length > bestResult.text.length) {
+          bestResult = { text: metaText, images, ogMeta };
+        }
+      }
+
+      await new Promise(r => setTimeout(r, 800));
     }
+
+    // Return the best result we got (even if partial from OG meta)
+    if (bestResult) {
+      console.log(`[fetch-url] Using Facebook OG meta fallback (${bestResult.text.length} chars)`);
+      return { text: bestResult.text.slice(0, 15000), images: bestResult.images.slice(0, 15) };
+    }
+
+    console.warn(`[fetch-url] All Facebook URL variants failed for ${url}`);
+    return null;
+  }
+
+  // ── Non-Facebook: standard fetch with retries ──
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const html = await fetchSingleUrl(url, BROWSER_HEADERS);
+    if (!html) {
+      if (attempt === 0) await new Promise(r => setTimeout(r, 1000));
+      continue;
+    }
+
+    const images = extractImagesFromHtml(html);
+    const text = htmlToText(html);
+    if (text.length < 30) {
+      console.warn(`[fetch-url] Very short content (${text.length} chars) from ${url}`);
+      if (attempt === 0) {
+        await new Promise(r => setTimeout(r, 1500));
+        continue;
+      }
+    }
+    return { text: text.slice(0, 15000), images: images.slice(0, 15) };
   }
   return null;
+}
+
+/* ── Build text from Facebook OG meta tags ── */
+function buildFacebookMetaText(ogMeta: Record<string, string>, rawText: string): string {
+  const parts: string[] = [];
+  if (ogMeta.title) parts.push(`LISTING TITLE: ${ogMeta.title}`);
+  if (ogMeta.description) parts.push(`LISTING DESCRIPTION: ${ogMeta.description}`);
+  if (ogMeta["site_name"]) parts.push(`SOURCE: ${ogMeta["site_name"]}`);
+
+  // Try to extract useful content from the raw text too
+  // Filter out Facebook boilerplate
+  const filteredLines = rawText.split("\n")
+    .filter(line => {
+      const l = line.trim().toLowerCase();
+      return l.length > 5 &&
+        !l.includes("log in") && !l.includes("sign up") && !l.includes("create account") &&
+        !l.includes("facebook") && !l.includes("forgot password") &&
+        !l.includes("cookie") && !l.includes("privacy policy");
+    });
+  if (filteredLines.length > 0) {
+    parts.push(`\nPAGE CONTENT:\n${filteredLines.join("\n")}`);
+  }
+
+  return parts.join("\n");
 }
 
 /* ── Convert HTML to readable text ── */
@@ -353,6 +496,7 @@ serve(async (req) => {
             : url.includes("madlan") ? "Madlan"
             : url.includes("homeless") ? "Homeless"
             : "rental listing website";
+          const isFbSource = sourceHint === "Facebook";
           enrichedMessages = [{
             role: "user",
             content: [
@@ -364,12 +508,13 @@ serve(async (req) => {
               `IMPORTANT: For price, look for numbers near ₪, ש"ח, שקל, NIS, שכירות, rent, or להשכרה.`,
               `For rooms, look for חדרים, חד', rooms, or X.5 patterns.`,
               `For images, include ALL image URLs found on the page that look like listing photos.`,
+              isFbSource ? `\nFACEBOOK NOTE: The content may be from OG meta tags or mbasic view. Extract ALL available data including: contact name/phone from the post, amenities mentioned (סורגים, מזגן, ממ"ד, מעלית, מרפסת, חניה, מחסן, דוד שמש, etc.), and any address/location details. Look carefully in the description text for all details.` : "",
             ].join("\n"),
           }];
         } else {
           console.warn(`[ai-assist] Could not fetch URL content (${fetched?.text.length ?? 0} chars). Sending URL for best-effort extraction.`);
           // If fetch failed, still tell the AI we couldn't get the content
-          const sourceHint = url.includes("facebook") ? "Facebook Marketplace / Groups"
+          const sourceHint2 = url.includes("facebook") ? "Facebook Marketplace / Groups"
             : url.includes("yad2") ? "Yad2"
             : url.includes("madlan") ? "Madlan"
             : "a rental listing website";
@@ -378,7 +523,7 @@ serve(async (req) => {
             content: [
               `I tried to fetch this rental listing URL but could not retrieve the page content: ${url}`,
               ``,
-              `The URL appears to be from: ${sourceHint}`,
+              `The URL appears to be from: ${sourceHint2}`,
               ``,
               `Based ONLY on what can be inferred from the URL structure (if any listing ID or parameters are visible), return what you can.`,
               `For any data that cannot be determined from the URL alone, you MUST use null.`,
