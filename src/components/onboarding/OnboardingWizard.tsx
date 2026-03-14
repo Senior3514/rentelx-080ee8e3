@@ -18,6 +18,8 @@ export interface SearchProfileDraft {
   mustHaves: string[];
   niceToHaves: string[];
   workplaceAddress: string;
+  currentAddress: string;
+  desiredArea: string;
 }
 
 const initialProfile: SearchProfileDraft = {
@@ -30,6 +32,8 @@ const initialProfile: SearchProfileDraft = {
   mustHaves: [],
   niceToHaves: [],
   workplaceAddress: "",
+  currentAddress: "",
+  desiredArea: "",
 };
 
 export interface OnboardingWizardProps {
@@ -55,22 +59,21 @@ export const OnboardingWizard = ({ onComplete, initialData }: OnboardingWizardPr
   const canNext = step === 0 ? profile.cities.length > 0 : true;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-lg">
+    <div className="w-full max-w-lg mx-auto px-2 py-4">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
+          className="text-center mb-6"
         >
-          <h1 className="text-3xl font-bold tracking-tight mb-2">
+          <h1 className="text-2xl font-bold tracking-tight mb-1">
             {t("onboarding.welcome")}
           </h1>
-          <p className="text-muted-foreground">{t("onboarding.subtitle")}</p>
+          <p className="text-sm text-muted-foreground">{t("onboarding.subtitle")}</p>
         </motion.div>
 
         {/* Profile Name */}
-        <div className="mb-6">
+        <div className="mb-4">
           <label className="text-sm font-medium mb-1.5 block">{t("onboarding.profileName")}</label>
           <Input
             value={profile.name}
@@ -81,7 +84,7 @@ export const OnboardingWizard = ({ onComplete, initialData }: OnboardingWizardPr
         </div>
 
         {/* Progress */}
-        <div className="flex gap-2 mb-8">
+        <div className="flex gap-2 mb-6">
           {[0, 1, 2].map((i) => (
             <div
               key={i}
@@ -106,7 +109,7 @@ export const OnboardingWizard = ({ onComplete, initialData }: OnboardingWizardPr
         </AnimatePresence>
 
         {/* Navigation */}
-        <div className="flex justify-between mt-8">
+        <div className="flex justify-between mt-6">
           <Button
             variant="ghost"
             onClick={() => setStep((s) => s - 1)}
@@ -136,7 +139,6 @@ export const OnboardingWizard = ({ onComplete, initialData }: OnboardingWizardPr
             </Button>
           )}
         </div>
-      </div>
     </div>
   );
 };

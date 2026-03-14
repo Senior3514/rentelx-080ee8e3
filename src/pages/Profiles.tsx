@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { OnboardingWizard, SearchProfileDraft } from "@/components/onboarding/OnboardingWizard";
-import { Plus, Trash2, MapPin, Pencil, Search, Briefcase, Sparkles } from "lucide-react";
+import { Plus, Trash2, MapPin, Pencil, Search, Briefcase, Sparkles, Navigation, Home } from "lucide-react";
 import { toast } from "sonner";
 import { scoreListing } from "@/lib/scoring";
 import {
@@ -22,6 +22,7 @@ const Profiles = () => {
   const qc = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [editingProfile, setEditingProfile] = useState<any>(null);
+  const MAX_PROFILES = 6;
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["search_profiles", user?.id],
@@ -47,6 +48,9 @@ const Profiles = () => {
 
   const createMutation = useMutation({
     mutationFn: async (draft: SearchProfileDraft) => {
+      if (profiles.length >= MAX_PROFILES) {
+        throw new Error(language === "he" ? `מקסימום ${MAX_PROFILES} פרופילים` : `Maximum ${MAX_PROFILES} profiles`);
+      }
       const { error } = await supabase.from("search_profiles").insert({
         user_id: user!.id,
         name: draft.name || "Untitled",
@@ -58,7 +62,9 @@ const Profiles = () => {
         must_haves: draft.mustHaves,
         nice_to_haves: draft.niceToHaves,
         workplace_address: draft.workplaceAddress || null,
-      });
+        current_address: draft.currentAddress || null,
+        desired_area: draft.desiredArea || null,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -111,7 +117,7 @@ const Profiles = () => {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, draft }: { id: string; draft: SearchProfileDraft }) => {
-      const updates = {
+      const updates: Record<string, unknown> = {
         name: draft.name || "Untitled",
         cities: draft.cities,
         min_price: draft.minPrice,
@@ -121,8 +127,10 @@ const Profiles = () => {
         must_haves: draft.mustHaves,
         nice_to_haves: draft.niceToHaves,
         workplace_address: draft.workplaceAddress || null,
+        current_address: draft.currentAddress || null,
+        desired_area: draft.desiredArea || null,
       };
-      const { error } = await supabase.from("search_profiles").update(updates).eq("id", id);
+      const { error } = await supabase.from("search_profiles").update(updates as any).eq("id", id);
       if (error) throw error;
       return { id, ...updates };
     },
@@ -138,8 +146,23 @@ const Profiles = () => {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-display font-bold">{t("profiles.title")}</h1>
-        <Button onClick={() => setShowCreate(true)} className="gap-1.5">
+        <div>
+          <h1 className="text-2xl font-display font-bold">{t("profiles.title")}</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {profiles.length}/{MAX_PROFILES} {language === "he" ? "פרופילים" : "profiles"}
+          </p>
+        </div>
+        <Button
+          onClick={() => {
+            if (profiles.length >= MAX_PROFILES) {
+              toast.error(language === "he" ? `מקסימום ${MAX_PROFILES} פרופילים` : `Maximum ${MAX_PROFILES} profiles`);
+              return;
+            }
+            setShowCreate(true);
+          }}
+          className="gap-1.5"
+          disabled={profiles.length >= MAX_PROFILES}
+        >
           <Plus className="h-4 w-4" /> {t("profiles.create")}
         </Button>
       </div>
@@ -171,6 +194,18 @@ const Profiles = () => {
                   <p className="text-sm text-muted-foreground mt-1">
                     ₪{p.min_price?.toLocaleString()}–₪{p.max_price?.toLocaleString()} · {p.min_rooms}–{p.max_rooms} {t("common.rooms")}
                   </p>
+                  {(p as any).current_address && (
+                    <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                      <Home className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{(p as any).current_address}</span>
+                    </p>
+                  )}
+                  {(p as any).desired_area && (
+                    <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                      <Navigation className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{(p as any).desired_area}</span>
+                    </p>
+                  )}
                   {(p as any).workplace_address && (
                     <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
                       <Briefcase className="h-3.5 w-3.5 shrink-0" />
@@ -256,6 +291,8 @@ const Profiles = () => {
                 mustHaves: editingProfile.must_haves,
                 niceToHaves: editingProfile.nice_to_haves,
                 workplaceAddress: editingProfile.workplace_address || "",
+                currentAddress: editingProfile.current_address || "",
+                desiredArea: editingProfile.desired_area || "",
               }}
             />
           )}

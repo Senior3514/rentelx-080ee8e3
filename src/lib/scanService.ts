@@ -79,9 +79,11 @@ export function scoreScannedListing(
     min_rooms?: number | null;
     max_rooms?: number | null;
     cities?: string[] | null;
+    must_haves?: string[] | null;
+    nice_to_haves?: string[] | null;
   }
 ): number {
-  let score = 60; // base
+  let score = 55; // base
 
   // Price match
   if (listing.price) {
@@ -107,6 +109,26 @@ export function scoreScannedListing(
     );
     if (cityMatch) score += 15;
     else score -= 10;
+  }
+
+  // Amenity match bonus
+  if (listing.amenities.length > 0) {
+    // Bonus for having many amenities
+    score += Math.min(10, listing.amenities.length * 1.5);
+
+    // Must-haves match
+    if (profile.must_haves?.length) {
+      const amenityMap: Record<string, string> = {
+        parking: "חניה", elevator: "מעלית", balcony: "מרפסת",
+        ac: "מיזוג", storage: "מחסן", furnished: "מרוהטת",
+        safeRoom: 'ממ"ד', bars: "סורגים", solarHeater: "דוד שמש",
+      };
+      const matchCount = profile.must_haves.filter((mh) => {
+        const hebrewTerm = amenityMap[mh] || mh;
+        return listing.amenities.some((a) => a.includes(hebrewTerm) || hebrewTerm.includes(a));
+      }).length;
+      score += matchCount * 3;
+    }
   }
 
   return Math.max(0, Math.min(100, score));
