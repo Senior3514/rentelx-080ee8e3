@@ -109,28 +109,24 @@ const Watchlist = () => {
     setUnavailable(false);
     setCurrentPage(1);
     try {
-      let result = await scanYad2({
+      const scanParams = {
         cities: selectedCities,
         minPrice: activeProfile?.min_price ?? undefined,
         maxPrice: activeProfile?.max_price ?? undefined,
         minRooms: activeProfile?.min_rooms ?? undefined,
         maxRooms: activeProfile?.max_rooms ?? undefined,
-      });
+      };
 
-      // Unavailable = Yad2 blocked or returned nothing
+      let result = await scanYad2(scanParams);
+
+      // Unavailable = Yad2 blocked or returned nothing — retry up to 2 more times
       if (result.unavailable || result.listings.length === 0) {
-        // Retry once automatically before showing unavailable
-        if (!result.unavailable) {
-          await new Promise((r) => setTimeout(r, 2000));
-          const retryResult = await scanYad2({
-            cities: selectedCities,
-            minPrice: activeProfile?.min_price ?? undefined,
-            maxPrice: activeProfile?.max_price ?? undefined,
-            minRooms: activeProfile?.min_rooms ?? undefined,
-            maxRooms: activeProfile?.max_rooms ?? undefined,
-          });
+        for (let attempt = 0; attempt < 2 && result.listings.length === 0; attempt++) {
+          await new Promise((r) => setTimeout(r, 2000 + attempt * 1500));
+          const retryResult = await scanYad2(scanParams);
           if (retryResult.listings.length > 0) {
             result = retryResult;
+            break;
           }
         }
         if (result.listings.length === 0) {
@@ -235,7 +231,7 @@ const Watchlist = () => {
   );
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-fade-up" dir={direction}>
+    <div className="max-w-4xl mx-auto space-y-6 animate-fade-up pb-20" dir={direction}>
 
       {/* ── Header ── */}
       <div className="flex items-start justify-between gap-4 flex-wrap">

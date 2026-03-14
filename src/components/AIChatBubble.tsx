@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MessageSquare, X, Send, Sparkles, Loader2,
-  ChevronDown, ChevronUp, Trash2, Bot, Minimize2
+  ChevronDown, Trash2, Bot
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -78,7 +78,6 @@ export function AIChatBubble() {
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
-  const [miniMode, setMiniMode] = useState(false); // Ultra compact FAB
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -183,32 +182,29 @@ export function AIChatBubble() {
     <>
       {/* ── Floating FAB ── */}
       <motion.button
-        className={`fixed bottom-5 end-5 z-50 rounded-full bg-primary text-primary-foreground shadow-2xl glow-primary flex items-center justify-center transition-all ${
-          miniMode ? "w-10 h-10" : "w-14 h-14"
-        }`}
+        className="fixed bottom-4 end-4 z-50 rounded-full bg-primary text-primary-foreground shadow-xl glow-primary flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11"
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => {
-          if (open && !minimized) { setOpen(false); setMinimized(false); }
-          else { setOpen(true); setMinimized(false); setMiniMode(false); }
+          if (open) { setOpen(false); setMinimized(false); }
+          else { setOpen(true); setMinimized(false); }
         }}
-        onDoubleClick={() => setMiniMode(v => !v)}
         aria-label="AI Assistant"
       >
         <AnimatePresence mode="wait" initial={false}>
           {open && !minimized ? (
             <motion.span key="x" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }}>
-              <X className={miniMode ? "h-4 w-4" : "h-6 w-6"} />
+              <X className="h-4 w-4 sm:h-5 sm:w-5" />
             </motion.span>
           ) : (
             <motion.span key="chat" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }}>
-              <MessageSquare className={miniMode ? "h-4 w-4" : "h-6 w-6"} />
+              <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
             </motion.span>
           )}
         </AnimatePresence>
         {hasUnread && (
-          <span className="absolute -top-0.5 -end-0.5 w-4 h-4 rounded-full bg-score-high border-2 border-background flex items-center justify-center">
-            <span className="text-[8px] font-bold text-white">{messages.filter(m => m.role === "assistant").length}</span>
+          <span className="absolute -top-0.5 -end-0.5 w-3.5 h-3.5 rounded-full bg-score-high border-2 border-background flex items-center justify-center">
+            <span className="text-[7px] font-bold text-white">{messages.filter(m => m.role === "assistant").length}</span>
           </span>
         )}
       </motion.button>
@@ -223,7 +219,7 @@ export function AIChatBubble() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.88, y: 20 }}
             transition={{ type: "spring", stiffness: 320, damping: 30 }}
-            className="fixed bottom-24 end-5 z-50 w-80 sm:w-96 rounded-2xl glass border border-border/60 shadow-2xl flex flex-col overflow-hidden"
+            className="fixed bottom-16 end-4 z-50 w-[calc(100vw-2rem)] sm:w-96 max-w-96 rounded-2xl glass border border-border/60 shadow-2xl flex flex-col overflow-hidden"
           >
             {/* ── Header — click to minimize/expand ── */}
             <div
@@ -243,7 +239,7 @@ export function AIChatBubble() {
                     : (language === "he" ? "חכם · קונטקסטואלי · AI" : language === "es" ? "Inteligente · Contextual · IA" : "Smart · Contextual · AI")}
                 </p>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 <div className={`w-2 h-2 rounded-full ${loading ? "bg-yellow-400 animate-pulse" : "bg-green-500 animate-bounce-subtle"}`} />
                 <Button
                   variant="ghost"
@@ -254,17 +250,8 @@ export function AIChatBubble() {
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={(e) => { e.stopPropagation(); setOpen(false); setMiniMode(true); }}
-                  title="Minimize to compact"
-                >
-                  <Minimize2 className="h-3 w-3" />
-                </Button>
-                <div className="text-muted-foreground">
-                  {minimized ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                <div className="text-muted-foreground transition-transform duration-200" style={{ transform: minimized ? "rotate(180deg)" : "rotate(0deg)" }}>
+                  <ChevronDown className="h-4 w-4" />
                 </div>
               </div>
             </div>

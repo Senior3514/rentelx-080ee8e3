@@ -35,7 +35,20 @@ const Profiles = () => {
         .eq("user_id", user!.id)
         .order("is_active", { ascending: false })
         .order("created_at", { ascending: false });
-      if (error) throw error;
+      if (error) {
+        // If the error is about missing columns, try selecting only known columns
+        if (error.message?.includes("schema cache")) {
+          const { data: fallback, error: fallbackErr } = await supabase
+            .from("search_profiles")
+            .select("id, user_id, name, cities, min_price, max_price, min_rooms, max_rooms, must_haves, nice_to_haves, is_active, created_at, updated_at")
+            .eq("user_id", user!.id)
+            .order("is_active", { ascending: false })
+            .order("created_at", { ascending: false });
+          if (fallbackErr) throw fallbackErr;
+          return fallback ?? [];
+        }
+        throw error;
+      }
       return data ?? [];
     },
     enabled: !!user,
@@ -85,7 +98,7 @@ const Profiles = () => {
       // If this is the first profile, make it active
       const isFirst = profiles.length === 0;
 
-      const { error } = await supabase.from("search_profiles").insert({
+      const fullPayload = {
         user_id: user!.id,
         name: draft.name || (language === "he" ? "פרופיל חדש" : "New Profile"),
         cities: draft.cities,
@@ -99,8 +112,21 @@ const Profiles = () => {
         current_address: draft.currentAddress || null,
         desired_area: draft.desiredArea || null,
         is_active: isFirst,
-      });
-      if (error) throw error;
+      };
+
+      const { error } = await supabase.from("search_profiles").insert(fullPayload);
+      if (error) {
+        // If the error is about missing columns (schema cache), retry without the new fields
+        if (error.message?.includes("schema cache") || error.message?.includes("current_address") || error.message?.includes("desired_area") || error.message?.includes("workplace_address")) {
+          const { user_id, name, cities, min_price, max_price, min_rooms, max_rooms, must_haves, nice_to_haves, is_active } = fullPayload;
+          const { error: retryErr } = await supabase.from("search_profiles").insert({
+            user_id, name, cities, min_price, max_price, min_rooms, max_rooms, must_haves, nice_to_haves, is_active,
+          } as any);
+          if (retryErr) throw retryErr;
+          return;
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["search_profiles"] });
@@ -171,7 +197,18 @@ const Profiles = () => {
         desired_area: draft.desiredArea || null,
       };
       const { error } = await supabase.from("search_profiles").update(updates).eq("id", id);
-      if (error) throw error;
+      if (error) {
+        // Retry without new columns if schema cache issue
+        if (error.message?.includes("schema cache") || error.message?.includes("current_address") || error.message?.includes("desired_area") || error.message?.includes("workplace_address")) {
+          const { name, cities, min_price, max_price, min_rooms, max_rooms, must_haves, nice_to_haves } = updates;
+          const { error: retryErr } = await supabase.from("search_profiles").update({
+            name, cities, min_price, max_price, min_rooms, max_rooms, must_haves, nice_to_haves,
+          } as any).eq("id", id);
+          if (retryErr) throw retryErr;
+        } else {
+          throw error;
+        }
+      }
       return { id, ...updates };
     },
     onSuccess: (data) => {
@@ -196,7 +233,7 @@ const Profiles = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6 pb-20">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-display font-bold">{t("profiles.title")}</h1>
