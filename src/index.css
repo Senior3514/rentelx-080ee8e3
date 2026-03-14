@@ -197,6 +197,78 @@
     --sidebar-ring: 260 60% 62%;
     --gradient-hero: linear-gradient(135deg, hsl(260, 60%, 62%), hsl(280, 55%, 58%));
   }
+
+  /* ═══ Color Scheme: Coral ═══ */
+  .scheme-coral {
+    --primary: 12 80% 55%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 350 70% 60%;
+    --accent-foreground: 0 0% 100%;
+    --ring: 12 80% 55%;
+    --sidebar-primary: 12 80% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-ring: 12 80% 55%;
+    --gradient-hero: linear-gradient(135deg, hsl(12, 80%, 55%), hsl(350, 70%, 60%));
+  }
+  .dark.scheme-coral {
+    --primary: 12 85% 62%;
+    --primary-foreground: 222 30% 8%;
+    --accent: 350 75% 65%;
+    --accent-foreground: 222 30% 8%;
+    --ring: 12 85% 62%;
+    --sidebar-primary: 12 85% 62%;
+    --sidebar-primary-foreground: 222 30% 8%;
+    --sidebar-ring: 12 85% 62%;
+    --gradient-hero: linear-gradient(135deg, hsl(12, 85%, 62%), hsl(350, 75%, 65%));
+  }
+
+  /* ═══ Color Scheme: Grape ═══ */
+  .scheme-grape {
+    --primary: 300 50% 50%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 320 55% 55%;
+    --accent-foreground: 0 0% 100%;
+    --ring: 300 50% 50%;
+    --sidebar-primary: 300 50% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-ring: 300 50% 50%;
+    --gradient-hero: linear-gradient(135deg, hsl(300, 50%, 50%), hsl(320, 55%, 55%));
+  }
+  .dark.scheme-grape {
+    --primary: 300 55% 60%;
+    --primary-foreground: 222 30% 8%;
+    --accent: 320 60% 62%;
+    --accent-foreground: 222 30% 8%;
+    --ring: 300 55% 60%;
+    --sidebar-primary: 300 55% 60%;
+    --sidebar-primary-foreground: 222 30% 8%;
+    --sidebar-ring: 300 55% 60%;
+    --gradient-hero: linear-gradient(135deg, hsl(300, 55%, 60%), hsl(320, 60%, 62%));
+  }
+
+  /* ═══ Color Scheme: Forest ═══ */
+  .scheme-forest {
+    --primary: 120 45% 38%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 90 40% 42%;
+    --accent-foreground: 0 0% 100%;
+    --ring: 120 45% 38%;
+    --sidebar-primary: 120 45% 38%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-ring: 120 45% 38%;
+    --gradient-hero: linear-gradient(135deg, hsl(120, 45%, 38%), hsl(90, 40%, 42%));
+  }
+  .dark.scheme-forest {
+    --primary: 120 50% 48%;
+    --primary-foreground: 222 30% 8%;
+    --accent: 90 45% 52%;
+    --accent-foreground: 222 30% 8%;
+    --ring: 120 50% 48%;
+    --sidebar-primary: 120 50% 48%;
+    --sidebar-primary-foreground: 222 30% 8%;
+    --sidebar-ring: 120 50% 48%;
+    --gradient-hero: linear-gradient(135deg, hsl(120, 50%, 48%), hsl(90, 45%, 52%));
+  }
 }
 
 @layer base {

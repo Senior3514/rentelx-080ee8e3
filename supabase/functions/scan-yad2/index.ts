@@ -171,16 +171,25 @@ function extractItems(json: unknown): Yad2Item[] {
   const j = json as Record<string, unknown>;
   const candidates = [
     (j as any)?.data?.feed?.feed_items,
+    (j as any)?.data?.feed?.items,
     (j as any)?.data?.listings,
+    (j as any)?.data?.results,
     (j as any)?.feed_items,
     (j as any)?.data?.feed_items,
     (j as any)?.data?.items,
     (j as any)?.listings,
+    (j as any)?.results,
     (j as any)?.items,
+    (j as any)?.feed,
     (j as any)?.data,
   ];
   for (const c of candidates) {
     if (Array.isArray(c) && c.length > 0) return c as Yad2Item[];
+  }
+  // Handle nested structures
+  if ((j as any)?.data && typeof (j as any).data === "object") {
+    const nested = extractItems((j as any).data);
+    if (nested.length > 0) return nested;
   }
   return [];
 }
@@ -199,6 +208,7 @@ const DESKTOP_HEADERS = {
   "sec-fetch-dest": "empty",
   "sec-fetch-mode": "cors",
   "sec-fetch-site": "same-site",
+  "x-requested-with": "XMLHttpRequest",
 };
 
 /* ── Mobile app headers ── */
@@ -208,6 +218,22 @@ const MOBILE_HEADERS = {
   "User-Agent": "Yad2/10.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) Mobile/21E236",
   "x-app-version": "10.0",
   "x-platform": "ios",
+};
+
+/* ── Desktop v2 headers (alternate Chrome profile) ── */
+const DESKTOP_V2_HEADERS = {
+  "Accept": "application/json, text/plain, */*",
+  "Accept-Language": "he-IL,he;q=0.9",
+  "Cache-Control": "max-age=0",
+  "Origin": "https://www.yad2.co.il",
+  "Referer": "https://www.yad2.co.il/realestate/rent",
+  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+  "sec-ch-ua": '"Chromium";v="123", "Google Chrome";v="123"',
+  "sec-ch-ua-mobile": "?0",
+  "sec-ch-ua-platform": '"macOS"',
+  "sec-fetch-dest": "empty",
+  "sec-fetch-mode": "cors",
+  "sec-fetch-site": "same-site",
 };
 
 async function tryFetch(url: string, headers: Record<string, string>, timeoutMs: number): Promise<Yad2Item[]> {
@@ -245,15 +271,19 @@ async function fetchCityListings(
   const attempts: Array<{ url: string; headers: Record<string, string> }> = [
     { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
     { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?topArea=${topArea}&area=${area}&city=${id}&${qs}`, headers: DESKTOP_HEADERS },
-    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&propertyGroup=apartments&${qs}`, headers: DESKTOP_HEADERS },
+    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&propertyGroup=apartments&${qs}`, headers: DESKTOP_V2_HEADERS },
+    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&rows=40&${qs}`, headers: DESKTOP_V2_HEADERS },
     { url: `https://gw.yad2.co.il/search/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
+    { url: `https://gw.yad2.co.il/realestate-feed/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
     { url: `https://gw.yad2.co.il/api/feed/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
+    { url: `https://gw.yad2.co.il/api/v3/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
     { url: `https://mobile-api.yad2.co.il/api/2/feed/realestate/rent?city=${id}&${qs}`, headers: MOBILE_HEADERS },
+    { url: `https://mobile-api.yad2.co.il/api/3/realestate/rent?city=${id}&${qs}`, headers: MOBILE_HEADERS },
   ];
 
   for (let i = 0; i < attempts.length; i++) {
     const { url, headers } = attempts[i];
-    const items = await tryFetch(url, headers, 10000);
+    const items = await tryFetch(url, headers, 12000);
     if (items.length > 0) {
       const valid = items
         .filter((item) => item.price && item.price > 0)

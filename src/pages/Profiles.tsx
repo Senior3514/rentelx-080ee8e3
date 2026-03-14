@@ -72,6 +72,9 @@ const Profiles = () => {
       setShowCreate(false);
       toast.success(t("profiles.profileCreated"));
     },
+    onError: (err: Error) => {
+      toast.error(language === "he" ? `שגיאה: ${err.message}` : `Error: ${err.message}`);
+    },
   });
 
   const rescoreMutation = useMutation({
@@ -140,6 +143,9 @@ const Profiles = () => {
       toast.success(t("profiles.profileUpdated"));
       // Re-score all listings against the updated profile
       if (data) rescoreMutation.mutate({ id: data.id, ...data });
+    },
+    onError: (err: Error) => {
+      toast.error(language === "he" ? `שגיאה: ${err.message}` : `Error: ${err.message}`);
     },
   });
 
@@ -270,7 +276,7 @@ const Profiles = () => {
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{t("profiles.create")}</DialogTitle></DialogHeader>
-          <OnboardingWizard onComplete={(draft) => createMutation.mutate(draft)} />
+          <OnboardingWizard onComplete={(draft) => createMutation.mutate(draft)} isPending={createMutation.isPending} />
         </DialogContent>
       </Dialog>
 
@@ -281,6 +287,7 @@ const Profiles = () => {
           {editingProfile && (
             <OnboardingWizard
               onComplete={(draft) => updateMutation.mutate({ id: editingProfile.id, draft })}
+              isPending={updateMutation.isPending}
               initialData={{
                 name: editingProfile.name,
                 cities: editingProfile.cities,

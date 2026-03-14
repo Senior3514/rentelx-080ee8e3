@@ -99,6 +99,80 @@ const Settings = () => {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["notification_prefs"] }); toast.success(t("settings.saved")); },
   });
 
+  const handleExportPDF = async () => {
+    try {
+      const { data: listings } = await supabase
+        .from("listings")
+        .select("address, city, price, rooms, sqm, floor, status, created_at, amenities")
+        .eq("user_id", user!.id)
+        .eq("status", "active");
+
+      if (!listings?.length) {
+        toast.info(t("settingsExtra.noDataToExport"));
+        return;
+      }
+
+      const isRtl = language === "he";
+      const rows = listings.map(l => {
+        const amenities = Array.isArray(l.amenities) ? (l.amenities as string[]).join(", ") : "";
+        return `<tr>
+          <td>${l.address ?? "—"}</td>
+          <td>${l.city ?? "—"}</td>
+          <td>₪${l.price?.toLocaleString() ?? "—"}</td>
+          <td>${l.rooms ?? "—"}</td>
+          <td>${l.sqm ?? "—"}</td>
+          <td style="font-size:11px">${amenities}</td>
+        </tr>`;
+      }).join("");
+
+      const html = `<!DOCTYPE html>
+<html dir="${isRtl ? "rtl" : "ltr"}" lang="${language}">
+<head>
+  <meta charset="UTF-8"/>
+  <title>RentelX Export</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;600&display=swap');
+    body { font-family: 'Rubik', Arial, sans-serif; margin: 20px; color: #1a1a2e; direction: ${isRtl ? "rtl" : "ltr"}; }
+    h1 { color: #e07b45; font-size: 22px; margin-bottom: 4px; }
+    p { color: #666; font-size: 12px; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #e07b45; color: #fff; padding: 8px 10px; text-align: ${isRtl ? "right" : "left"}; }
+    td { padding: 7px 10px; border-bottom: 1px solid #eee; }
+    tr:nth-child(even) td { background: #fafaf8; }
+    @media print { body { margin: 0; } }
+  </style>
+</head>
+<body>
+  <h1>${isRtl ? "ספריית דירות — RentelX" : "Apartment Library — RentelX"}</h1>
+  <p>${isRtl ? `סה"כ ${listings.length} דירות · ${new Date().toLocaleDateString("he-IL")}` : `${listings.length} listings · ${new Date().toLocaleDateString()}`}</p>
+  <table>
+    <thead>
+      <tr>
+        <th>${isRtl ? "כתובת" : "Address"}</th>
+        <th>${isRtl ? "עיר" : "City"}</th>
+        <th>${isRtl ? "מחיר" : "Price"}</th>
+        <th>${isRtl ? "חדרים" : "Rooms"}</th>
+        <th>${isRtl ? "מ\"ר" : "SQM"}</th>
+        <th>${isRtl ? "מאפיינים" : "Amenities"}</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+</body>
+</html>`;
+
+      const win = window.open("", "_blank");
+      if (win) {
+        win.document.write(html);
+        win.document.close();
+        setTimeout(() => { win.print(); }, 500);
+        toast.success(t("settingsExtra.exportSuccess"));
+      }
+    } catch {
+      toast.error("Export failed");
+    }
+  };
+
   const handleExportData = async () => {
     try {
       const { data: listings } = await supabase
@@ -236,13 +310,16 @@ const Settings = () => {
         <h3 className="font-semibold flex items-center gap-1.5">
           <Palette className="h-4 w-4" /> {t("settings.colorScheme")}
         </h3>
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           {([
             { value: "default" as const, label: t("settings.schemeDefault"), colors: ["hsl(16,65%,52%)", "hsl(38,75%,55%)"] },
             { value: "ocean" as const, label: t("settings.schemeOcean"), colors: ["hsl(200,65%,48%)", "hsl(180,55%,42%)"] },
             { value: "sunset" as const, label: t("settings.schemeSunset"), colors: ["hsl(340,65%,52%)", "hsl(25,80%,55%)"] },
             { value: "emerald" as const, label: t("settings.schemeEmerald"), colors: ["hsl(160,55%,38%)", "hsl(140,50%,45%)"] },
             { value: "midnight" as const, label: t("settings.schemeMidnight"), colors: ["hsl(260,55%,52%)", "hsl(280,50%,48%)"] },
+            { value: "coral" as const, label: t("settings.schemeCoral"), colors: ["hsl(12,80%,55%)", "hsl(350,70%,60%)"] },
+            { value: "grape" as const, label: t("settings.schemeGrape"), colors: ["hsl(300,50%,50%)", "hsl(320,55%,55%)"] },
+            { value: "forest" as const, label: t("settings.schemeForest"), colors: ["hsl(120,45%,38%)", "hsl(90,40%,42%)"] },
           ]).map((scheme) => (
             <button
               key={scheme.value}
@@ -299,9 +376,14 @@ const Settings = () => {
         <p className="text-xs text-muted-foreground">
           {t("settingsExtra.exportDesc")}
         </p>
-        <Button variant="outline" size="sm" onClick={handleExportData} className="gap-1.5">
-          <FileDown className="h-3.5 w-3.5" /> CSV
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={handleExportData} className="gap-1.5">
+            <FileDown className="h-3.5 w-3.5" /> CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-1.5">
+            <FileDown className="h-3.5 w-3.5" /> PDF
+          </Button>
+        </div>
       </Card>
 
       <Button variant="destructive" onClick={signOut} className="w-full gap-1.5">

@@ -58,7 +58,7 @@
   },
   "nav": {
     "dashboard": "Dashboard",
-    "inbox": "Inbox",
+    "inbox": "Apartment Library",
     "pipeline": "Pipeline",
     "watchlist": "Watchlist",
     "compare": "Compare",
@@ -157,7 +157,7 @@
     "noData": "No data yet"
   },
   "inbox": {
-    "title": "Listings Inbox",
+    "title": "Apartment Library",
     "empty": "No listings yet",
     "emptySubtitle": "Add your first listing to get started",
     "addListing": "Add Listing",
@@ -248,6 +248,9 @@
     "schemeSunset": "Sunset",
     "schemeEmerald": "Emerald",
     "schemeMidnight": "Midnight",
+    "schemeCoral": "Coral",
+    "schemeGrape": "Grape",
+    "schemeForest": "Forest",
     "preferredCity": "Preferred city",
     "preferredCityPlaceholder": "e.g. Tel Aviv"
   },
