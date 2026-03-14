@@ -107,32 +107,6 @@ const Login = () => {
             </Button>
           </form>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-transparent px-2 text-muted-foreground">{t("auth.or")}</span>
-            </div>
-          </div>
-
-          <Button
-            variant="outline"
-            className="w-full"
-            disabled={loading}
-            onClick={async () => {
-              const { allowed, remainingMs } = checkRateLimit("guest-login");
-              if (!allowed) {
-                setBlockMsg(`Too many attempts. Try again in ${formatBlockTime(remainingMs)}.`);
-                return;
-              }
-              setLoading(true);
-              const { error } = await supabase.auth.signInAnonymously();
-              setLoading(false);
-              if (error) toast.error(error.message);
-              else navigate("/onboarding");
-            }}
-          >
-            {t("auth.guestLogin")}
-          </Button>
         </div>
 
         <div className="text-center text-sm space-y-2">
