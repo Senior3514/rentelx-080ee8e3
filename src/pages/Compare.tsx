@@ -217,7 +217,7 @@ const Compare = () => {
     : `User has ${listings.length} listings total. No listings selected for comparison yet.`;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-fade-up">
+    <div className="max-w-6xl mx-auto space-y-6 animate-fade-up pb-20">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>

@@ -527,7 +527,7 @@ const Relocation = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-5 animate-fade-up">
+    <div className="max-w-6xl mx-auto space-y-5 animate-fade-up pb-20">
 
       {/* ─── Profile Selector ─── */}
       <div className="flex items-center gap-2 flex-wrap">

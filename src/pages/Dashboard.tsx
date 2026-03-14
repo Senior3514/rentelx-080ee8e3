@@ -141,7 +141,7 @@ const Dashboard = () => {
   }, [listings, language]);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-fade-up">
+    <div className="max-w-4xl mx-auto space-y-8 animate-fade-up pb-20">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>

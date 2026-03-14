@@ -217,7 +217,7 @@ const Settings = () => {
   ];
 
   return (
-    <div className="max-w-lg mx-auto space-y-6">
+    <div className="max-w-lg mx-auto space-y-6 pb-20">
       <h1 className="text-2xl font-display font-bold">{t("nav.settings")}</h1>
 
       {/* Account */}

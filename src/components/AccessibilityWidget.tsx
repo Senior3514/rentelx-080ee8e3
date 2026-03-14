@@ -146,13 +146,13 @@ export const AccessibilityWidget = () => {
       {/* Floating toggle button */}
       <motion.button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-24 end-4 z-50 w-12 h-12 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+        className="fixed bottom-16 end-4 z-50 mb-12 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.95 }}
         aria-label={isHe ? "נגישות" : "Accessibility"}
         title={isHe ? "נגישות" : "Accessibility"}
       >
-        <Accessibility className="h-6 w-6" />
+        <Accessibility className="h-4 w-4 sm:h-5 sm:w-5" />
       </motion.button>
 
       {/* Panel */}
@@ -173,7 +173,7 @@ export const AccessibilityWidget = () => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
-              className="fixed bottom-24 end-4 z-50 w-72 sm:w-80 bg-background border border-border rounded-2xl shadow-2xl overflow-hidden"
+              className="fixed bottom-32 end-4 z-50 w-72 sm:w-80 max-h-[70vh] bg-background border border-border rounded-2xl shadow-2xl overflow-hidden"
               role="dialog"
               aria-label={isHe ? "הגדרות נגישות" : "Accessibility Settings"}
             >

@@ -163,7 +163,7 @@ const InboxPage = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto pb-20">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-display font-bold">{t("inbox.title")}</h1>
         <div className="flex items-center gap-2">

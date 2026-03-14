@@ -138,6 +138,24 @@ export function AppSidebar() {
         {/* ── Footer ── */}
         <SidebarFooter>
           <div className={`flex flex-col gap-1 px-2 pb-3 ${collapsed ? "items-center" : ""}`}>
+            {/* Collapse toggle */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleSidebar}
+              className={`gap-1.5 text-muted-foreground hover:text-foreground transition-colors ${collapsed ? "w-8 h-8 p-0 justify-center" : "w-full justify-start"}`}
+              title={collapsed
+                ? t("sidebar.expand")
+                : t("sidebar.collapse")}
+            >
+              <CollapseIcon className="h-4 w-4 shrink-0" />
+              {!collapsed && (
+                <span className="text-xs font-medium">
+                  {t("sidebar.collapse")}
+                </span>
+              )}
+            </Button>
+
             {/* Home link */}
             {collapsed ? (
               <Tooltip>
@@ -166,24 +184,6 @@ export function AppSidebar() {
                 <span className="text-sm">{t("nav.home")}</span>
               </Button>
             )}
-
-            {/* Collapse toggle */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleSidebar}
-              className={`gap-1.5 text-muted-foreground hover:text-foreground transition-colors ${collapsed ? "w-8 h-8 p-0 justify-center" : "w-full justify-start"}`}
-              title={collapsed
-                ? t("sidebar.expand")
-                : t("sidebar.collapse")}
-            >
-              <CollapseIcon className="h-4 w-4 shrink-0" />
-              {!collapsed && (
-                <span className="text-xs font-medium">
-                  {t("sidebar.collapse")}
-                </span>
-              )}
-            </Button>
 
             {/* Logout */}
             {!collapsed ? (
