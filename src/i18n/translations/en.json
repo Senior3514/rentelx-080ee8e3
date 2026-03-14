@@ -426,6 +426,14 @@
     "hours": "hours",
     "minutes": "minutes",
     "call": "Call",
-    "sendEmail": "Send email"
+    "sendEmail": "Send email",
+    "newCenter": "New Center",
+    "createCenter": "Create Moving Center",
+    "deleteCenter": "Delete center",
+    "moveName": "Move name",
+    "moveNamePlaceholder": "e.g. Moving to Tel Aviv",
+    "estimatedDate": "Estimated moving date",
+    "profileSetupDesc": "Set your moving date and profile name. You can create up to 3 moving centers for different moves.",
+    "centersAvailable": "more center(s) available"
   }
 }

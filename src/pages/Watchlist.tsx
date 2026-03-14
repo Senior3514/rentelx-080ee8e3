@@ -106,7 +106,7 @@ const Watchlist = () => {
     setError(null);
     setUnavailable(false);
     try {
-      const result = await scanYad2({
+      let result = await scanYad2({
         cities: selectedCities,
         minPrice: activeProfile?.min_price ?? undefined,
         maxPrice: activeProfile?.max_price ?? undefined,
@@ -116,15 +116,31 @@ const Watchlist = () => {
 
       // Unavailable = Yad2 blocked or returned nothing
       if (result.unavailable || result.listings.length === 0) {
-        setUnavailable(true);
-        setResults([]);
-        setFetchedAt(result.fetchedAt);
-        toast.warning(
-          language === "he"
-            ? "יד2 חוסם בקשות אוטומטיות כרגע — נסו שוב בעוד מספר דקות"
-            : "Yad2 is temporarily blocking automated requests — try again shortly"
-        );
-        return;
+        // Retry once automatically before showing unavailable
+        if (!result.unavailable) {
+          await new Promise((r) => setTimeout(r, 2000));
+          const retryResult = await scanYad2({
+            cities: selectedCities,
+            minPrice: activeProfile?.min_price ?? undefined,
+            maxPrice: activeProfile?.max_price ?? undefined,
+            minRooms: activeProfile?.min_rooms ?? undefined,
+            maxRooms: activeProfile?.max_rooms ?? undefined,
+          });
+          if (retryResult.listings.length > 0) {
+            result = retryResult;
+          }
+        }
+        if (result.listings.length === 0) {
+          setUnavailable(true);
+          setResults([]);
+          setFetchedAt(result.fetchedAt);
+          toast.info(
+            language === "he"
+              ? "הסריקה הכללית לא מצאה תוצאות כרגע — נסו שוב בעוד מספר דקות"
+              : "General scan found no results at the moment — try again shortly"
+          );
+          return;
+        }
       }
 
       const scored = result.listings
@@ -430,12 +446,12 @@ const Watchlist = () => {
                 </motion.div>
                 <div>
                   <p className="font-semibold text-lg">
-                    {language === "he" ? "יד2 לא זמין כרגע" : "Yad2 Temporarily Unavailable"}
+                    {language === "he" ? "סריקה כללית — אין תוצאות כרגע" : "General Scan — No Results Right Now"}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1 max-w-sm">
                     {language === "he"
-                      ? "שרת יד2 לא הגיב. זהו מצב זמני — נסו שוב בעוד מספר דקות."
-                      : "Yad2's server didn't respond. This is temporary — please try again in a few minutes."}
+                      ? "הסריקה הכללית לא מצאה דירות תואמות כרגע. נסו שוב בעוד מספר דקות או שנו את הפילטרים."
+                      : "The general scan found no matching listings right now. Try again shortly or adjust your filters."}
                   </p>
                 </div>
                 <Button onClick={doScan} variant="outline" className="gap-2">

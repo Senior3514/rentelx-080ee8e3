@@ -1,25 +1,15 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  Book, Search, ArrowLeft, ExternalLink, Clock, FileText, Database,
-  Loader2, BookOpen, Sparkles, Home, Zap, BarChart3, Filter, Columns,
-  Globe, Shield, HelpCircle, ChevronRight, Star
+  Search, ArrowLeft, FileText,
+  BookOpen, Sparkles, Home, Zap, BarChart3, Filter, Columns,
+  Globe, Shield, HelpCircle, ChevronRight
 } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/ui/PageHeader";
-import {
-  listKnowledgeBasePages,
-  getKnowledgeBasePage,
-  searchKnowledgeBase,
-  getKnowledgeBaseDatabaseId,
-  setKnowledgeBaseDatabaseId,
-  type NotionPage,
-} from "@/lib/notionService";
 
 const container = {
   hidden: { opacity: 0 },
@@ -119,12 +109,7 @@ When you paste a listing URL, RentelX's AI engine:
 ### Tips for Best Results
 - Use **direct links** to specific listings (not search results pages)
 - For Facebook: use the public post link, not the group feed link
-- If extraction misses some data, you can edit the listing manually after saving
-
-### Troubleshooting
-- **"Could not extract data"** — The website may block automated access. Try manual entry.
-- **Missing fields** — Some sites don't include all details. Fill in missing data manually.
-- **Wrong data** — Hit "Re-extract" or edit after saving.`,
+- If extraction misses some data, you can edit the listing manually after saving`,
     contentHe: `## איך שליפת AI עובדת
 
 כשמדביקים קישור לדירה, מנוע ה-AI של RentelX:
@@ -144,12 +129,7 @@ When you paste a listing URL, RentelX's AI engine:
 ### טיפים לתוצאות מיטביות
 - השתמשו ב**קישורים ישירים** למודעות ספציפיות (לא דפי חיפוש)
 - לפייסבוק: השתמשו בקישור הפוסט הציבורי, לא בפיד הקבוצה
-- אם החילוץ מפספס נתונים, ניתן לערוך את הדירה ידנית אחרי שמירה
-
-### פתרון בעיות
-- **"לא הצלחנו לשלוף נתונים"** — האתר עשוי לחסום גישה אוטומטית. נסו הזנה ידנית.
-- **שדות חסרים** — חלק מהאתרים לא כוללים את כל הפרטים. השלימו ידנית.
-- **נתונים שגויים** — לחצו "שלוף מחדש" או ערכו אחרי שמירה.`,
+- אם החילוץ מפספס נתונים, ניתן לערוך את הדירה ידנית אחרי שמירה`,
   },
   {
     id: "watchlist-scanning",
@@ -158,14 +138,14 @@ When you paste a listing URL, RentelX's AI engine:
     titleHe: "רשימת מעקב וסריקה אוטומטית",
     categoryEn: "Scanning",
     categoryHe: "סריקה",
-    contentEn: `## Real-Time Yad2 Scanning
+    contentEn: `## Real-Time General Scanning
 
-The Watchlist scans Yad2 in real-time for new rental listings.
+The Watchlist performs a general scan of the Israeli rental market in real-time.
 
 ### How to Use
 1. Go to **Watchlist** page
 2. Select cities to scan (Tel Aviv, Givatayim, Ramat Gan, etc.)
-3. Click **"Scan Now"** for immediate results
+3. Click **"Scan Now"** for immediate organized results
 4. Toggle **"Auto-Scan"** for automatic scanning every 5 minutes
 
 ### Filters
@@ -176,20 +156,15 @@ The Watchlist scans Yad2 in real-time for new rental listings.
 ### Saving Listings
 - Click the **+** button on any scan result to save it to your Inbox
 - Saved listings are scored against all your active profiles
-- Images, amenities, and all data are preserved
+- Images, amenities, and all data are preserved`,
+    contentHe: `## סריקה כללית בזמן אמת
 
-### Important Notes
-- Yad2 may temporarily block scanning — just retry after a few minutes
-- Auto-scan runs every 5 minutes while the page is open
-- Scan results show real-time data from Yad2's API`,
-    contentHe: `## סריקת יד2 בזמן אמת
-
-רשימת המעקב סורקת את יד2 בזמן אמת לדירות חדשות.
+רשימת המעקב מבצעת סריקה כללית של שוק השכירות הישראלי בזמן אמת.
 
 ### איך להשתמש
 1. לכו לדף **רשימת מעקב**
 2. בחרו ערים לסריקה (תל אביב, גבעתיים, רמת גן, וכו')
-3. לחצו **"סרוק עכשיו"** לתוצאות מיידיות
+3. לחצו **"סרוק עכשיו"** לתוצאות מסודרות מיידיות
 4. הפעילו **"סריקה אוטומטית"** לסריקה אוטומטית כל 5 דקות
 
 ### פילטרים
@@ -200,12 +175,7 @@ The Watchlist scans Yad2 in real-time for new rental listings.
 ### שמירת דירות
 - לחצו על כפתור ה-**+** בכל תוצאת סריקה לשמירה בתיבה
 - דירות שנשמרות מדורגות כנגד כל הפרופילים הפעילים
-- תמונות, מאפיינים וכל הנתונים נשמרים
-
-### הערות חשובות
-- יד2 עשוי לחסום סריקה זמנית — פשוט נסו שוב אחרי מספר דקות
-- סריקה אוטומטית רצה כל 5 דקות כשהדף פתוח
-- תוצאות הסריקה מציגות נתונים בזמן אמת מ-API של יד2`,
+- תמונות, מאפיינים וכל הנתונים נשמרים`,
   },
   {
     id: "scoring-system",
@@ -227,9 +197,9 @@ Every listing is scored 0-100 based on how well it matches your search profile.
 | **Amenities** | 20% | Must-haves weighted 2x more than nice-to-haves |
 
 ### Score Colors
-- 🟢 **80-100**: Excellent match — highly recommended
-- 🟡 **50-79**: Good match — worth considering
-- 🔴 **0-49**: Low match — may not meet your criteria
+- **80-100**: Excellent match — highly recommended
+- **50-79**: Good match — worth considering
+- **0-49**: Low match — may not meet your criteria
 
 ### Tips
 - Create a detailed search profile for more accurate scores
@@ -248,9 +218,9 @@ Every listing is scored 0-100 based on how well it matches your search profile.
 | **מאפיינים** | 20% | דרישות חובה שוקלות פי 2 מיתרונות |
 
 ### צבעי ציון
-- 🟢 **80-100**: התאמה מצוינת — מומלץ מאוד
-- 🟡 **50-79**: התאמה טובה — שווה בדיקה
-- 🔴 **0-49**: התאמה נמוכה — עשוי לא לענות על הקריטריונים
+- **80-100**: התאמה מצוינת — מומלץ מאוד
+- **50-79**: התאמה טובה — שווה בדיקה
+- **0-49**: התאמה נמוכה — עשוי לא לענות על הקריטריונים
 
 ### טיפים
 - צרו פרופיל חיפוש מפורט לציונים מדויקים יותר
@@ -361,9 +331,9 @@ The AI comparison provides:
 RentelX supports 3 languages with full RTL layout:
 
 ### Supported Languages
-- 🇬🇧 **English** (LTR)
-- 🇮🇱 **Hebrew** (RTL) — with Rubik font
-- 🇪🇸 **Spanish** (LTR)
+- **English** (LTR)
+- **Hebrew** (RTL) — with Rubik font
+- **Spanish** (LTR)
 
 ### How to Switch
 Click the language toggle (EN/עב) in the top navigation bar.
@@ -377,9 +347,9 @@ Click the language toggle (EN/עב) in the top navigation bar.
 RentelX תומך ב-3 שפות עם תצוגת RTL מלאה:
 
 ### שפות נתמכות
-- 🇬🇧 **אנגלית** (LTR)
-- 🇮🇱 **עברית** (RTL) — עם גופן Rubik
-- 🇪🇸 **ספרדית** (LTR)
+- **אנגלית** (LTR)
+- **עברית** (RTL) — עם גופן Rubik
+- **ספרדית** (LTR)
 
 ### איך להחליף
 לחצו על כפתור השפה (EN/עב) בסרגל הניווט העליון.
@@ -427,50 +397,8 @@ RentelX תומך ב-3 שפות עם תצוגת RTL מלאה:
 
 export default function KnowledgeBase() {
   const { t, language, direction } = useLanguage();
-  const [dbId, setDbId] = useState(getKnowledgeBaseDatabaseId() ?? "");
-  const [dbIdInput, setDbIdInput] = useState(dbId);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<string>("help");
-  const isNotionConfigured = Boolean(dbId);
-
-  // List pages from the Notion database
-  const {
-    data: pages,
-    isLoading: pagesLoading,
-    error: pagesError,
-  } = useQuery({
-    queryKey: ["notion-kb-pages", dbId, searchQuery],
-    queryFn: () => {
-      if (searchQuery.trim()) return searchKnowledgeBase(searchQuery);
-      return listKnowledgeBasePages(dbId, undefined);
-    },
-    enabled: isNotionConfigured && activeTab === "notion",
-    staleTime: 60_000,
-  });
-
-  // Load selected Notion page content
-  const { data: pageContent, isLoading: pageLoading } = useQuery({
-    queryKey: ["notion-kb-page", selectedPageId],
-    queryFn: () => getKnowledgeBasePage(selectedPageId!),
-    enabled: Boolean(selectedPageId),
-    staleTime: 120_000,
-  });
-
-  function handleConnect() {
-    const trimmed = dbIdInput.trim();
-    if (!trimmed) return;
-    setKnowledgeBaseDatabaseId(trimmed);
-    setDbId(trimmed);
-  }
-
-  function handleDisconnect() {
-    localStorage.removeItem("rentelx_notion_db_id");
-    setDbId("");
-    setDbIdInput("");
-    setSelectedPageId(null);
-  }
 
   // Filter help articles by search
   const filteredArticles = searchQuery.trim()
@@ -532,58 +460,6 @@ export default function KnowledgeBase() {
     );
   }
 
-  // Notion page detail view
-  if (selectedPageId) {
-    return (
-      <div className="p-6 max-w-4xl mx-auto" dir={direction}>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setSelectedPageId(null)}
-          className="mb-4 gap-1"
-        >
-          <ArrowLeft className="h-4 w-4 flip-rtl" />
-          {t("common.back")}
-        </Button>
-
-        {pageLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : pageContent ? (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-xl">
-                    {pageContent.icon && <span>{pageContent.icon}</span>}
-                    {pageContent.title}
-                  </CardTitle>
-                  {pageContent.url && (
-                    <a href={pageContent.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {t("knowledgeBase.lastEdited")}: {new Date(pageContent.lastEdited).toLocaleDateString()}
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
-                  {pageContent.content || (
-                    <p className="text-muted-foreground italic">{t("knowledgeBase.emptyPage")}</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ) : null}
-      </div>
-    );
-  }
-
   // Main view
   return (
     <div className="p-6 max-w-4xl mx-auto" dir={direction}>
@@ -591,8 +467,8 @@ export default function KnowledgeBase() {
         <PageHeader
           title={t("knowledgeBase.title")}
           subtitle={language === "he"
-            ? "מדריכים, עזרה ומאגר מידע — הכל במקום אחד"
-            : "Guides, help & knowledge base — all in one place"}
+            ? "מדריכים ועזרה — הכל במקום אחד"
+            : "Guides & help — all in one place"}
         />
       </div>
 
@@ -607,156 +483,47 @@ export default function KnowledgeBase() {
         />
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full grid grid-cols-2 mb-4">
-          <TabsTrigger value="help" className="gap-1.5">
-            <HelpCircle className="h-3.5 w-3.5" />
-            {language === "he" ? "מדריכים ועזרה" : "Guides & Help"}
-          </TabsTrigger>
-          <TabsTrigger value="notion" className="gap-1.5">
-            <Database className="h-3.5 w-3.5" />
-            Notion
-          </TabsTrigger>
-        </TabsList>
-
-        {/* ─── Built-in Help Tab ─── */}
-        <TabsContent value="help">
-          <motion.div
-            variants={container}
-            initial="hidden"
-            animate="show"
-            className="grid gap-3"
-          >
-            {filteredArticles.length === 0 ? (
-              <Card>
-                <CardContent className="py-10 text-center">
-                  <FileText className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground">
-                    {language === "he" ? "לא נמצאו תוצאות" : "No results found"}
-                  </p>
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="grid gap-3"
+      >
+        {filteredArticles.length === 0 ? (
+          <Card>
+            <CardContent className="py-10 text-center">
+              <FileText className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+              <p className="text-muted-foreground">
+                {language === "he" ? "לא נמצאו תוצאות" : "No results found"}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          filteredArticles.map((article) => (
+            <motion.div key={article.id} variants={item} layout>
+              <Card
+                className="cursor-pointer hover:shadow-md transition-all hover:border-primary/30 group"
+                onClick={() => setSelectedArticleId(article.id)}
+              >
+                <CardContent className="py-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                    {article.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">
+                      {language === "he" ? article.titleHe : article.titleEn}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {language === "he" ? article.categoryHe : article.categoryEn}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 group-hover:text-primary transition-colors flip-rtl" />
                 </CardContent>
               </Card>
-            ) : (
-              filteredArticles.map((article) => (
-                <motion.div key={article.id} variants={item} layout>
-                  <Card
-                    className="cursor-pointer hover:shadow-md transition-all hover:border-primary/30 group"
-                    onClick={() => setSelectedArticleId(article.id)}
-                  >
-                    <CardContent className="py-4 flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
-                        {article.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">
-                          {language === "he" ? article.titleHe : article.titleEn}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {language === "he" ? article.categoryHe : article.categoryEn}
-                        </p>
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 group-hover:text-primary transition-colors flip-rtl" />
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))
-            )}
-          </motion.div>
-        </TabsContent>
-
-        {/* ─── Notion Tab ─── */}
-        <TabsContent value="notion">
-          {!isNotionConfigured ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Database className="h-5 w-5" />
-                  {t("knowledgeBase.connectNotion")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  {t("knowledgeBase.connectInstructions")}
-                </p>
-                <ol className="text-sm text-muted-foreground list-decimal ps-5 space-y-2">
-                  <li>{t("knowledgeBase.step1")}</li>
-                  <li>{t("knowledgeBase.step2")}</li>
-                  <li>{t("knowledgeBase.step3")}</li>
-                </ol>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder={t("knowledgeBase.dbIdPlaceholder")}
-                    value={dbIdInput}
-                    onChange={(e) => setDbIdInput(e.target.value)}
-                    className="font-mono text-sm"
-                  />
-                  <Button onClick={handleConnect} disabled={!dbIdInput.trim()}>
-                    {t("knowledgeBase.connect")}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              <div className="flex justify-end mb-3">
-                <Button variant="outline" size="sm" onClick={handleDisconnect}>
-                  {t("knowledgeBase.disconnect")}
-                </Button>
-              </div>
-
-              {pagesLoading ? (
-                <div className="flex items-center justify-center py-20">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : pagesError ? (
-                <Card>
-                  <CardContent className="py-10 text-center">
-                    <p className="text-destructive">{t("knowledgeBase.error")}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {pagesError instanceof Error ? pagesError.message : String(pagesError)}
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : !pages?.length ? (
-                <Card>
-                  <CardContent className="py-10 text-center">
-                    <FileText className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-                    <p className="text-muted-foreground">{t("knowledgeBase.empty")}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{t("knowledgeBase.emptyHint")}</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <motion.div variants={container} initial="hidden" animate="show" className="grid gap-3">
-                  <AnimatePresence>
-                    {pages.map((page: NotionPage) => (
-                      <motion.div key={page.id} variants={item} layout>
-                        <Card
-                          className="cursor-pointer hover:shadow-md transition-shadow"
-                          onClick={() => setSelectedPageId(page.id)}
-                        >
-                          <CardContent className="py-4 flex items-center gap-3">
-                            <div className="text-2xl shrink-0 w-8 text-center">
-                              {page.icon ?? <FileText className="h-5 w-5 text-muted-foreground mx-auto" />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">{page.title}</p>
-                              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                <Clock className="h-3 w-3" />
-                                {new Date(page.lastEdited).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </motion.div>
-              )}
-            </>
-          )}
-        </TabsContent>
-      </Tabs>
+            </motion.div>
+          ))
+        )}
+      </motion.div>
     </div>
   );
 }

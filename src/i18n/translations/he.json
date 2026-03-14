@@ -426,6 +426,14 @@
     "hours": "שעות",
     "minutes": "דקות",
     "call": "התקשר",
-    "sendEmail": "שלח מייל"
+    "sendEmail": "שלח מייל",
+    "newCenter": "מרכז חדש",
+    "createCenter": "צור מרכז שליטה",
+    "deleteCenter": "מחק מרכז",
+    "moveName": "שם המעבר",
+    "moveNamePlaceholder": "לדוגמה: מעבר לתל אביב",
+    "estimatedDate": "תאריך מעבר משוער",
+    "profileSetupDesc": "הגדירו את תאריך המעבר ושם לפרופיל. ניתן ליצור עד 3 מרכזי שליטה למעברים שונים.",
+    "centersAvailable": "מרכזים נוספים אפשריים"
   }
 }

@@ -216,7 +216,34 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
     });
   };
 
-  // Extract listing data from URL using AI (with real page content)
+  // Parse AI response JSON
+  const parseExtractedJson = (content: string): Record<string, any> | null => {
+    try {
+      const cleaned = content.replace(/```json?\s*/g, "").replace(/```\s*/g, "").trim();
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) return null;
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        address: parsed.address || null,
+        neighborhood: parsed.neighborhood || null,
+        city: parsed.city || null,
+        price: parsed.price != null ? Number(parsed.price) || null : null,
+        rooms: parsed.rooms != null ? Number(parsed.rooms) || null : null,
+        sqm: parsed.sqm != null ? Number(parsed.sqm) || null : null,
+        floor: parsed.floor != null ? Number(parsed.floor) : null,
+        total_floors: parsed.total_floors != null ? Number(parsed.total_floors) : null,
+        description: parsed.description || null,
+        amenities: Array.isArray(parsed.amenities) ? parsed.amenities.filter(Boolean) : [],
+        contact_name: parsed.contact_name || null,
+        contact_phone: parsed.contact_phone || null,
+        image_urls: Array.isArray(parsed.image_urls) ? parsed.image_urls.filter(Boolean) : [],
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  // Extract listing data from URL using AI (with real page content + retry)
   const extractFromUrl = async (inputUrl: string) => {
     setUrlFetching(true);
     setUrlExtracted(null);
@@ -225,67 +252,72 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
       const source = detectSource(inputUrl);
 
       let extracted: Record<string, any> | null = null;
-      try {
-        const res = await supabase.functions.invoke("ai-assist", {
-          body: {
-            type: "extract",
-            messages: [{
-              role: "user",
-              content: `Extract all rental listing data from this ${source} listing URL: ${inputUrl}`,
-            }],
-          },
-        });
+      const MAX_RETRIES = 3;
 
-        if (res.data && !res.error) {
-          const content = typeof res.data === "string" ? res.data : res.data?.content;
-          if (content) {
-            // Parse JSON from the response, handling potential markdown wrapping
-            const cleaned = content.replace(/```json?\s*/g, "").replace(/```\s*/g, "").trim();
-            const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              const parsed = JSON.parse(jsonMatch[0]);
-              // Normalize field types
-              extracted = {
-                address: parsed.address || null,
-                neighborhood: parsed.neighborhood || null,
-                city: parsed.city || null,
-                price: parsed.price != null ? Number(parsed.price) || null : null,
-                rooms: parsed.rooms != null ? Number(parsed.rooms) || null : null,
-                sqm: parsed.sqm != null ? Number(parsed.sqm) || null : null,
-                floor: parsed.floor != null ? Number(parsed.floor) : null,
-                total_floors: parsed.total_floors != null ? Number(parsed.total_floors) : null,
-                description: parsed.description || null,
-                amenities: Array.isArray(parsed.amenities) ? parsed.amenities.filter(Boolean) : [],
-                contact_name: parsed.contact_name || null,
-                contact_phone: parsed.contact_phone || null,
-                image_urls: Array.isArray(parsed.image_urls) ? parsed.image_urls.filter(Boolean) : [],
-              };
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        try {
+          const res = await supabase.functions.invoke("ai-assist", {
+            body: {
+              type: "extract",
+              messages: [{
+                role: "user",
+                content: attempt === 0
+                  ? `Extract all rental listing data from this ${source} listing URL: ${inputUrl}`
+                  : `Please try again to extract rental listing data from this ${source} listing URL: ${inputUrl}. This is attempt ${attempt + 1}. Make sure to fetch the actual page content and extract every available field.`,
+              }],
+            },
+          });
+
+          if (res.data && !res.error) {
+            const content = typeof res.data === "string" ? res.data : res.data?.content;
+            if (content) {
+              extracted = parseExtractedJson(content);
+              // If we got meaningful data, break the retry loop
+              if (extracted && (extracted.address || extracted.city || extracted.price || extracted.rooms)) {
+                break;
+              }
             }
           }
+        } catch (err) {
+          console.error(`AI extraction attempt ${attempt + 1} error:`, err);
         }
-      } catch (err) {
-        console.error("AI extraction error:", err);
+        // Brief delay between retries
+        if (attempt < MAX_RETRIES - 1) {
+          await new Promise((r) => setTimeout(r, 1500));
+        }
       }
 
-      // Check if we got useful data - if not, show error instead of mock data
-      if (!extracted || (!extracted.address && !extracted.city && !extracted.price && !extracted.rooms)) {
-        toast.error(
+      // Even partial data is useful — show it and let user complete manually
+      if (extracted && (extracted.address || extracted.city || extracted.price || extracted.rooms || extracted.description)) {
+        const hasAllFields = extracted.address && extracted.price && extracted.rooms;
+        if (!hasAllFields) {
+          setExtractionPartial(true);
+        }
+        setUrlExtracted(extracted);
+        toast.success(
           language === "he"
-            ? "לא הצלחנו לשלוף נתונים מהקישור. ייתכן שהאתר חוסם גישה אוטומטית. נסו להזין ידנית."
-            : "Could not extract data from this URL. The site may block automated access. Try manual entry."
+            ? "הנתונים נשלפו בהצלחה! בדקו ושמרו."
+            : "Data extracted successfully! Review and save."
         );
-        setUrlFetching(false);
-        return null;
+        return extracted;
       }
 
-      // Check if extraction is partial (some key fields missing)
-      const hasAllFields = extracted.address && extracted.price && extracted.rooms;
-      if (!hasAllFields) {
-        setExtractionPartial(true);
-      }
-
-      setUrlExtracted(extracted);
-      return extracted;
+      // If AI truly returned nothing, provide helpful message but don't block
+      toast.warning(
+        language === "he"
+          ? "השליפה החזירה תוצאות חלקיות. ניתן להשלים ידנית ולשמור."
+          : "Extraction returned partial results. You can complete manually and save."
+      );
+      // Set minimal extracted data so user can still save with the URL
+      const minimal = {
+        address: null, neighborhood: null, city: null,
+        price: null, rooms: null, sqm: null, floor: null, total_floors: null,
+        description: null, amenities: [], contact_name: null, contact_phone: null,
+        image_urls: [],
+      };
+      setUrlExtracted(minimal);
+      setExtractionPartial(true);
+      return minimal;
     } catch (err) {
       console.error("URL extraction error:", err);
       toast.error(
