@@ -24,6 +24,7 @@ export interface ScannedListing {
     storage: boolean;
   };
   cover_image: string | null;
+  image_urls?: string[];
   contact_name: string | null;
   contact_phone: string | null;
   listed_at: string;

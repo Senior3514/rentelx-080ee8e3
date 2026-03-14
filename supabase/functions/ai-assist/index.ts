@@ -39,8 +39,11 @@ Include: price per month in ₪, location/neighborhood, size (rooms + sqm), and 
 Be factual — only state what is mentioned in the listing, do not invent details.
 Answer in the user's language (Hebrew or English).`,
 
-  extract: `You are a data extraction engine for Israeli rental listings.
-Extract structured data from the provided listing text and return ONLY valid JSON in this exact format:
+  extract: `You are a precise data extraction engine for Israeli rental listings.
+You will receive the ACTUAL CONTENT of a listing page (HTML text or plain text) that was fetched from the web.
+Extract ONLY the data that is explicitly present in the provided content.
+
+Return ONLY valid JSON in this exact format:
 {
   "address": "street and number or null",
   "neighborhood": "neighborhood name or null",
@@ -53,11 +56,21 @@ Extract structured data from the provided listing text and return ONLY valid JSO
   "description": "clean description text or null",
   "amenities": ["list", "of", "amenities"],
   "contact_name": "name or null",
-  "contact_phone": "phone or null"
+  "contact_phone": "phone or null",
+  "image_urls": ["url1", "url2"]
 }
-Extract Hebrew amenities as-is (חניה, מעלית, מרפסת, מיזוג, מרוהטת, ממ"ד, מחסן, גינה, etc.).
-Do NOT invent data. If a field is not found, use null.
-Return ONLY the JSON object, no other text.`,
+
+CRITICAL RULES:
+- Extract ONLY data that exists in the provided text. NEVER guess or invent data.
+- If a field is not found in the text, use null.
+- Extract Hebrew amenities as-is (חניה, מעלית, מרפסת, מיזוג, ממ"ד, מרוהטת, מחסן, גינה, ריהוט, etc.).
+- For Facebook posts: extract phone numbers, price, rooms count, location from the post text.
+- For Yad2: extract all structured data fields.
+- Extract image URLs when found (og:image meta tags, img src attributes, data-src).
+- Phone numbers: look for Israeli patterns (05X-XXXXXXX, 0X-XXXXXXX, +972...).
+- Price: look for numbers near ₪, ש"ח, שקל, NIS, or "שכירות" / "rent" / "להשכרה".
+- Rooms: look for "חדרים", "חד'", "rooms", or X.5 patterns.
+- Return ONLY the JSON object, no other text.`,
 };
 
 // Model priority list — tries each in order until one succeeds
@@ -119,6 +132,132 @@ async function callOpenRouter(
   }
 }
 
+/* ── Fetch actual web page content from URL ── */
+async function fetchUrlContent(url: string): Promise<{ text: string; images: string[] } | null> {
+  const BROWSER_HEADERS: Record<string, string> = {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Cache-Control": "no-cache",
+  };
+
+  // For Facebook, add mobile user agent to get simpler HTML
+  const isFacebook = url.includes("facebook.com") || url.includes("fb.com");
+  if (isFacebook) {
+    BROWSER_HEADERS["User-Agent"] = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36";
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const res = await fetch(url, {
+      headers: BROWSER_HEADERS,
+      signal: controller.signal,
+      redirect: "follow",
+    });
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      console.warn(`[fetch-url] HTTP ${res.status} from ${url}`);
+      return null;
+    }
+
+    const html = await res.text();
+
+    // Extract images from og:image, meta tags, and img elements
+    const images: string[] = [];
+    const ogImageMatches = html.matchAll(/(?:property|name)=["']og:image["']\s+content=["']([^"']+)["']/gi);
+    for (const m of ogImageMatches) {
+      if (m[1] && !m[1].includes("placeholder")) images.push(m[1]);
+    }
+    const imgSrcMatches = html.matchAll(/<img[^>]+(?:src|data-src)=["']([^"']+)["']/gi);
+    for (const m of imgSrcMatches) {
+      if (m[1] && m[1].startsWith("http") && !m[1].includes("logo") && !m[1].includes("icon") && !m[1].includes("avatar") && !m[1].includes("emoji")) {
+        images.push(m[1]);
+      }
+    }
+
+    // Strip HTML to get clean text content
+    const text = htmlToText(html);
+    return { text: text.slice(0, 12000), images: images.slice(0, 10) };
+  } catch (e) {
+    clearTimeout(timer);
+    console.warn(`[fetch-url] Error fetching ${url}:`, (e as Error)?.message);
+    return null;
+  }
+}
+
+/* ── Convert HTML to readable text ── */
+function htmlToText(html: string): string {
+  // Extract title
+  const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+  const title = titleMatch ? titleMatch[1].trim() : "";
+
+  // Extract meta description
+  const metaDescMatch = html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i);
+  const metaDesc = metaDescMatch ? metaDescMatch[1].trim() : "";
+
+  // Extract og:description
+  const ogDescMatch = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i);
+  const ogDesc = ogDescMatch ? ogDescMatch[1].trim() : "";
+
+  // Extract JSON-LD structured data (common on listing sites)
+  const jsonLdMatches = html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
+  let jsonLdText = "";
+  for (const m of jsonLdMatches) {
+    try {
+      const data = JSON.parse(m[1]);
+      jsonLdText += "\n" + JSON.stringify(data, null, 0);
+    } catch { /* skip malformed JSON-LD */ }
+  }
+
+  // Remove scripts, styles, and irrelevant elements
+  const text = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<nav[\s\S]*?<\/nav>/gi, " ")
+    .replace(/<footer[\s\S]*?<\/footer>/gi, " ")
+    .replace(/<header[\s\S]*?<\/header>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    // Convert block elements to newlines
+    .replace(/<\/?(div|p|br|h[1-6]|li|tr|td|section|article)[^>]*>/gi, "\n")
+    // Remove remaining tags
+    .replace(/<[^>]+>/g, " ")
+    // Decode common HTML entities
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec)))
+    // Collapse whitespace
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n\s*\n/g, "\n")
+    .trim();
+
+  // Build final content with metadata first
+  const parts: string[] = [];
+  if (title) parts.push(`PAGE TITLE: ${title}`);
+  if (metaDesc) parts.push(`META DESCRIPTION: ${metaDesc}`);
+  if (ogDesc && ogDesc !== metaDesc) parts.push(`OG DESCRIPTION: ${ogDesc}`);
+  if (jsonLdText) parts.push(`STRUCTURED DATA: ${jsonLdText.slice(0, 3000)}`);
+  parts.push(`\nPAGE CONTENT:\n${text}`);
+
+  return parts.join("\n");
+}
+
+/* ── Extract URL from message content ── */
+function extractUrlFromMessage(messages: Array<{ role: string; content: string }>): string | null {
+  for (const msg of messages) {
+    const urlMatch = msg.content.match(/https?:\/\/[^\s"'<>]+/);
+    if (urlMatch) return urlMatch[0];
+  }
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: getCorsHeaders(req) });
@@ -150,15 +289,56 @@ serve(async (req) => {
     }
 
     const systemPrompt = SYSTEM_PROMPTS[type] ?? SYSTEM_PROMPTS.chat;
+
+    // For extraction: fetch the actual URL content and include it in the message
+    let enrichedMessages = messages;
+    if (type === "extract") {
+      const url = extractUrlFromMessage(messages);
+      if (url) {
+        console.log(`[ai-assist] Fetching URL content: ${url}`);
+        const fetched = await fetchUrlContent(url);
+
+        if (fetched && fetched.text.length > 50) {
+          console.log(`[ai-assist] Fetched ${fetched.text.length} chars, ${fetched.images.length} images from ${url}`);
+          // Replace the user message with one that includes the actual content
+          enrichedMessages = [{
+            role: "user",
+            content: [
+              `Extract rental listing data from the following page content.`,
+              `SOURCE URL: ${url}`,
+              fetched.images.length > 0 ? `\nIMAGES FOUND ON PAGE:\n${fetched.images.join("\n")}` : "",
+              `\n--- PAGE CONTENT START ---\n${fetched.text}\n--- PAGE CONTENT END ---`,
+              `\nExtract ONLY data that appears in the content above. Return JSON only.`,
+            ].join("\n"),
+          }];
+        } else {
+          console.warn(`[ai-assist] Could not fetch URL content (${fetched?.text.length ?? 0} chars). Sending URL for best-effort extraction.`);
+          // If fetch failed, still tell the AI we couldn't get the content
+          enrichedMessages = [{
+            role: "user",
+            content: [
+              `I tried to fetch this rental listing URL but could not retrieve the page content: ${url}`,
+              ``,
+              `The URL appears to be from: ${url.includes("facebook") ? "Facebook Marketplace / Groups" : url.includes("yad2") ? "Yad2" : "a rental listing website"}`,
+              ``,
+              `Based ONLY on what can be inferred from the URL structure (if any listing ID or parameters are visible), return what you can.`,
+              `For any data that cannot be determined from the URL alone, you MUST use null.`,
+              `Do NOT invent or guess any data. Return JSON with mostly null values rather than fabricated data.`,
+            ].join("\n"),
+          }];
+        }
+      }
+    }
+
     const callOpts = type === "extract"
-      ? { maxTokens: 800, temperature: 0.1 }
+      ? { maxTokens: 1200, temperature: 0.1, timeoutMs: 45000 }
       : type === "analyze"
       ? { maxTokens: 1200, temperature: 0.4 }
       : { maxTokens: 1024, temperature: 0.7 };
 
     // Try each model in priority order
     for (const model of MODELS) {
-      const content = await callOpenRouter(apiKey, model, systemPrompt, messages, callOpts);
+      const content = await callOpenRouter(apiKey, model, systemPrompt, enrichedMessages, callOpts);
       if (content) {
         console.log(`ai-assist: replied via ${model} (${content.length} chars)`);
         return new Response(

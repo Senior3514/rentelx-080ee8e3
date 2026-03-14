@@ -45,6 +45,10 @@ interface Yad2Item {
   // Mobile API fields
   row_4?: string; row_1?: string; row_2?: string; row_3?: string;
   main_image?: string;
+  // Additional image fields from various API versions
+  img_url?: string;
+  images_urls?: string[];
+  media?: { images?: Array<{ src?: string; url?: string }> };
 }
 
 function normalizeItem(item: Yad2Item, cityLabel: string) {
@@ -66,6 +70,36 @@ function normalizeItem(item: Yad2Item, cityLabel: string) {
   if (item.safe_room)       amenities.push('ממ"ד');
   if (item.storage)         amenities.push("מחסן");
 
+  // Extract best available cover image
+  const coverImage = item.cover_image
+    ?? item.main_image
+    ?? item.img_url
+    ?? item.images?.[0]?.src
+    ?? item.media?.images?.[0]?.src
+    ?? item.media?.images?.[0]?.url
+    ?? (item.images_urls && item.images_urls.length > 0 ? item.images_urls[0] : null)
+    ?? null;
+
+  // Collect all image URLs
+  const allImages: string[] = [];
+  if (coverImage) allImages.push(coverImage);
+  if (item.images) {
+    for (const img of item.images) {
+      if (img.src && !allImages.includes(img.src)) allImages.push(img.src);
+    }
+  }
+  if (item.media?.images) {
+    for (const img of item.media.images) {
+      const url = img.src ?? img.url;
+      if (url && !allImages.includes(url)) allImages.push(url);
+    }
+  }
+  if (item.images_urls) {
+    for (const url of item.images_urls) {
+      if (url && !allImages.includes(url)) allImages.push(url);
+    }
+  }
+
   return {
     source_id: String(tokenId ?? Math.random()),
     source: "yad2" as const,
@@ -84,7 +118,8 @@ function normalizeItem(item: Yad2Item, cityLabel: string) {
       airConditioning: !!item.air_conditioner, furnished: !!item.furniture,
       safeRoom: !!item.safe_room, storage: !!item.storage,
     },
-    cover_image: item.cover_image ?? item.main_image ?? item.images?.[0]?.src ?? null,
+    cover_image: coverImage,
+    image_urls: allImages.slice(0, 10),
     contact_name: item.contact_name ?? null,
     contact_phone: item.contact_phone ?? null,
     listed_at: item.updated_at ?? item.created_at ?? new Date().toISOString(),
@@ -168,14 +203,9 @@ async function fetchCityListings(
   const qs = new URLSearchParams({ ...params, compact: "1", forceLdLoad: "true" }).toString();
   const { id, topArea, area } = city;
 
-  // Try primary endpoint first, then fallbacks — stop at first success
-  // Only 3 attempts (primary desktop, desktop with area, mobile) to avoid excessive requests
   const attempts: Array<{ url: string; headers: Record<string, string> }> = [
-    // 1. Feed search legacy with city ID (main desktop API)
     { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
-    // 2. Same with topArea + area for better routing
     { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?topArea=${topArea}&area=${area}&city=${id}&${qs}`, headers: DESKTOP_HEADERS },
-    // 3. Mobile API (different rate limits)
     { url: `https://mobile-api.yad2.co.il/api/2/feed/realestate/rent?city=${id}&${qs}`, headers: MOBILE_HEADERS },
   ];
 
@@ -191,7 +221,6 @@ async function fetchCityListings(
         return valid;
       }
     }
-    // Small delay between fallback attempts to avoid rate limiting
     if (i < attempts.length - 1) await delay(300);
   }
 
@@ -235,7 +264,6 @@ serve(async (req) => {
       for (const r of batchResults) {
         if (r.status === "fulfilled") allListings.push(...r.value);
       }
-      // Small delay between batches
       if (i + BATCH_SIZE < validCities.length) await delay(500);
     }
 

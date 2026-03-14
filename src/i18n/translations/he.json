@@ -285,7 +285,7 @@
   },
   "knowledgeBase": {
     "title": "מאגר ידע",
-    "subtitle": "מרכז התיעוד של הצוות שלך, מונע על ידי Notion",
+    "subtitle": "מדריכים, עזרה ומאגר מידע — הכל במקום אחד",
     "connectNotion": "התחבר ל-Notion",
     "connectInstructions": "חבר את סביבת העבודה שלך ב-Notion כדי להשתמש בה כמאגר ידע. עקוב אחרי השלבים:",
     "step1": "צור אינטגרציה ב-notion.so/my-integrations והעתק את מפתח ה-API",
@@ -294,12 +294,14 @@
     "dbIdPlaceholder": "הדבק מזהה מסד נתונים של Notion...",
     "connect": "התחבר",
     "disconnect": "התנתק",
-    "searchPlaceholder": "חפש במאגר הידע...",
+    "searchPlaceholder": "חפשו מדריכים, עזרה...",
     "lastEdited": "נערך לאחרונה",
     "empty": "לא נמצאו מאמרים",
     "emptyHint": "הוסף דפים למסד הנתונים של Notion כדי לראות אותם כאן",
     "emptyPage": "לדף זה אין תוכן עדיין",
-    "error": "טעינת מאגר הידע נכשלה"
+    "error": "טעינת מאגר הידע נכשלה",
+    "guidesHelp": "מדריכים ועזרה",
+    "noResults": "לא נמצאו תוצאות"
   },
   "compare": {
     "title": "השוואת דירות",

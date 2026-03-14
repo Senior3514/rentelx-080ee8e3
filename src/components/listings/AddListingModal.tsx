@@ -10,13 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { scoreListing } from "@/lib/scoring";
-import { detectSource, MOCK_YAD2_LISTINGS, yad2ListingToDbInsert } from "@/lib/yad2";
+import { detectSource } from "@/lib/yad2";
 import { motion, AnimatePresence } from "framer-motion";
 import { z } from "zod";
 import {
   Upload, X, ImagePlus, Link2, Loader2, Camera, FileText,
   MapPin, DollarSign, BedDouble, Maximize, Building2, Phone, User,
-  Sparkles, CheckCircle2, Globe
+  Sparkles, CheckCircle2, Globe, AlertTriangle, Image as ImageIcon
 } from "lucide-react";
 
 interface AddListingModalProps {
@@ -58,6 +58,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
   });
   const [urlFetching, setUrlFetching] = useState(false);
   const [urlExtracted, setUrlExtracted] = useState<Record<string, any> | null>(null);
+  const [extractionPartial, setExtractionPartial] = useState(false);
 
   // Image upload state
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -177,6 +178,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
     setImagePreviews([]);
     setUrlExtracted(null);
     setUrlFetching(false);
+    setExtractionPartial(false);
   };
 
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -214,14 +216,14 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
     });
   };
 
-  // Extract listing data from URL using AI
+  // Extract listing data from URL using AI (with real page content)
   const extractFromUrl = async (inputUrl: string) => {
     setUrlFetching(true);
     setUrlExtracted(null);
+    setExtractionPartial(false);
     try {
       const source = detectSource(inputUrl);
 
-      // Try AI extraction via edge function using the proper "extract" type
       let extracted: Record<string, any> | null = null;
       try {
         const res = await supabase.functions.invoke("ai-assist", {
@@ -229,25 +231,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
             type: "extract",
             messages: [{
               role: "user",
-              content: [
-                `Extract all rental listing data from this ${source} listing URL: ${inputUrl}`,
-                "",
-                "Parse the URL structure and any embedded data to extract:",
-                "- address: full street address with number",
-                "- neighborhood: neighborhood or area name",
-                "- city: city name in Hebrew (תל אביב, גבעתיים, רמת גן, etc.)",
-                "- price: monthly rent in NIS (number only)",
-                "- rooms: number of rooms (can be decimal like 2.5, 3.5)",
-                "- sqm: apartment size in square meters",
-                "- floor: floor number",
-                "- total_floors: total floors in building",
-                "- description: listing description text",
-                "- amenities: array of amenities in Hebrew (חניה, מעלית, מרפסת, מיזוג, ממ\"ד, מרוהטת, מחסן, גינה, etc.)",
-                "- contact_name: landlord or agent name",
-                "- contact_phone: phone number",
-                "",
-                "Return ONLY valid JSON. Use null for unknown fields. Do NOT invent data.",
-              ].join("\n"),
+              content: `Extract all rental listing data from this ${source} listing URL: ${inputUrl}`,
             }],
           },
         });
@@ -274,41 +258,41 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                 amenities: Array.isArray(parsed.amenities) ? parsed.amenities.filter(Boolean) : [],
                 contact_name: parsed.contact_name || null,
                 contact_phone: parsed.contact_phone || null,
+                image_urls: Array.isArray(parsed.image_urls) ? parsed.image_urls.filter(Boolean) : [],
               };
             }
           }
         }
-      } catch {
-        // AI extraction failed, fall back to mock data
+      } catch (err) {
+        console.error("AI extraction error:", err);
       }
 
-      // If AI didn't return useful data, use mock data based on source
-      if (!extracted || (!extracted.address && !extracted.city && !extracted.price)) {
-        const mockListings = MOCK_YAD2_LISTINGS.filter(l => l.source === source || source === "other");
-        const mock = mockListings.length > 0
-          ? mockListings[Math.floor(Math.random() * mockListings.length)]
-          : MOCK_YAD2_LISTINGS[0];
+      // Check if we got useful data - if not, show error instead of mock data
+      if (!extracted || (!extracted.address && !extracted.city && !extracted.price && !extracted.rooms)) {
+        toast.error(
+          language === "he"
+            ? "לא הצלחנו לשלוף נתונים מהקישור. ייתכן שהאתר חוסם גישה אוטומטית. נסו להזין ידנית."
+            : "Could not extract data from this URL. The site may block automated access. Try manual entry."
+        );
+        setUrlFetching(false);
+        return null;
+      }
 
-        extracted = {
-          address: mock.address,
-          neighborhood: mock.neighborhood,
-          city: mock.city,
-          price: mock.price,
-          rooms: mock.rooms,
-          sqm: mock.sqm,
-          floor: mock.floor,
-          total_floors: mock.totalFloors,
-          description: mock.description,
-          contact_name: mock.contactName,
-          contact_phone: mock.contactPhone,
-          amenities: mock.amenities,
-        };
+      // Check if extraction is partial (some key fields missing)
+      const hasAllFields = extracted.address && extracted.price && extracted.rooms;
+      if (!hasAllFields) {
+        setExtractionPartial(true);
       }
 
       setUrlExtracted(extracted);
       return extracted;
     } catch (err) {
       console.error("URL extraction error:", err);
+      toast.error(
+        language === "he"
+          ? "שגיאה בשליפת הנתונים. נסו שוב."
+          : "Error extracting data. Please try again."
+      );
       return null;
     } finally {
       setUrlFetching(false);
@@ -343,6 +327,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
       contact_name: urlExtracted.contact_name || null,
       contact_phone: urlExtracted.contact_phone || null,
       amenities: urlExtracted.amenities || [],
+      image_urls: urlExtracted.image_urls || [],
     };
     insertMutation.mutate(listing);
   };
@@ -391,7 +376,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                   <Input
                     placeholder={t("addListing.urlPlaceholder")}
                     value={url}
-                    onChange={(e) => { setUrl(e.target.value); setUrlError(""); setUrlExtracted(null); }}
+                    onChange={(e) => { setUrl(e.target.value); setUrlError(""); setUrlExtracted(null); setExtractionPartial(false); }}
                     className="ps-10"
                     required
                   />
@@ -418,11 +403,33 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                 </motion.div>
               )}
 
-              {!urlExtracted && (
+              {!urlExtracted && !urlFetching && (
                 <p className="text-xs text-muted-foreground">
-                  {language === "he" ? "הדביקו קישור מיד2, פייסבוק, או כל אתר נדל\"ן — ה-AI ישלוף את כל הפרטים אוטומטית" : "Paste a link from Yad2, Facebook, or any real estate site — AI will extract all details automatically"}
+                  {language === "he" ? "הדביקו קישור מיד2, פייסבוק, או כל אתר נדל\"ן — ה-AI ישלוף את כל הפרטים אוטומטית מתוכן הדף" : "Paste a link from Yad2, Facebook, or any real estate site — AI will extract all details from the actual page content"}
                 </p>
               )}
+
+              {/* Loading state with progress */}
+              <AnimatePresence>
+                {urlFetching && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-2"
+                  >
+                    <div className="flex items-center gap-2 text-sm text-primary font-medium">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {language === "he" ? "שולף נתונים מהדף..." : "Fetching page content..."}
+                    </div>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p>{language === "he" ? "1. מוריד את תוכן הדף" : "1. Downloading page content"}</p>
+                      <p>{language === "he" ? "2. מנתח ומחלץ פרטי דירה" : "2. Analyzing & extracting listing data"}</p>
+                      <p>{language === "he" ? "3. מזהה תמונות ופרטי קשר" : "3. Identifying images & contact info"}</p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Extracted data preview - full details */}
               <AnimatePresence>
@@ -435,8 +442,47 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                   >
                     <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
                       <CheckCircle2 className="h-3.5 w-3.5" />
-                      {language === "he" ? "נתונים שנשלפו בהצלחה" : "Data Extracted Successfully"}
+                      {language === "he" ? "נתונים שנשלפו מהדף בהצלחה" : "Data Extracted from Page"}
                     </div>
+
+                    {/* Partial extraction warning */}
+                    {extractionPartial && (
+                      <div className="flex items-start gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 rounded-lg px-3 py-2">
+                        <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                        <span>
+                          {language === "he"
+                            ? "חלק מהנתונים חסרים — ניתן להשלים ידנית לאחר השמירה"
+                            : "Some data is missing — you can complete it manually after saving"}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Extracted images */}
+                    {urlExtracted.image_urls?.length > 0 && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium">
+                          <ImageIcon className="h-3 w-3" />
+                          {language === "he" ? `${urlExtracted.image_urls.length} תמונות נמצאו` : `${urlExtracted.image_urls.length} images found`}
+                        </div>
+                        <div className="flex gap-1.5 overflow-x-auto pb-1">
+                          {urlExtracted.image_urls.slice(0, 4).map((imgUrl: string, i: number) => (
+                            <img
+                              key={i}
+                              src={imgUrl}
+                              alt=""
+                              className="w-16 h-16 rounded-lg object-cover ring-1 ring-border/40 shrink-0"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                            />
+                          ))}
+                          {urlExtracted.image_urls.length > 4 && (
+                            <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center text-xs text-muted-foreground shrink-0">
+                              +{urlExtracted.image_urls.length - 4}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       {urlExtracted.address && (
                         <div className="flex items-center gap-1.5">
@@ -517,27 +563,18 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
               </AnimatePresence>
 
               {/* Action buttons */}
-              {!urlExtracted ? (
+              {!urlExtracted && !urlFetching ? (
                 <Button type="submit" className="w-full gap-2 glow-primary" disabled={isLoading}>
-                  {urlFetching ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {language === "he" ? "שולף נתונים עם AI..." : "AI extracting data..."}
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4" />
-                      {t("addListing.fetch")}
-                    </>
-                  )}
+                  <Sparkles className="h-4 w-4" />
+                  {t("addListing.fetch")}
                 </Button>
-              ) : (
+              ) : urlExtracted ? (
                 <div className="flex gap-2">
                   <Button
                     type="button"
                     variant="outline"
                     className="flex-1 gap-1.5"
-                    onClick={() => setUrlExtracted(null)}
+                    onClick={() => { setUrlExtracted(null); setExtractionPartial(false); }}
                     disabled={isLoading}
                   >
                     {language === "he" ? "שלוף מחדש" : "Re-extract"}
@@ -561,7 +598,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                     )}
                   </Button>
                 </div>
-              )}
+              ) : null}
             </form>
           </TabsContent>
 
