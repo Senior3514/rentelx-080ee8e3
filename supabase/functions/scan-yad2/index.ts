@@ -159,6 +159,8 @@ async function tryFetch(url: string, headers: Record<string, string>, timeoutMs:
   }
 }
 
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 async function fetchCityListings(
   city: typeof CITY_CODES[string],
   params: Record<string, string>,
@@ -166,24 +168,20 @@ async function fetchCityListings(
   const qs = new URLSearchParams({ ...params, compact: "1", forceLdLoad: "true" }).toString();
   const { id, topArea, area } = city;
 
-  // Try these URLs in sequence — stop at first success
+  // Try primary endpoint first, then fallbacks — stop at first success
+  // Only 3 attempts (primary desktop, desktop with area, mobile) to avoid excessive requests
   const attempts: Array<{ url: string; headers: Record<string, string> }> = [
     // 1. Feed search legacy with city ID (main desktop API)
     { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
     // 2. Same with topArea + area for better routing
     { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?topArea=${topArea}&area=${area}&city=${id}&${qs}`, headers: DESKTOP_HEADERS },
-    // 3. Direct realestate endpoint (older format)
-    { url: `https://gw.yad2.co.il/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
-    // 4. Pre-load SSR endpoint
-    { url: `https://www.yad2.co.il/api/pre-load/getFeedIndex/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
-    // 5. Mobile API (Yad2 mobile app endpoint — different IP limits)
-    { url: `https://mobile-api.yad2.co.il/api/1/feed/realestate/rent?city=${id}&${qs}`, headers: MOBILE_HEADERS },
-    // 6. Mobile API v2
+    // 3. Mobile API (different rate limits)
     { url: `https://mobile-api.yad2.co.il/api/2/feed/realestate/rent?city=${id}&${qs}`, headers: MOBILE_HEADERS },
   ];
 
-  for (const { url, headers } of attempts) {
-    const items = await tryFetch(url, headers, 14000);
+  for (let i = 0; i < attempts.length; i++) {
+    const { url, headers } = attempts[i];
+    const items = await tryFetch(url, headers, 10000);
     if (items.length > 0) {
       const valid = items
         .filter((item) => item.price && item.price > 0)
@@ -193,6 +191,8 @@ async function fetchCityListings(
         return valid;
       }
     }
+    // Small delay between fallback attempts to avoid rate limiting
+    if (i < attempts.length - 1) await delay(300);
   }
 
   console.warn(`[yad2] ✗ No listings for city ${city.label} (${city.id}) — all endpoints blocked`);
@@ -222,16 +222,24 @@ serve(async (req) => {
     if (minPrice != null || maxPrice != null) params.price = `${minPrice ?? 0}-${maxPrice ?? 99999}`;
     if (minRooms != null || maxRooms != null) params.rooms = `${minRooms ?? 1}-${maxRooms ?? 10}`;
 
-    // Fetch all cities in parallel
-    const cityResults = await Promise.allSettled(
-      cities
-        .filter((c) => CITY_CODES[c])
-        .map((c) => fetchCityListings(CITY_CODES[c], params))
-    );
+    // Fetch cities in batches of 2 to avoid overwhelming Yad2
+    const validCities = cities.filter((c) => CITY_CODES[c]);
+    const allListings: ReturnType<typeof normalizeItem>[] = [];
+    const BATCH_SIZE = 2;
 
-    const listings = cityResults
-      .flatMap((r) => (r.status === "fulfilled" ? r.value : []))
-      .slice(0, 80);
+    for (let i = 0; i < validCities.length; i += BATCH_SIZE) {
+      const batch = validCities.slice(i, i + BATCH_SIZE);
+      const batchResults = await Promise.allSettled(
+        batch.map((c) => fetchCityListings(CITY_CODES[c], params))
+      );
+      for (const r of batchResults) {
+        if (r.status === "fulfilled") allListings.push(...r.value);
+      }
+      // Small delay between batches
+      if (i + BATCH_SIZE < validCities.length) await delay(500);
+    }
+
+    const listings = allListings.slice(0, 80);
 
     const unavailable = listings.length === 0;
 

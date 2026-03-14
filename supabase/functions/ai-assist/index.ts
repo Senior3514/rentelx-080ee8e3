@@ -151,7 +151,7 @@ serve(async (req) => {
 
     const systemPrompt = SYSTEM_PROMPTS[type] ?? SYSTEM_PROMPTS.chat;
     const callOpts = type === "extract"
-      ? { maxTokens: 512, temperature: 0.1 }
+      ? { maxTokens: 800, temperature: 0.1 }
       : type === "analyze"
       ? { maxTokens: 1200, temperature: 0.4 }
       : { maxTokens: 1024, temperature: 0.7 };

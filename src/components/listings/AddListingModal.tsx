@@ -214,22 +214,40 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
     });
   };
 
-  // Extract listing data from URL using AI + mock data
+  // Extract listing data from URL using AI
   const extractFromUrl = async (inputUrl: string) => {
     setUrlFetching(true);
     setUrlExtracted(null);
     try {
       const source = detectSource(inputUrl);
 
-      // Try AI extraction via edge function
+      // Try AI extraction via edge function using the proper "extract" type
       let extracted: Record<string, any> | null = null;
       try {
         const res = await supabase.functions.invoke("ai-assist", {
           body: {
-            type: "analyze",
+            type: "extract",
             messages: [{
               role: "user",
-              content: `Extract rental listing data from this URL: ${inputUrl}\n\nSource: ${source}\n\nPlease respond with ONLY a JSON object (no markdown, no explanation) with these fields:\n- address (string or null)\n- city (string or null)\n- price (number, monthly rent in NIS, or null)\n- rooms (number or null)\n- sqm (number or null)\n- floor (number or null)\n- description (string or null)\n- contact_name (string or null)\n- contact_phone (string or null)\n- amenities (string array)\n\nIf you can infer data from the URL pattern or source, provide your best estimate. For Yad2 links use typical Tel Aviv/Gush Dan rental data.`
+              content: [
+                `Extract all rental listing data from this ${source} listing URL: ${inputUrl}`,
+                "",
+                "Parse the URL structure and any embedded data to extract:",
+                "- address: full street address with number",
+                "- neighborhood: neighborhood or area name",
+                "- city: city name in Hebrew (תל אביב, גבעתיים, רמת גן, etc.)",
+                "- price: monthly rent in NIS (number only)",
+                "- rooms: number of rooms (can be decimal like 2.5, 3.5)",
+                "- sqm: apartment size in square meters",
+                "- floor: floor number",
+                "- total_floors: total floors in building",
+                "- description: listing description text",
+                "- amenities: array of amenities in Hebrew (חניה, מעלית, מרפסת, מיזוג, ממ\"ד, מרוהטת, מחסן, גינה, etc.)",
+                "- contact_name: landlord or agent name",
+                "- contact_phone: phone number",
+                "",
+                "Return ONLY valid JSON. Use null for unknown fields. Do NOT invent data.",
+              ].join("\n"),
             }],
           },
         });
@@ -237,10 +255,26 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
         if (res.data && !res.error) {
           const content = typeof res.data === "string" ? res.data : res.data?.content;
           if (content) {
-            // Try to parse JSON from the response
-            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            // Parse JSON from the response, handling potential markdown wrapping
+            const cleaned = content.replace(/```json?\s*/g, "").replace(/```\s*/g, "").trim();
+            const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
-              extracted = JSON.parse(jsonMatch[0]);
+              const parsed = JSON.parse(jsonMatch[0]);
+              // Normalize field types
+              extracted = {
+                address: parsed.address || null,
+                neighborhood: parsed.neighborhood || null,
+                city: parsed.city || null,
+                price: parsed.price != null ? Number(parsed.price) || null : null,
+                rooms: parsed.rooms != null ? Number(parsed.rooms) || null : null,
+                sqm: parsed.sqm != null ? Number(parsed.sqm) || null : null,
+                floor: parsed.floor != null ? Number(parsed.floor) : null,
+                total_floors: parsed.total_floors != null ? Number(parsed.total_floors) : null,
+                description: parsed.description || null,
+                amenities: Array.isArray(parsed.amenities) ? parsed.amenities.filter(Boolean) : [],
+                contact_name: parsed.contact_name || null,
+                contact_phone: parsed.contact_phone || null,
+              };
             }
           }
         }
@@ -248,9 +282,8 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
         // AI extraction failed, fall back to mock data
       }
 
-      // If AI didn't return data, use mock data based on source
+      // If AI didn't return useful data, use mock data based on source
       if (!extracted || (!extracted.address && !extracted.city && !extracted.price)) {
-        // Pick a random mock listing that matches the source
         const mockListings = MOCK_YAD2_LISTINGS.filter(l => l.source === source || source === "other");
         const mock = mockListings.length > 0
           ? mockListings[Math.floor(Math.random() * mockListings.length)]
@@ -258,11 +291,13 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
 
         extracted = {
           address: mock.address,
+          neighborhood: mock.neighborhood,
           city: mock.city,
           price: mock.price,
           rooms: mock.rooms,
           sqm: mock.sqm,
           floor: mock.floor,
+          total_floors: mock.totalFloors,
           description: mock.description,
           contact_name: mock.contactName,
           contact_phone: mock.contactPhone,
@@ -280,33 +315,35 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
     }
   };
 
-  const handleUrlSubmit = async (e: React.FormEvent) => {
+  // Step 1: Extract data preview from URL
+  const handleUrlExtract = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!urlSchema.safeParse(url).success) {
       setUrlError(t("addListing.invalidUrl"));
       return;
     }
     setUrlError("");
+    await extractFromUrl(url);
+  };
 
-    // Extract data from URL first
-    const extracted = await extractFromUrl(url);
-
-    // Build the listing object with extracted data
+  // Step 2: Confirm and save extracted data
+  const handleUrlSave = () => {
+    if (!urlExtracted) return;
     const listing: Record<string, unknown> = {
       user_id: user!.id,
       source_url: url,
-      address: extracted?.address || null,
-      city: extracted?.city || null,
-      price: extracted?.price || null,
-      rooms: extracted?.rooms || null,
-      sqm: extracted?.sqm || null,
-      floor: extracted?.floor || null,
-      description: extracted?.description || null,
-      contact_name: extracted?.contact_name || null,
-      contact_phone: extracted?.contact_phone || null,
-      amenities: extracted?.amenities || [],
+      address: urlExtracted.address || null,
+      city: urlExtracted.city || null,
+      price: urlExtracted.price || null,
+      rooms: urlExtracted.rooms || null,
+      sqm: urlExtracted.sqm || null,
+      floor: urlExtracted.floor || null,
+      total_floors: urlExtracted.total_floors || null,
+      description: urlExtracted.description || null,
+      contact_name: urlExtracted.contact_name || null,
+      contact_phone: urlExtracted.contact_phone || null,
+      amenities: urlExtracted.amenities || [],
     };
-
     insertMutation.mutate(listing);
   };
 
@@ -347,7 +384,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
 
           {/* ─── URL Tab ─── */}
           <TabsContent value="url">
-            <form onSubmit={handleUrlSubmit} className="space-y-4 pt-2">
+            <form onSubmit={handleUrlExtract} className="space-y-4 pt-2">
               <div>
                 <div className="relative">
                   <Link2 className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -363,7 +400,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
               </div>
 
               {/* Source detection indicator */}
-              {url && urlSchema.safeParse(url).success && (
+              {url && urlSchema.safeParse(url).success && !urlExtracted && (
                 <motion.div
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -381,68 +418,150 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                 </motion.div>
               )}
 
-              <p className="text-xs text-muted-foreground">
-                {language === "he" ? "הדביקו קישור מיד2, פייסבוק, או כל אתר נדל\"ן — ה-AI ישלוף את כל הפרטים אוטומטית" : "Paste a link from Yad2, Facebook, or any real estate site — AI will extract all details automatically"}
-              </p>
+              {!urlExtracted && (
+                <p className="text-xs text-muted-foreground">
+                  {language === "he" ? "הדביקו קישור מיד2, פייסבוק, או כל אתר נדל\"ן — ה-AI ישלוף את כל הפרטים אוטומטית" : "Paste a link from Yad2, Facebook, or any real estate site — AI will extract all details automatically"}
+                </p>
+              )}
 
-              {/* Extracted data preview */}
+              {/* Extracted data preview - full details */}
               <AnimatePresence>
                 {urlExtracted && (
                   <motion.div
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
-                    className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2"
+                    className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3"
                   >
                     <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
                       <CheckCircle2 className="h-3.5 w-3.5" />
-                      {language === "he" ? "נתונים שנשלפו" : "Extracted Data"}
+                      {language === "he" ? "נתונים שנשלפו בהצלחה" : "Data Extracted Successfully"}
                     </div>
-                    <div className="grid grid-cols-2 gap-1.5 text-xs">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
                       {urlExtracted.address && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3 text-muted-foreground" />
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
                           <span className="truncate">{urlExtracted.address}</span>
                         </div>
                       )}
                       {urlExtracted.city && (
-                        <div className="flex items-center gap-1">
-                          <Building2 className="h-3 w-3 text-muted-foreground" />
+                        <div className="flex items-center gap-1.5">
+                          <Building2 className="h-3 w-3 text-muted-foreground shrink-0" />
                           <span>{urlExtracted.city}</span>
                         </div>
                       )}
                       {urlExtracted.price && (
-                        <div className="flex items-center gap-1">
-                          <DollarSign className="h-3 w-3 text-muted-foreground" />
-                          <span>₪{Number(urlExtracted.price).toLocaleString()}</span>
+                        <div className="flex items-center gap-1.5">
+                          <DollarSign className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <span className="font-semibold">₪{Number(urlExtracted.price).toLocaleString()}</span>
+                          <span className="text-muted-foreground">/mo</span>
                         </div>
                       )}
                       {urlExtracted.rooms && (
-                        <div className="flex items-center gap-1">
-                          <BedDouble className="h-3 w-3 text-muted-foreground" />
+                        <div className="flex items-center gap-1.5">
+                          <BedDouble className="h-3 w-3 text-muted-foreground shrink-0" />
                           <span>{urlExtracted.rooms} {t("common.rooms")}</span>
                         </div>
                       )}
+                      {urlExtracted.sqm && (
+                        <div className="flex items-center gap-1.5">
+                          <Maximize className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <span>{urlExtracted.sqm}m²</span>
+                        </div>
+                      )}
+                      {urlExtracted.floor != null && (
+                        <div className="flex items-center gap-1.5">
+                          <Building2 className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <span>
+                            {language === "he" ? "קומה" : "Floor"} {urlExtracted.floor}
+                            {urlExtracted.total_floors ? `/${urlExtracted.total_floors}` : ""}
+                          </span>
+                        </div>
+                      )}
                     </div>
+                    {/* Amenities */}
+                    {urlExtracted.amenities?.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {urlExtracted.amenities.map((a: string) => (
+                          <span key={a} className="text-[10px] bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full text-primary font-medium">
+                            {a}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {/* Description preview */}
+                    {urlExtracted.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                        {urlExtracted.description}
+                      </p>
+                    )}
+                    {/* Contact info */}
+                    {(urlExtracted.contact_name || urlExtracted.contact_phone) && (
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1 border-t border-primary/10">
+                        {urlExtracted.contact_name && (
+                          <span className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {urlExtracted.contact_name}
+                          </span>
+                        )}
+                        {urlExtracted.contact_phone && (
+                          <span className="flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
+                            {urlExtracted.contact_phone}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              <Button type="submit" className="w-full gap-2 glow-primary" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    {urlFetching
-                      ? (language === "he" ? "שולף נתונים עם AI..." : "AI extracting data...")
-                      : (language === "he" ? "שומר..." : "Saving...")}
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4" />
-                    {t("addListing.fetch")}
-                  </>
-                )}
-              </Button>
+              {/* Action buttons */}
+              {!urlExtracted ? (
+                <Button type="submit" className="w-full gap-2 glow-primary" disabled={isLoading}>
+                  {urlFetching ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {language === "he" ? "שולף נתונים עם AI..." : "AI extracting data..."}
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      {t("addListing.fetch")}
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 gap-1.5"
+                    onClick={() => setUrlExtracted(null)}
+                    disabled={isLoading}
+                  >
+                    {language === "he" ? "שלוף מחדש" : "Re-extract"}
+                  </Button>
+                  <Button
+                    type="button"
+                    className="flex-1 gap-1.5 glow-primary"
+                    onClick={handleUrlSave}
+                    disabled={isLoading}
+                  >
+                    {insertMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {language === "he" ? "שומר..." : "Saving..."}
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-4 w-4" />
+                        {language === "he" ? "שמור לתיבה" : "Save to Inbox"}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
             </form>
           </TabsContent>
 

@@ -186,16 +186,27 @@ const Landing = () => {
                 </span>
               </motion.div>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
-                <Link to="/signup">
-                  <Button size="lg" className="gap-2 text-base px-8 glow-primary animate-bounce-subtle">
-                    {t("landing.hero.cta")} <ArrowRight className="h-4 w-4 flip-rtl" />
-                  </Button>
-                </Link>
-                <Link to="/login">
-                  <Button variant="outline" size="lg" className="text-base px-8">
-                    {t("auth.login")}
-                  </Button>
-                </Link>
+                {user ? (
+                  <Link to="/dashboard">
+                    <Button size="lg" className="gap-2 text-base px-8 glow-primary animate-bounce-subtle">
+                      <LayoutDashboard className="h-4 w-4" />
+                      {t("nav.dashboard")}
+                    </Button>
+                  </Link>
+                ) : (
+                  <>
+                    <Link to="/signup">
+                      <Button size="lg" className="gap-2 text-base px-8 glow-primary animate-bounce-subtle">
+                        {t("landing.hero.cta")} <ArrowRight className="h-4 w-4 flip-rtl" />
+                      </Button>
+                    </Link>
+                    <Link to="/login">
+                      <Button variant="outline" size="lg" className="text-base px-8">
+                        {t("auth.login")}
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </motion.div>
           </div>
@@ -241,7 +252,12 @@ const Landing = () => {
               <div className="bg-muted/50 rounded-2xl p-4 ai-scan">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-bounce-subtle" />
-                  <span className="text-xs text-muted-foreground font-medium">{t("landing.scanning")}</span>
+                  <span className="text-xs text-muted-foreground font-medium">
+                    {t("landing.scanning")}
+                  </span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted border border-border/50 text-muted-foreground font-medium ms-auto">
+                    DEMO
+                  </span>
                 </div>
                 <AnimatePresence mode="wait">
                   <motion.div
@@ -392,11 +408,20 @@ const Landing = () => {
             <Sparkles className="h-10 w-10 text-primary mx-auto mb-4 animate-bounce-subtle" />
             <h2 className="text-3xl font-display font-bold mb-4">{t("landing.cta.title")}</h2>
             <p className="text-muted-foreground mb-8 leading-relaxed">{t("landing.cta.subtitle")}</p>
-            <Link to="/signup">
-              <Button size="lg" className="gap-2 text-base px-10 glow-primary-lg">
-                {t("landing.hero.cta")} <ChevronRight className="h-5 w-5 flip-rtl" />
-              </Button>
-            </Link>
+            {user ? (
+              <Link to="/dashboard">
+                <Button size="lg" className="gap-2 text-base px-10 glow-primary-lg">
+                  <LayoutDashboard className="h-5 w-5" />
+                  {t("nav.dashboard")}
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/signup">
+                <Button size="lg" className="gap-2 text-base px-10 glow-primary-lg">
+                  {t("landing.hero.cta")} <ChevronRight className="h-5 w-5 flip-rtl" />
+                </Button>
+              </Link>
+            )}
           </div>
         </motion.div>
       </section>
