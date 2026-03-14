@@ -34,9 +34,10 @@ const CITY_CODES: Record<string, { id: number; label: string; topArea: number; a
 interface Yad2Item {
   id?: string; token?: string; link_token?: string;
   address?: { street?: { text?: string }; house?: { text?: string }; neighborhood?: { text?: string } };
-  price?: number; rooms?: number | string; square_meters?: number | string;
-  floor?: number | string; total_floors?: number | string; city_text?: string;
-  description_text?: string; info_text?: string;
+  street?: string; house_number?: string | number; neighborhood?: string;
+  price?: number | string; rooms?: number | string; square_meters?: number | string;
+  floor?: number | string; total_floors?: number | string; city_text?: string; city?: string;
+  description_text?: string; info_text?: string; title?: string;
   air_conditioner?: boolean; parking?: boolean; elevator?: boolean;
   balcony?: boolean; furniture?: boolean | string; safe_room?: boolean; storage?: boolean;
   bars?: boolean; window_bars?: boolean;
@@ -50,9 +51,10 @@ interface Yad2Item {
   disabled_access?: boolean;
   underground_parking?: boolean;
   sun_balcony?: boolean;
-  cover_image?: string; images?: Array<{ src?: string }>;
+  pets?: boolean; pets_allowed?: boolean;
+  cover_image?: string; images?: Array<{ src?: string; url?: string }>;
   contact_name?: string; contact_phone?: string;
-  updated_at?: string; created_at?: string;
+  updated_at?: string; created_at?: string; date?: string; date_added?: string;
   // Mobile API fields
   row_4?: string; row_1?: string; row_2?: string; row_3?: string;
   main_image?: string;
@@ -60,16 +62,20 @@ interface Yad2Item {
   img_url?: string;
   images_urls?: string[];
   media?: { images?: Array<{ src?: string; url?: string }> };
+  image?: string;
+  gallery?: Array<{ src?: string; url?: string }>;
   // Additional fields from newer API versions
   additional_info?: Record<string, boolean>;
   features?: Record<string, boolean | string>;
   amenities_list?: string[];
+  // Price as text
+  price_text?: string;
 }
 
 function normalizeItem(item: Yad2Item, cityLabel: string) {
-  const street    = item.address?.street?.text ?? "";
-  const houseNum  = item.address?.house?.text  ?? "";
-  const neighborhood = item.address?.neighborhood?.text ?? null;
+  const street    = item.address?.street?.text ?? item.street ?? "";
+  const houseNum  = item.address?.house?.text  ?? (item.house_number != null ? String(item.house_number) : "");
+  const neighborhood = item.address?.neighborhood?.text ?? item.neighborhood ?? null;
   const address   = [street, houseNum].filter(Boolean).join(" ") || null;
 
   // Build Yad2 direct link — link_token → token → id → null
@@ -109,13 +115,32 @@ function normalizeItem(item: Yad2Item, cityLabel: string) {
     }
   }
 
+  // Check pets
+  if (item.pets || item.pets_allowed)                amenities.push("חיות מחמד מותר");
+
+  // Check features object for additional amenities
+  if (item.features) {
+    const f = item.features;
+    if ((f.parking || f.underground_parking) && !amenities.includes("חניה"))     amenities.push("חניה");
+    if (f.elevator && !amenities.includes("מעלית"))                               amenities.push("מעלית");
+    if (f.balcony && !amenities.includes("מרפסת"))                               amenities.push("מרפסת");
+    if ((f.air_conditioner || f.ac) && !amenities.includes("מיזוג"))             amenities.push("מיזוג");
+    if ((f.furniture || f.furnished) && !amenities.includes("מרוהטת"))            amenities.push("מרוהטת");
+    if ((f.safe_room || f.mamad) && !amenities.includes('ממ"ד'))                  amenities.push('ממ"ד');
+    if (f.storage && !amenities.includes("מחסן"))                                amenities.push("מחסן");
+  }
+
   // Extract best available cover image
   const coverImage = item.cover_image
     ?? item.main_image
     ?? item.img_url
+    ?? item.image
     ?? item.images?.[0]?.src
+    ?? item.images?.[0]?.url
     ?? item.media?.images?.[0]?.src
     ?? item.media?.images?.[0]?.url
+    ?? item.gallery?.[0]?.src
+    ?? item.gallery?.[0]?.url
     ?? (item.images_urls && item.images_urls.length > 0 ? item.images_urls[0] : null)
     ?? null;
 
@@ -124,11 +149,18 @@ function normalizeItem(item: Yad2Item, cityLabel: string) {
   if (coverImage) allImages.push(coverImage);
   if (item.images) {
     for (const img of item.images) {
-      if (img.src && !allImages.includes(img.src)) allImages.push(img.src);
+      const url = img.src ?? img.url;
+      if (url && !allImages.includes(url)) allImages.push(url);
     }
   }
   if (item.media?.images) {
     for (const img of item.media.images) {
+      const url = img.src ?? img.url;
+      if (url && !allImages.includes(url)) allImages.push(url);
+    }
+  }
+  if (item.gallery) {
+    for (const img of item.gallery) {
       const url = img.src ?? img.url;
       if (url && !allImages.includes(url)) allImages.push(url);
     }
@@ -144,13 +176,13 @@ function normalizeItem(item: Yad2Item, cityLabel: string) {
     source: "yad2" as const,
     source_url,
     address, neighborhood,
-    city: item.city_text ?? cityLabel,
-    price: typeof item.price === "number" ? item.price : null,
+    city: item.city_text ?? item.city ?? cityLabel,
+    price: typeof item.price === "number" ? item.price : (typeof item.price === "string" ? parseInt(item.price.replace(/[^\d]/g, ""), 10) || null : (item.price_text ? parseInt(item.price_text.replace(/[^\d]/g, ""), 10) || null : null)),
     rooms: item.rooms != null ? parseFloat(String(item.rooms)) : null,
     sqm: item.square_meters != null ? parseInt(String(item.square_meters), 10) : null,
     floor: item.floor != null ? parseInt(String(item.floor), 10) : null,
     total_floors: item.total_floors != null ? parseInt(String(item.total_floors), 10) : null,
-    description: item.description_text ?? item.info_text ?? null,
+    description: item.description_text ?? item.info_text ?? item.title ?? null,
     amenities,
     features: {
       parking: !!item.parking, balcony: !!item.balcony, elevator: !!item.elevator,
@@ -161,7 +193,7 @@ function normalizeItem(item: Yad2Item, cityLabel: string) {
     image_urls: allImages.slice(0, 10),
     contact_name: item.contact_name ?? null,
     contact_phone: item.contact_phone ?? null,
-    listed_at: item.updated_at ?? item.created_at ?? new Date().toISOString(),
+    listed_at: item.updated_at ?? item.created_at ?? item.date ?? item.date_added ?? new Date().toISOString(),
   };
 }
 
@@ -277,6 +309,8 @@ async function fetchCityListings(
     { url: `https://gw.yad2.co.il/realestate-feed/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
     { url: `https://gw.yad2.co.il/api/feed/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
     { url: `https://gw.yad2.co.il/api/v3/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
+    { url: `https://gw.yad2.co.il/api/v2/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_V2_HEADERS },
+    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&deal_type=rent&${qs}`, headers: DESKTOP_HEADERS },
     { url: `https://mobile-api.yad2.co.il/api/2/feed/realestate/rent?city=${id}&${qs}`, headers: MOBILE_HEADERS },
     { url: `https://mobile-api.yad2.co.il/api/3/realestate/rent?city=${id}&${qs}`, headers: MOBILE_HEADERS },
   ];
@@ -286,7 +320,13 @@ async function fetchCityListings(
     const items = await tryFetch(url, headers, 12000);
     if (items.length > 0) {
       const valid = items
-        .filter((item) => item.price && item.price > 0)
+        .filter((item) => {
+          // Accept items with a numeric price > 0, or a price_text that can be parsed
+          if (typeof item.price === "number" && item.price > 0) return true;
+          if (typeof item.price === "string" && parseInt(item.price.replace(/[^\d]/g, ""), 10) > 0) return true;
+          if (item.price_text && parseInt(item.price_text.replace(/[^\d]/g, ""), 10) > 0) return true;
+          return false;
+        })
         .map((item) => normalizeItem(item, city.label));
       if (valid.length > 0) {
         console.log(`[yad2] ✓ ${valid.length} listings from ${url}`);

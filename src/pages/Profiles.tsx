@@ -7,14 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { OnboardingWizard, SearchProfileDraft } from "@/components/onboarding/OnboardingWizard";
-import { Plus, Trash2, MapPin, Pencil, Search, Briefcase, Sparkles, Navigation, Home } from "lucide-react";
+import { Plus, Trash2, MapPin, Pencil, Search, Briefcase, Sparkles, Navigation, Home, CheckCircle2, Circle } from "lucide-react";
 import { toast } from "sonner";
 import { scoreListing } from "@/lib/scoring";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+
+const MAX_PROFILES = 6;
 
 const Profiles = () => {
   const { user } = useAuth();
@@ -22,7 +25,6 @@ const Profiles = () => {
   const qc = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [editingProfile, setEditingProfile] = useState<any>(null);
-  const MAX_PROFILES = 6;
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["search_profiles", user?.id],
@@ -31,6 +33,7 @@ const Profiles = () => {
         .from("search_profiles")
         .select("*")
         .eq("user_id", user!.id)
+        .order("is_active", { ascending: false })
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -43,7 +46,34 @@ const Profiles = () => {
       const { error } = await supabase.from("search_profiles").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["search_profiles"] }); toast.success(t("profiles.profileDeleted")); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["search_profiles"] });
+      qc.invalidateQueries({ queryKey: ["active_profile"] });
+      toast.success(t("profiles.profileDeleted"));
+    },
+  });
+
+  const activateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      // Deactivate all profiles first
+      const { error: deactivateErr } = await supabase
+        .from("search_profiles")
+        .update({ is_active: false })
+        .eq("user_id", user!.id);
+      if (deactivateErr) throw deactivateErr;
+
+      // Activate the selected one
+      const { error: activateErr } = await supabase
+        .from("search_profiles")
+        .update({ is_active: true })
+        .eq("id", id);
+      if (activateErr) throw activateErr;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["search_profiles"] });
+      qc.invalidateQueries({ queryKey: ["active_profile"] });
+      toast.success(language === "he" ? "הפרופיל הופעל" : "Profile activated");
+    },
   });
 
   const createMutation = useMutation({
@@ -51,9 +81,13 @@ const Profiles = () => {
       if (profiles.length >= MAX_PROFILES) {
         throw new Error(language === "he" ? `מקסימום ${MAX_PROFILES} פרופילים` : `Maximum ${MAX_PROFILES} profiles`);
       }
+
+      // If this is the first profile, make it active
+      const isFirst = profiles.length === 0;
+
       const { error } = await supabase.from("search_profiles").insert({
         user_id: user!.id,
-        name: draft.name || "Untitled",
+        name: draft.name || (language === "he" ? "פרופיל חדש" : "New Profile"),
         cities: draft.cities,
         min_price: draft.minPrice,
         max_price: draft.maxPrice,
@@ -64,11 +98,13 @@ const Profiles = () => {
         workplace_address: draft.workplaceAddress || null,
         current_address: draft.currentAddress || null,
         desired_area: draft.desiredArea || null,
-      } as any);
+        is_active: isFirst,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["search_profiles"] });
+      qc.invalidateQueries({ queryKey: ["active_profile"] });
       setShowCreate(false);
       toast.success(t("profiles.profileCreated"));
     },
@@ -79,7 +115,6 @@ const Profiles = () => {
 
   const rescoreMutation = useMutation({
     mutationFn: async (profileData: any) => {
-      // Fetch all active listings and re-score them against the updated profile
       const { data: listings } = await supabase
         .from("listings")
         .select("id, city, price, rooms, amenities")
@@ -96,9 +131,11 @@ const Profiles = () => {
         max_rooms: profileData.max_rooms || 99,
         must_haves: profileData.must_haves || [],
         nice_to_haves: profileData.nice_to_haves || [],
+        workplace_address: profileData.workplace_address || null,
+        current_address: profileData.current_address || null,
+        desired_area: profileData.desired_area || null,
       };
 
-      // Re-score each listing
       for (const listing of listings) {
         const score = scoreListing(
           { city: listing.city, price: listing.price, rooms: listing.rooms, amenities: listing.amenities },
@@ -114,14 +151,14 @@ const Profiles = () => {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["listings"] });
-      toast.success(language === "he" ? "הציונים עודכנו" : language === "es" ? "Puntuaciones actualizadas" : "Scores updated");
+      toast.success(language === "he" ? "הציונים עודכנו" : "Scores updated");
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, draft }: { id: string; draft: SearchProfileDraft }) => {
-      const updates: Record<string, unknown> = {
-        name: draft.name || "Untitled",
+      const updates = {
+        name: draft.name || (language === "he" ? "פרופיל" : "Profile"),
         cities: draft.cities,
         min_price: draft.minPrice,
         max_price: draft.maxPrice,
@@ -133,21 +170,30 @@ const Profiles = () => {
         current_address: draft.currentAddress || null,
         desired_area: draft.desiredArea || null,
       };
-      const { error } = await supabase.from("search_profiles").update(updates as any).eq("id", id);
+      const { error } = await supabase.from("search_profiles").update(updates).eq("id", id);
       if (error) throw error;
       return { id, ...updates };
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["search_profiles"] });
+      qc.invalidateQueries({ queryKey: ["active_profile"] });
       setEditingProfile(null);
       toast.success(t("profiles.profileUpdated"));
-      // Re-score all listings against the updated profile
       if (data) rescoreMutation.mutate({ id: data.id, ...data });
     },
     onError: (err: Error) => {
       toast.error(language === "he" ? `שגיאה: ${err.message}` : `Error: ${err.message}`);
     },
   });
+
+  const containerVariants = {
+    hidden: {},
+    show: { transition: { staggerChildren: 0.07 } },
+  };
+  const itemVariants = {
+    hidden: { opacity: 0, y: 16 },
+    show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 26 } },
+  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -167,7 +213,7 @@ const Profiles = () => {
             setShowCreate(true);
           }}
           className="gap-1.5"
-          disabled={profiles.length >= MAX_PROFILES}
+          disabled={profiles.length >= MAX_PROFILES || createMutation.isPending}
         >
           <Plus className="h-4 w-4" /> {t("profiles.create")}
         </Button>
@@ -187,89 +233,126 @@ const Profiles = () => {
           </Button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="space-y-3"
+        >
           {profiles.map((p) => (
-            <Card key={p.id} className="p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold">{p.name || "Untitled"}</h3>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                    <MapPin className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate">{p.cities?.join(", ") || "—"}</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    ₪{p.min_price?.toLocaleString()}–₪{p.max_price?.toLocaleString()} · {p.min_rooms}–{p.max_rooms} {t("common.rooms")}
-                  </p>
-                  {(p as any).current_address && (
-                    <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                      <Home className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">{(p as any).current_address}</span>
-                    </p>
-                  )}
-                  {(p as any).desired_area && (
-                    <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                      <Navigation className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">{(p as any).desired_area}</span>
-                    </p>
-                  )}
-                  {(p as any).workplace_address && (
-                    <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                      <Briefcase className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">{(p as any).workplace_address}</span>
-                    </p>
-                  )}
-                  {p.must_haves?.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {p.must_haves.map((mh: string) => (
-                        <span key={mh} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{mh}</span>
-                      ))}
+            <motion.div key={p.id} variants={itemVariants} layout>
+              <Card className={`p-4 transition-all ${p.is_active ? "ring-2 ring-primary/50 border-primary/30" : ""}`}>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => activateMutation.mutate(p.id)}
+                        className="shrink-0 transition-transform hover:scale-110"
+                        title={language === "he" ? (p.is_active ? "פרופיל פעיל" : "הפעל פרופיל") : (p.is_active ? "Active profile" : "Set as active")}
+                        disabled={activateMutation.isPending}
+                      >
+                        {p.is_active ? (
+                          <CheckCircle2 className="h-5 w-5 text-primary" />
+                        ) : (
+                          <Circle className="h-5 w-5 text-muted-foreground/50 hover:text-primary/60" />
+                        )}
+                      </button>
+                      <h3 className="font-semibold">{p.name || (language === "he" ? "ללא שם" : "Untitled")}</h3>
+                      {p.is_active && (
+                        <span className="text-[10px] bg-primary/15 text-primary px-2 py-0.5 rounded-full font-medium">
+                          {language === "he" ? "פעיל" : "Active"}
+                        </span>
+                      )}
                     </div>
-                  )}
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1 ms-7">
+                      <MapPin className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{p.cities?.join(", ") || "—"}</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1 ms-7">
+                      ₪{p.min_price?.toLocaleString()}–₪{p.max_price?.toLocaleString()} · {p.min_rooms}–{p.max_rooms} {t("common.rooms")}
+                    </p>
+                    {p.current_address && (
+                      <p className="text-sm text-muted-foreground mt-1 ms-7 flex items-center gap-1">
+                        <Home className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{p.current_address}</span>
+                      </p>
+                    )}
+                    {p.desired_area && (
+                      <p className="text-sm text-muted-foreground mt-1 ms-7 flex items-center gap-1">
+                        <Navigation className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{p.desired_area}</span>
+                      </p>
+                    )}
+                    {p.workplace_address && (
+                      <p className="text-sm text-muted-foreground mt-1 ms-7 flex items-center gap-1">
+                        <Briefcase className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{p.workplace_address}</span>
+                      </p>
+                    )}
+                    {p.must_haves?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2 ms-7">
+                        {p.must_haves.map((mh: string) => (
+                          <span key={mh} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{mh}</span>
+                        ))}
+                      </div>
+                    )}
+                    {p.nice_to_haves?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1 ms-7">
+                        {p.nice_to_haves.map((nh: string) => (
+                          <span key={nh} className="text-xs bg-accent/10 text-accent-foreground px-2 py-0.5 rounded-full">{nh}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => rescoreMutation.mutate({
+                        id: p.id,
+                        cities: p.cities,
+                        min_price: p.min_price,
+                        max_price: p.max_price,
+                        min_rooms: p.min_rooms,
+                        max_rooms: p.max_rooms,
+                        must_haves: p.must_haves,
+                        nice_to_haves: p.nice_to_haves,
+                        workplace_address: p.workplace_address,
+                        current_address: p.current_address,
+                        desired_area: p.desired_area,
+                      })}
+                      title={language === "he" ? "חשב ציונים מחדש" : "Re-score listings"}
+                      className="text-primary"
+                      disabled={rescoreMutation.isPending}
+                    >
+                      <Sparkles className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setEditingProfile(p)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>{t("profiles.confirmDelete")}</AlertDialogTitle>
+                          <AlertDialogDescription>{t("profiles.delete")}?</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => deleteMutation.mutate(p.id)}>{t("common.delete")}</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => rescoreMutation.mutate({
-                      id: p.id,
-                      cities: p.cities,
-                      min_price: p.min_price,
-                      max_price: p.max_price,
-                      min_rooms: p.min_rooms,
-                      max_rooms: p.max_rooms,
-                      must_haves: p.must_haves,
-                      nice_to_haves: p.nice_to_haves,
-                    })}
-                    title={language === "he" ? "חשב ציונים מחדש" : "Re-score listings"}
-                    className="text-primary"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => setEditingProfile(p)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>{t("profiles.confirmDelete")}</AlertDialogTitle>
-                        <AlertDialogDescription>{t("profiles.delete")}?</AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => deleteMutation.mutate(p.id)}>{t("common.delete")}</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </div>
-            </Card>
+              </Card>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
 
       {/* Create dialog */}
