@@ -9,9 +9,10 @@ import { memo, useState } from "react";
 
 interface ListingCardProps {
   listing: any;
+  variant?: "grid" | "list";
 }
 
-export const ListingCard = memo(({ listing }: ListingCardProps) => {
+export const ListingCard = memo(({ listing, variant = "grid" }: ListingCardProps) => {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [imgError, setImgError] = useState(false);
@@ -34,6 +35,145 @@ export const ListingCard = memo(({ listing }: ListingCardProps) => {
   const coverImage = listing.image_urls?.[0];
   const hasImages = coverImage && !imgError;
 
+  const scoreBars = listing.listing_scores?.length > 0 ? (() => {
+    const best = listing.listing_scores.reduce((b: any, s: any) => s.score > (b?.score ?? 0) ? s : b, null);
+    const bd = best?.breakdown as Record<string, number> | null;
+    if (!bd) return null;
+    const dims = Object.entries(bd).filter(([k]) => k !== "total").slice(0, 4);
+    if (dims.length === 0) return null;
+    return dims;
+  })() : null;
+
+  /* ── LIST variant ── */
+  if (variant === "list") {
+    return (
+      <motion.div
+        whileHover={{ y: -1 }}
+        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      >
+        <Card
+          className="overflow-hidden cursor-pointer card-hover shine-overlay border-border/60 group"
+          onClick={() => navigate(`/listings/${listing.id}`)}
+        >
+          <div className="flex gap-0">
+            {/* Cover image thumbnail */}
+            <div className="relative w-28 sm:w-36 shrink-0 overflow-hidden">
+              {hasImages ? (
+                <img
+                  src={coverImage}
+                  alt=""
+                  className="w-full h-full object-cover min-h-[110px] transition-transform duration-300 group-hover:scale-105"
+                  onError={() => setImgError(true)}
+                  loading="lazy"
+                />
+              ) : (
+                <div className="w-full h-full min-h-[110px] bg-gradient-to-br from-primary/20 via-primary/10 to-transparent flex items-center justify-center">
+                  <Building2 className="h-8 w-8 text-primary/40" />
+                </div>
+              )}
+              {topScore > 0 && (
+                <div className={`absolute top-2 start-2 px-2 py-0.5 rounded-xl text-xs font-bold shadow-md backdrop-blur-sm ${scoreColor} ${topScore >= 80 ? "animate-glow" : ""}`}>
+                  {topScore}
+                </div>
+              )}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0 p-3 flex flex-col gap-1.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm leading-snug truncate">
+                    {listing.address || listing.city || "Unknown"}
+                  </p>
+                  {listing.city && listing.address && (
+                    <span className="text-xs text-muted-foreground">{listing.city}</span>
+                  )}
+                </div>
+                {listing.source_url && (
+                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
+                )}
+              </div>
+
+              <div className="flex items-center gap-2.5 flex-wrap">
+                {listing.price && (
+                  <span className="font-bold text-primary text-base leading-none">
+                    {t("common.shekel")}{listing.price.toLocaleString()}
+                    <span className="text-xs font-normal text-muted-foreground">{t("common.perMonth")}</span>
+                  </span>
+                )}
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {listing.rooms && (
+                    <span className="flex items-center gap-1 bg-muted/60 rounded-md px-1.5 py-0.5">
+                      <BedDouble className="h-3 w-3" />
+                      {listing.rooms}
+                    </span>
+                  )}
+                  {listing.sqm && (
+                    <span className="flex items-center gap-1 bg-muted/60 rounded-md px-1.5 py-0.5">
+                      <Maximize className="h-3 w-3" />
+                      {listing.sqm}m²
+                    </span>
+                  )}
+                  {listing.floor != null && (
+                    <span className="flex items-center gap-1 bg-muted/60 rounded-md px-1.5 py-0.5">
+                      <Building2 className="h-3 w-3" />
+                      {listing.floor}{listing.total_floors ? `/${listing.total_floors}` : ""}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {listing.amenities?.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {listing.amenities.slice(0, 5).map((a: string) => (
+                    <span key={a} className="text-[10px] bg-primary/8 text-primary/90 border border-primary/15 px-1.5 py-0.5 rounded-full">{a}</span>
+                  ))}
+                  {listing.amenities.length > 5 && (
+                    <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded-full text-muted-foreground">
+                      +{listing.amenities.length - 5}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {(listing.contact_name || listing.contact_phone) && (
+                <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1 border-t border-border/30 mt-auto">
+                  {listing.contact_name && (
+                    <span className="flex items-center gap-1">
+                      <User className="h-3 w-3" />
+                      <span className="truncate max-w-[100px]">{listing.contact_name}</span>
+                    </span>
+                  )}
+                  {listing.contact_phone && (
+                    <span className="flex items-center gap-1" dir="ltr">
+                      <Phone className="h-3 w-3" />
+                      {listing.contact_phone}
+                    </span>
+                  )}
+                  <span className="flex items-center gap-1 text-[10px] text-muted-foreground/60 ms-auto">
+                    <Clock className="h-2.5 w-2.5" />
+                    {timeAgo}
+                  </span>
+                </div>
+              )}
+
+              {scoreBars && (
+                <div className="flex gap-0.5 mt-auto">
+                  {scoreBars.map(([k, v]) => {
+                    const val = typeof v === "number" ? v : 0;
+                    const segColor = val >= 80 ? "bg-score-high" : val >= 50 ? "bg-score-medium" : "bg-score-low";
+                    return <div key={k} className={`flex-1 h-1.5 rounded-sm ${segColor} opacity-80`} title={`${k}: ${val}`} />;
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+      </motion.div>
+    );
+  }
+
+  /* ── GRID variant (default) ── */
   return (
     <motion.div
       whileHover={{ y: -2 }}
@@ -167,47 +307,29 @@ export const ListingCard = memo(({ listing }: ListingCardProps) => {
                   {topScore}
                 </div>
               )}
-              {listing.listing_scores?.length > 0 && (() => {
-                const best = listing.listing_scores.reduce((b: any, s: any) => s.score > (b?.score ?? 0) ? s : b, null);
-                const bd = best?.breakdown as Record<string, number> | null;
-                if (!bd) return null;
-                const dims = Object.entries(bd).filter(([k]) => k !== "total").slice(0, 4);
-                if (dims.length === 0) return null;
-                return (
-                  <div className="flex gap-0.5 w-16">
-                    {dims.map(([k, v]) => {
-                      const val = typeof v === "number" ? v : 0;
-                      const segColor = val >= 80 ? "bg-score-high" : val >= 50 ? "bg-score-medium" : "bg-score-low";
-                      return (
-                        <div key={k} className={`flex-1 h-1.5 rounded-sm ${segColor} opacity-80`} title={`${k}: ${val}`} />
-                      );
-                    })}
-                  </div>
-                );
-              })()}
+              {scoreBars && (
+                <div className="flex gap-0.5 w-16">
+                  {scoreBars.map(([k, v]) => {
+                    const val = typeof v === "number" ? v : 0;
+                    const segColor = val >= 80 ? "bg-score-high" : val >= 50 ? "bg-score-medium" : "bg-score-low";
+                    return <div key={k} className={`flex-1 h-1.5 rounded-sm ${segColor} opacity-80`} title={`${k}: ${val}`} />;
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>
 
         {/* Score bars - show below content when cover image is present */}
-        {hasImages && listing.listing_scores?.length > 0 && (() => {
-          const best = listing.listing_scores.reduce((b: any, s: any) => s.score > (b?.score ?? 0) ? s : b, null);
-          const bd = best?.breakdown as Record<string, number> | null;
-          if (!bd) return null;
-          const dims = Object.entries(bd).filter(([k]) => k !== "total").slice(0, 4);
-          if (dims.length === 0) return null;
-          return (
-            <div className="flex gap-0.5 mt-2">
-              {dims.map(([k, v]) => {
-                const val = typeof v === "number" ? v : 0;
-                const segColor = val >= 80 ? "bg-score-high" : val >= 50 ? "bg-score-medium" : "bg-score-low";
-                return (
-                  <div key={k} className={`flex-1 h-1.5 rounded-sm ${segColor} opacity-80`} title={`${k}: ${val}`} />
-                );
-              })}
-            </div>
-          );
-        })()}
+        {hasImages && scoreBars && (
+          <div className="flex gap-0.5 mt-2">
+            {scoreBars.map(([k, v]) => {
+              const val = typeof v === "number" ? v : 0;
+              const segColor = val >= 80 ? "bg-score-high" : val >= 50 ? "bg-score-medium" : "bg-score-low";
+              return <div key={k} className={`flex-1 h-1.5 rounded-sm ${segColor} opacity-80`} title={`${k}: ${val}`} />;
+            })}
+          </div>
+        )}
       </div>
     </Card>
     </motion.div>

@@ -12,7 +12,7 @@ import {
   Building2, Wifi, Bolt, Droplets, Truck, BookMarked,
   ChevronDown, ChevronRight, Target, Activity, FileDown,
   LayoutDashboard, ListTodo, BookOpen, Users,
-  GripVertical, ArrowUp, ArrowDown, Pencil
+  GripVertical, ArrowUp, ArrowDown, Pencil, LayoutGrid, List
 } from "lucide-react";
 
 /* ─── Types ─── */
@@ -489,6 +489,7 @@ const Relocation = () => {
   // Drag & edit state for boxes
   const [dragBoxId, setDragBoxId] = useState<string | null>(null);
   const [editingBoxId, setEditingBoxId] = useState<string | null>(null);
+  const [boxViewMode, setBoxViewMode] = useState<"list" | "grid">("list");
 
   const addProvider = (type: ProviderType) => {
     setProviders((prev) => [...prev, { id: uid(), type, name: "", phone: "", email: "", status: "not_contacted" }]);
@@ -1222,10 +1223,27 @@ const Relocation = () => {
             exit={{ opacity: 0, y: -8 }}
             className="space-y-4"
           >
-            <h2 className="text-base font-display font-bold flex items-center gap-2">
-              <Package className="h-4 w-4 text-primary" />
-              {t("relocation.boxInventory")}
-            </h2>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-base font-display font-bold flex items-center gap-2">
+                <Package className="h-4 w-4 text-primary" />
+                {t("relocation.boxInventory")}
+                <span className="text-xs font-normal text-muted-foreground">({boxes.length})</span>
+              </h2>
+              <div className="flex items-center bg-muted/50 border border-border/60 rounded-lg p-0.5">
+                <button
+                  onClick={() => setBoxViewMode("list")}
+                  className={`p-1.5 rounded-md transition-all ${boxViewMode === "list" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  <List className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => setBoxViewMode("grid")}
+                  className={`p-1.5 rounded-md transition-all ${boxViewMode === "grid" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
 
             <div className="relative">
               <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -1237,7 +1255,7 @@ const Relocation = () => {
               />
             </div>
 
-            <div className="space-y-2 max-h-[60vh] overflow-y-auto pe-1">
+            <div className={`max-h-[60vh] overflow-y-auto pe-1 ${boxViewMode === "grid" ? "grid grid-cols-2 lg:grid-cols-3 gap-2" : "space-y-2"}`}>
               <AnimatePresence>
                 {filteredBoxes.map((box) => {
                   const realIdx = boxes.findIndex((b) => b.id === box.id);
