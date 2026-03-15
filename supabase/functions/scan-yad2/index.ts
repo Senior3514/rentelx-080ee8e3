@@ -233,41 +233,41 @@ function extractItems(json: unknown): Yad2Item[] {
   return [];
 }
 
-/* ── Browser headers (desktop Chrome 124) ── */
+/* ── Browser headers (desktop Chrome 131 — Jan 2026) ── */
 const DESKTOP_HEADERS = {
   "Accept": "application/json, text/plain, */*",
   "Accept-Language": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7",
   "Cache-Control": "no-cache",
+  "Pragma": "no-cache",
   "Origin": "https://www.yad2.co.il",
   "Referer": "https://www.yad2.co.il/realestate/rent",
-  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-  "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  "sec-ch-ua": '"Chromium";v="131", "Google Chrome";v="131", "Not_A Brand";v="24"',
   "sec-ch-ua-mobile": "?0",
   "sec-ch-ua-platform": '"Windows"',
   "sec-fetch-dest": "empty",
   "sec-fetch-mode": "cors",
   "sec-fetch-site": "same-site",
-  "x-requested-with": "XMLHttpRequest",
 };
 
-/* ── Mobile app headers ── */
+/* ── Mobile app headers (updated) ── */
 const MOBILE_HEADERS = {
   "Accept": "application/json",
   "Accept-Language": "he-IL,he;q=0.9",
-  "User-Agent": "Yad2/10.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) Mobile/21E236",
-  "x-app-version": "10.0",
+  "User-Agent": "Yad2/12.0 (iPhone; CPU iPhone OS 18_2 like Mac OS X) Mobile/22C150",
+  "x-app-version": "12.0",
   "x-platform": "ios",
 };
 
-/* ── Desktop v2 headers (alternate Chrome profile) ── */
+/* ── Desktop v2 headers (Mac Chrome 130) ── */
 const DESKTOP_V2_HEADERS = {
   "Accept": "application/json, text/plain, */*",
   "Accept-Language": "he-IL,he;q=0.9",
   "Cache-Control": "max-age=0",
   "Origin": "https://www.yad2.co.il",
   "Referer": "https://www.yad2.co.il/realestate/rent",
-  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-  "sec-ch-ua": '"Chromium";v="123", "Google Chrome";v="123"',
+  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+  "sec-ch-ua": '"Chromium";v="130", "Google Chrome";v="130"',
   "sec-ch-ua-mobile": "?0",
   "sec-ch-ua-platform": '"macOS"',
   "sec-fetch-dest": "empty",
@@ -275,25 +275,41 @@ const DESKTOP_V2_HEADERS = {
   "sec-fetch-site": "same-site",
 };
 
+/* ── Android app headers ── */
+const ANDROID_HEADERS = {
+  "Accept": "application/json",
+  "Accept-Language": "he-IL,he;q=0.9",
+  "User-Agent": "Yad2/11.5 (Linux; Android 14; Pixel 8 Pro) okhttp/4.12.0",
+  "x-app-version": "11.5",
+  "x-platform": "android",
+};
+
 async function tryFetch(url: string, headers: Record<string, string>, timeoutMs: number): Promise<Yad2Item[]> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { headers, signal: controller.signal });
+    const res = await fetch(url, { headers, signal: controller.signal, redirect: "follow" });
     clearTimeout(timer);
     if (!res.ok) {
-      console.warn(`[yad2] ${res.status} from ${url}`);
+      console.warn(`[yad2] ${res.status} from ${url.slice(0, 80)}`);
+      return [];
+    }
+    const contentType = res.headers.get("content-type") ?? "";
+    // If Yad2 returns HTML (captcha/block page), skip
+    if (contentType.includes("text/html")) {
+      console.warn(`[yad2] HTML response (blocked/captcha) from ${url.slice(0, 80)}`);
       return [];
     }
     const text = await res.text();
+    if (!text || text.length < 10) return [];
     let json: unknown;
     try { json = JSON.parse(text); } catch { return []; }
     return extractItems(json);
   } catch (e) {
     clearTimeout(timer);
     const name = (e as Error)?.name;
-    if (name === "AbortError") console.warn(`[yad2] timeout: ${url}`);
-    else console.warn(`[yad2] error: ${url}`, (e as Error)?.message);
+    if (name === "AbortError") console.warn(`[yad2] timeout: ${url.slice(0, 80)}`);
+    else console.warn(`[yad2] error: ${url.slice(0, 80)}`, (e as Error)?.message);
     return [];
   }
 }
@@ -305,20 +321,33 @@ async function fetchCityListings(
   params: Record<string, string>,
 ): Promise<ReturnType<typeof normalizeItem>[]> {
   const qs = new URLSearchParams({ ...params, compact: "1", forceLdLoad: "true" }).toString();
+  const qsClean = new URLSearchParams(params).toString();
   const { id, topArea, area } = city;
 
   const attempts: Array<{ url: string; headers: Record<string, string> }> = [
+    // Primary gateway endpoints with area info
     { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&topArea=${topArea}&area=${area}&${qs}`, headers: DESKTOP_HEADERS },
-    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
-    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&propertyGroup=apartments&${qs}`, headers: DESKTOP_V2_HEADERS },
-    { url: `https://gw.yad2.co.il/search/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
+    // Without area — sometimes Yad2 requires simpler queries
+    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_V2_HEADERS },
+    // Property group filter
+    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&propertyGroup=apartments&${qs}`, headers: DESKTOP_HEADERS },
+    // Search endpoint (newer API)
+    { url: `https://gw.yad2.co.il/search/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_V2_HEADERS },
+    // V3 API endpoint
+    { url: `https://gw.yad2.co.il/search/realestate?city=${id}&dealType=rent&${qsClean}`, headers: DESKTOP_HEADERS },
+    // With pagination
     { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&page=1&${qs}`, headers: DESKTOP_V2_HEADERS },
-    { url: `https://mobile-api.yad2.co.il/api/2/feed/realestate/rent?city=${id}&${qs}`, headers: MOBILE_HEADERS },
+    // Mobile API iOS
+    { url: `https://mobile-api.yad2.co.il/api/2/feed/realestate/rent?city=${id}&${qsClean}`, headers: MOBILE_HEADERS },
+    // Mobile API Android
+    { url: `https://mobile-api.yad2.co.il/api/2/feed/realestate/rent?city=${id}&${qsClean}`, headers: ANDROID_HEADERS },
+    // Direct feed endpoint with minimal params
+    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}`, headers: DESKTOP_HEADERS },
   ];
 
   for (let i = 0; i < attempts.length; i++) {
     const { url, headers } = attempts[i];
-    const items = await tryFetch(url, headers, 8000);
+    const items = await tryFetch(url, headers, 10000);
     if (items.length > 0) {
       const valid = items
         .filter((item) => {
@@ -326,6 +355,8 @@ async function fetchCityListings(
           if (typeof item.price === "number" && item.price > 0) return true;
           if (typeof item.price === "string" && parseInt(item.price.replace(/[^\d]/g, ""), 10) > 0) return true;
           if (item.price_text && parseInt(item.price_text.replace(/[^\d]/g, ""), 10) > 0) return true;
+          // Also accept items with address/rooms (price might be "contact for price")
+          if ((item.address?.street?.text || item.street) && (item.rooms || item.square_meters)) return true;
           return false;
         })
         .map((item) => normalizeItem(item, city.label));
@@ -334,7 +365,8 @@ async function fetchCityListings(
         return valid;
       }
     }
-    if (i < attempts.length - 1) await delay(150);
+    // Stagger delays to avoid rate limiting
+    if (i < attempts.length - 1) await delay(200 + Math.random() * 300);
   }
 
   console.warn(`[yad2] ✗ No listings for city ${city.label} (${city.id}) — all endpoints blocked`);

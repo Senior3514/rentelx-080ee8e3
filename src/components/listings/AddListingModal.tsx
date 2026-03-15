@@ -179,6 +179,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
     setUrlExtracted(null);
     setUrlFetching(false);
     setExtractionPartial(false);
+    setDuplicateWarning(null);
   };
 
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -353,12 +354,49 @@ CRITICAL RULES — MUST FOLLOW:
       return;
     }
     setUrlError("");
+    setDuplicateWarning(null);
+    // Check for duplicate before extracting
+    if (url) {
+      await checkDuplicate(url);
+    }
     await extractFromUrl(url);
   };
 
+  // Check for duplicate listing by source_url
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+
+  const checkDuplicate = async (sourceUrl: string): Promise<boolean> => {
+    if (!user || !sourceUrl) return false;
+    try {
+      const { data } = await supabase
+        .from("listings")
+        .select("id, address, city")
+        .eq("user_id", user.id)
+        .eq("source_url", sourceUrl)
+        .limit(1);
+      if (data && data.length > 0) {
+        const existing = data[0];
+        const label = existing.address || existing.city || "Unknown";
+        setDuplicateWarning(
+          language === "he"
+            ? `דירה זו כבר קיימת ברשימות שלך: "${label}". לא ניתן להוסיף אותה פעמיים.`
+            : `This listing already exists in your inbox: "${label}". Cannot add it twice.`
+        );
+        return true;
+      }
+    } catch { /* ignore */ }
+    setDuplicateWarning(null);
+    return false;
+  };
+
   // Step 2: Confirm and save extracted data
-  const handleUrlSave = () => {
+  const handleUrlSave = async () => {
     if (!urlExtracted) return;
+    // Check for duplicates first
+    if (url) {
+      const isDupe = await checkDuplicate(url);
+      if (isDupe) return;
+    }
     const listing: Record<string, unknown> = {
       user_id: user!.id,
       source_url: url,
@@ -376,6 +414,11 @@ CRITICAL RULES — MUST FOLLOW:
       image_urls: urlExtracted.image_urls || [],
     };
     insertMutation.mutate(listing);
+  };
+
+  // Update extracted field inline
+  const updateExtracted = (field: string, value: any) => {
+    setUrlExtracted((prev) => prev ? { ...prev, [field]: value } : prev);
   };
 
   const f = (key: keyof typeof form) => ({
@@ -422,7 +465,7 @@ CRITICAL RULES — MUST FOLLOW:
                   <Input
                     placeholder={t("addListing.urlPlaceholder")}
                     value={url}
-                    onChange={(e) => { setUrl(e.target.value); setUrlError(""); setUrlExtracted(null); setExtractionPartial(false); }}
+                    onChange={(e) => { setUrl(e.target.value); setUrlError(""); setUrlExtracted(null); setExtractionPartial(false); setDuplicateWarning(null); }}
                     className="ps-10"
                     required
                   />
@@ -612,54 +655,123 @@ CRITICAL RULES — MUST FOLLOW:
                       </div>
                     )}
 
-                    {/* Main data - price highlight + details grid */}
-                    {urlExtracted.price && (
-                      <div className="flex items-baseline gap-1 px-2">
-                        <DollarSign className="h-4 w-4 text-primary shrink-0" />
-                        <span className="text-xl font-bold text-primary">₪{Number(urlExtracted.price).toLocaleString()}</span>
-                        <span className="text-xs text-muted-foreground">{t("common.perMonth")}</span>
-                      </div>
+                    {/* Duplicate warning */}
+                    {duplicateWarning && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2 flex items-start gap-2"
+                      >
+                        <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                        <span className="font-medium">{duplicateWarning}</span>
+                      </motion.div>
                     )}
 
+                    {/* Editable fields */}
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      {urlExtracted.address && (
-                        <div className="flex items-center gap-1.5 col-span-2">
-                          <MapPin className="h-3 w-3 text-primary shrink-0" />
-                          <span className="truncate font-medium">{urlExtracted.address}</span>
-                          {urlExtracted.city && (
-                            <span className="text-muted-foreground shrink-0">· {urlExtracted.city}</span>
-                          )}
+                      <div className="col-span-2">
+                        <label className="text-[10px] text-muted-foreground font-medium mb-0.5 flex items-center gap-1">
+                          <MapPin className="h-3 w-3 text-primary" /> {t("addListing.address")}
+                        </label>
+                        <Input
+                          value={urlExtracted.address ?? ""}
+                          onChange={(e) => updateExtracted("address", e.target.value || null)}
+                          placeholder={t("addListing.address")}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground font-medium mb-0.5 flex items-center gap-1">
+                          <Building2 className="h-3 w-3 text-primary" /> {t("addListing.city")}
+                        </label>
+                        <Input
+                          value={urlExtracted.city ?? ""}
+                          onChange={(e) => updateExtracted("city", e.target.value || null)}
+                          placeholder={t("addListing.city")}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground font-medium mb-0.5 flex items-center gap-1">
+                          <DollarSign className="h-3 w-3 text-primary" /> {t("addListing.price")}
+                        </label>
+                        <Input
+                          type="number"
+                          value={urlExtracted.price ?? ""}
+                          onChange={(e) => updateExtracted("price", e.target.value ? Number(e.target.value) : null)}
+                          placeholder="₪"
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground font-medium mb-0.5 flex items-center gap-1">
+                          <BedDouble className="h-3 w-3 text-primary" /> {t("addListing.rooms")}
+                        </label>
+                        <Input
+                          type="number"
+                          step="0.5"
+                          value={urlExtracted.rooms ?? ""}
+                          onChange={(e) => updateExtracted("rooms", e.target.value ? Number(e.target.value) : null)}
+                          placeholder={t("addListing.rooms")}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground font-medium mb-0.5 flex items-center gap-1">
+                          <Maximize className="h-3 w-3 text-primary" /> {t("addListing.sqm")}
+                        </label>
+                        <Input
+                          type="number"
+                          value={urlExtracted.sqm ?? ""}
+                          onChange={(e) => updateExtracted("sqm", e.target.value ? Number(e.target.value) : null)}
+                          placeholder="m²"
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground font-medium mb-0.5 flex items-center gap-1">
+                          <Building2 className="h-3 w-3 text-primary" /> {t("addListing.floor")}
+                        </label>
+                        <div className="flex gap-1">
+                          <Input
+                            type="number"
+                            value={urlExtracted.floor ?? ""}
+                            onChange={(e) => updateExtracted("floor", e.target.value ? Number(e.target.value) : null)}
+                            placeholder={t("addListing.floor")}
+                            className="h-8 text-xs flex-1"
+                          />
+                          <Input
+                            type="number"
+                            value={urlExtracted.total_floors ?? ""}
+                            onChange={(e) => updateExtracted("total_floors", e.target.value ? Number(e.target.value) : null)}
+                            placeholder="/"
+                            className="h-8 text-xs w-14"
+                          />
                         </div>
-                      )}
-                      {!urlExtracted.address && urlExtracted.city && (
-                        <div className="flex items-center gap-1.5">
-                          <Building2 className="h-3 w-3 text-primary shrink-0" />
-                          <span className="font-medium">{urlExtracted.city}</span>
-                        </div>
-                      )}
-                      {urlExtracted.rooms && (
-                        <div className="flex items-center gap-1.5 bg-muted/40 rounded-lg px-2 py-1.5">
-                          <BedDouble className="h-3 w-3 text-muted-foreground shrink-0" />
-                          <span className="font-medium">{urlExtracted.rooms}</span>
-                          <span className="text-muted-foreground">{t("common.rooms")}</span>
-                        </div>
-                      )}
-                      {urlExtracted.sqm && (
-                        <div className="flex items-center gap-1.5 bg-muted/40 rounded-lg px-2 py-1.5">
-                          <Maximize className="h-3 w-3 text-muted-foreground shrink-0" />
-                          <span className="font-medium">{urlExtracted.sqm}</span>
-                          <span className="text-muted-foreground">m²</span>
-                        </div>
-                      )}
-                      {urlExtracted.floor != null && (
-                        <div className="flex items-center gap-1.5 bg-muted/40 rounded-lg px-2 py-1.5">
-                          <Building2 className="h-3 w-3 text-muted-foreground shrink-0" />
-                          <span className="font-medium">
-                            {t("common.floor")} {urlExtracted.floor}
-                            {urlExtracted.total_floors ? `/${urlExtracted.total_floors}` : ""}
-                          </span>
-                        </div>
-                      )}
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground font-medium mb-0.5 flex items-center gap-1">
+                          <User className="h-3 w-3 text-primary" /> {t("addListing.contactName")}
+                        </label>
+                        <Input
+                          value={urlExtracted.contact_name ?? ""}
+                          onChange={(e) => updateExtracted("contact_name", e.target.value || null)}
+                          placeholder={t("addListing.contactName")}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground font-medium mb-0.5 flex items-center gap-1">
+                          <Phone className="h-3 w-3 text-primary" /> {t("addListing.contactPhone")}
+                        </label>
+                        <Input
+                          value={urlExtracted.contact_phone ?? ""}
+                          onChange={(e) => updateExtracted("contact_phone", e.target.value || null)}
+                          placeholder={t("addListing.contactPhone")}
+                          className="h-8 text-xs"
+                          dir="ltr"
+                        />
+                      </div>
                     </div>
 
                     {/* Amenities */}
@@ -678,24 +790,6 @@ CRITICAL RULES — MUST FOLLOW:
                       <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed bg-muted/30 rounded-lg px-2.5 py-2">
                         {urlExtracted.description}
                       </p>
-                    )}
-
-                    {/* Contact info */}
-                    {(urlExtracted.contact_name || urlExtracted.contact_phone) && (
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t border-primary/10">
-                        {urlExtracted.contact_name && (
-                          <span className="flex items-center gap-1">
-                            <User className="h-3 w-3 text-primary/70" />
-                            {urlExtracted.contact_name}
-                          </span>
-                        )}
-                        {urlExtracted.contact_phone && (
-                          <a href={`tel:${urlExtracted.contact_phone}`} className="flex items-center gap-1 text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
-                            <Phone className="h-3 w-3" />
-                            <span dir="ltr">{urlExtracted.contact_phone}</span>
-                          </a>
-                        )}
-                      </div>
                     )}
                   </motion.div>
                 )}
@@ -722,7 +816,7 @@ CRITICAL RULES — MUST FOLLOW:
                     type="button"
                     className="flex-1 gap-1.5 glow-primary"
                     onClick={handleUrlSave}
-                    disabled={isLoading}
+                    disabled={isLoading || !!duplicateWarning}
                   >
                     {insertMutation.isPending ? (
                       <>

@@ -12,8 +12,9 @@ import {
   Building2, Wifi, Bolt, Droplets, Truck, BookMarked,
   ChevronDown, ChevronRight, Target, Activity, FileDown,
   LayoutDashboard, ListTodo, BookOpen, Users,
-  GripVertical, ArrowUp, ArrowDown, Pencil, LayoutGrid, List
+  GripVertical, ArrowUp, ArrowDown, Pencil
 } from "lucide-react";
+import { ViewToggle } from "@/components/ui/view-toggle";
 
 /* ─── Types ─── */
 type Priority = "P0" | "P1" | "P2";
@@ -1229,20 +1230,7 @@ const Relocation = () => {
                 {t("relocation.boxInventory")}
                 <span className="text-xs font-normal text-muted-foreground">({boxes.length})</span>
               </h2>
-              <div className="flex items-center bg-muted/50 border border-border/60 rounded-lg p-0.5">
-                <button
-                  onClick={() => setBoxViewMode("list")}
-                  className={`p-1.5 rounded-md transition-all ${boxViewMode === "list" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}
-                >
-                  <List className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  onClick={() => setBoxViewMode("grid")}
-                  className={`p-1.5 rounded-md transition-all ${boxViewMode === "grid" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}
-                >
-                  <LayoutGrid className="h-3.5 w-3.5" />
-                </button>
-              </div>
+              <ViewToggle viewMode={boxViewMode} onViewModeChange={setBoxViewMode} />
             </div>
 
             <div className="relative">

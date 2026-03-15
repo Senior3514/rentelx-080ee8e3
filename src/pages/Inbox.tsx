@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Plus, Search, Inbox as InboxIcon, Download, Scale, FileText, LayoutGrid, List } from "lucide-react";
+import { Plus, Search, Inbox as InboxIcon, Download, Scale, FileText } from "lucide-react";
+import { ViewToggle } from "@/components/ui/view-toggle";
 import { useNavigate } from "react-router-dom";
 import { ListingCard } from "@/components/listings/ListingCard";
 import { AddListingModal } from "@/components/listings/AddListingModal";
@@ -168,23 +169,7 @@ const InboxPage = () => {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-display font-bold">{t("inbox.title")}</h1>
         <div className="flex items-center gap-2">
-          {/* View toggle */}
-          <div className="flex items-center bg-muted/50 border border-border/60 rounded-lg p-0.5">
-            <button
-              onClick={() => setViewMode("list")}
-              className={`p-1.5 rounded-md transition-all ${viewMode === "list" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}
-              title={language === "he" ? "תצוגת רשימה" : "List view"}
-            >
-              <List className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`p-1.5 rounded-md transition-all ${viewMode === "grid" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}
-              title={language === "he" ? "תצוגת כרטיסים" : "Grid view"}
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-          </div>
+          <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
           <Button variant="outline" size="sm" onClick={() => navigate("/compare")} className="gap-1.5 hidden sm:flex">
             <Scale className="h-4 w-4" />
             {language === "he" ? "השוואה" : "Compare"}
