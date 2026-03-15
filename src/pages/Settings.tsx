@@ -217,8 +217,10 @@ const Settings = () => {
   ];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 pb-20 w-full">
+    <div className="w-full space-y-6 pb-20 animate-fade-up">
       <h1 className="text-2xl font-display font-bold">{t("nav.settings")}</h1>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
       {/* Account */}
       <Card className="p-4 space-y-3">
@@ -306,7 +308,7 @@ const Settings = () => {
       </Card>
 
       {/* Color Scheme */}
-      <Card className="p-4 space-y-3">
+      <Card className="p-4 space-y-3 lg:col-span-2">
         <h3 className="font-semibold flex items-center gap-1.5">
           <Palette className="h-4 w-4" /> {t("settings.colorScheme")}
         </h3>
@@ -369,7 +371,7 @@ const Settings = () => {
       </Card>
 
       {/* Export */}
-      <Card className="p-4 space-y-3">
+      <Card className="p-4 space-y-3 lg:col-span-2">
         <h3 className="font-semibold flex items-center gap-1.5">
           <FileDown className="h-4 w-4" /> {t("common.export")}
         </h3>
@@ -385,6 +387,8 @@ const Settings = () => {
           </Button>
         </div>
       </Card>
+
+      </div>{/* end grid */}
 
       {/* Keyboard Shortcuts */}
       <Card className="p-4 space-y-3">
