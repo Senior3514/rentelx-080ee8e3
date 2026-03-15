@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { scoreListing } from "@/lib/scoring";
-import { detectSource } from "@/lib/yad2";
+import { detectSource, getSourceDisplayName } from "@/lib/yad2";
 import { motion, AnimatePresence } from "framer-motion";
 import { z } from "zod";
 import {
@@ -45,7 +45,7 @@ const manualSchema = z.object({
 
 export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) => {
   const { user } = useAuth();
-  const { t, language } = useLanguage();
+  const { t, language, direction } = useLanguage();
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -283,8 +283,11 @@ Return a JSON object with these exact fields (use null if not found):
   "image_urls": ["url1", "url2", ...]
 }
 
-CRITICAL: Extract ONLY data that ACTUALLY appears on the page. Do NOT invent or guess any data.
-For amenities: ONLY include amenities that are EXPLICITLY listed on the page. Keep original Hebrew names as they appear (מעלית, חניה, מרפסת, מיזוג, ממ"ד, מחסן, דוד שמש, סורגים, גישה לנכים, מזגן טורנדו, משופצת, ריהוט, חיות מחמד, מתאים לשותפים, מטבח כשר, דלתות רב בריח). If NO amenities are mentioned, return an EMPTY array [].`
+CRITICAL RULES — MUST FOLLOW:
+1. Extract ONLY data that ACTUALLY appears on the page content. Do NOT invent, guess, or assume any data.
+2. For amenities: ONLY include amenities that are EXPLICITLY LISTED on the page. If the page does NOT mention a specific amenity, do NOT include it. An empty array [] is the correct answer if no amenities are listed. Do NOT default to common amenities like AC/מיזוג, ממ"ד, דוד שמש, ריהוט — these must be EXPLICITLY mentioned on the page.
+3. If the page content cannot be read or is empty, return all null values. Do NOT fabricate data.
+4. Keep original Hebrew terms as they appear on the page.`
                   : `Please try again to extract rental listing data from this ${source} listing URL: ${inputUrl}. This is attempt ${attempt + 1}. Make sure to fetch the actual page content and extract every available field. Return a JSON object with: address, neighborhood, city, price, rooms, sqm, floor, total_floors, description, amenities, contact_name, contact_phone, image_urls.`,
               }],
             },
@@ -436,7 +439,7 @@ For amenities: ONLY include amenities that are EXPLICITLY listed on the page. Ke
                   <Globe className="h-3.5 w-3.5 text-primary" />
                   <span>
                     {t("addListingExtra.sourceLabel")}:
-                    <strong className="text-foreground capitalize">{detectSource(url)}</strong>
+                    <strong className="text-foreground">{getSourceDisplayName(url)}</strong>
                   </span>
                   <Sparkles className="h-3 w-3 text-primary ms-auto" />
                   <span className="text-primary">
@@ -539,8 +542,8 @@ For amenities: ONLY include amenities that are EXPLICITLY listed on the page. Ke
                         <CheckCircle2 className="h-3.5 w-3.5" />
                         {t("addListingExtra.dataExtracted")}
                       </div>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium capitalize">
-                        {detectSource(url)}
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                        {getSourceDisplayName(url)}
                       </span>
                     </div>
 

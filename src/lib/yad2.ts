@@ -50,7 +50,7 @@ export function isYad2Url(url: string): boolean {
   }
 }
 
-/** Detect the listing source from URL */
+/** Detect the listing source from URL — supports any property listing worldwide */
 export function detectSource(url: string): Yad2Listing["source"] {
   try {
     const { hostname } = new URL(url);
@@ -60,6 +60,53 @@ export function detectSource(url: string): Yad2Listing["source"] {
     return "other";
   } catch {
     return "other";
+  }
+}
+
+/** Check if URL looks like a valid property listing link (any source) */
+export function isPropertyUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/** Get a display-friendly source name for any URL */
+export function getSourceDisplayName(url: string): string {
+  try {
+    const { hostname } = new URL(url);
+    if (hostname.includes("yad2")) return "Yad2";
+    if (hostname.includes("madlan")) return "Madlan";
+    if (hostname.includes("facebook") || hostname.includes("fb.com")) return "Facebook";
+    if (hostname.includes("homeless")) return "Homeless";
+    if (hostname.includes("winwin")) return "WinWin";
+    if (hostname.includes("onmap")) return "OnMap";
+    if (hostname.includes("komo")) return "Komo";
+    if (hostname.includes("airbnb")) return "Airbnb";
+    if (hostname.includes("booking")) return "Booking";
+    if (hostname.includes("zillow")) return "Zillow";
+    if (hostname.includes("rightmove")) return "Rightmove";
+    if (hostname.includes("idealista")) return "Idealista";
+    if (hostname.includes("immobilienscout")) return "ImmobilienScout24";
+    if (hostname.includes("seloger")) return "SeLoger";
+    if (hostname.includes("realtor")) return "Realtor";
+    if (hostname.includes("redfin")) return "Redfin";
+    if (hostname.includes("trulia")) return "Trulia";
+    if (hostname.includes("apartments")) return "Apartments.com";
+    if (hostname.includes("spareroom")) return "SpareRoom";
+    if (hostname.includes("zoopla")) return "Zoopla";
+    if (hostname.includes("leboncoin")) return "Leboncoin";
+    if (hostname.includes("immowelt")) return "Immowelt";
+    if (hostname.includes("hemnet")) return "Hemnet";
+    if (hostname.includes("funda")) return "Funda";
+    if (hostname.includes("domain.com")) return "Domain";
+    if (hostname.includes("realestate.com")) return "RealEstate";
+    // Generic: strip www. and extract domain name
+    return hostname.replace(/^www\./, "").split(".")[0].charAt(0).toUpperCase() + hostname.replace(/^www\./, "").split(".")[0].slice(1);
+  } catch {
+    return "Web";
   }
 }
 

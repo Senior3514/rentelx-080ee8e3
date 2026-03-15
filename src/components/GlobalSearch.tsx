@@ -28,6 +28,22 @@ const ACTIONS = [
   { id: "export-csv", icon: FileDown, labelEn: "Export CSV", labelHe: "ייצוא CSV", keywordsHe: "ייצוא הורדה", keywordsEn: "export download" },
 ];
 
+// Shortcut hints for pages (G+key chord)
+const PAGE_SHORTCUTS: Record<string, string> = {
+  "/dashboard": "G → D",
+  "/inbox": "G → I",
+  "/watchlist": "G → W",
+  "/pipeline": "G → P",
+  "/settings": "G → S",
+  "/compare": "G → C",
+  "/relocation": "G → R",
+};
+
+/** Detect if running on macOS for keyboard shortcut display */
+function isMac(): boolean {
+  return typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+}
+
 interface GlobalSearchProps {
   onAction?: (actionId: string) => void;
 }
@@ -70,7 +86,7 @@ export const GlobalSearch = ({ onAction }: GlobalSearchProps) => {
           {isHe ? "חיפוש..." : "Search..."}
         </span>
         <kbd className="hidden sm:inline-flex h-5 items-center gap-0.5 rounded border bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
-          ⌘K
+          {isMac() ? "⌘K" : "Ctrl+K"}
         </kbd>
       </button>
 
@@ -89,7 +105,12 @@ export const GlobalSearch = ({ onAction }: GlobalSearchProps) => {
                 className="gap-2"
               >
                 <page.icon className="h-4 w-4 text-muted-foreground" />
-                <span>{isHe ? page.labelHe : page.labelEn}</span>
+                <span className="flex-1">{isHe ? page.labelHe : page.labelEn}</span>
+                {PAGE_SHORTCUTS[page.path] && (
+                  <kbd className="text-[10px] text-muted-foreground/60 font-mono bg-muted/60 px-1.5 py-0.5 rounded">
+                    {PAGE_SHORTCUTS[page.path]}
+                  </kbd>
+                )}
               </CommandItem>
             ))}
           </CommandGroup>
