@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { cityDisplayName, amenityDisplayName } from "@/lib/cityMap";
-import { MapPin, BedDouble, Maximize, Building2, Clock, ExternalLink, Phone, User, Image as ImageIcon, Pencil } from "lucide-react";
+import { getSourceDisplayName } from "@/lib/yad2";
+import { MapPin, BedDouble, Maximize, Building2, Clock, ExternalLink, Phone, User, Image as ImageIcon, Pencil, Globe } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
@@ -91,7 +92,12 @@ export const ListingCard = memo(({ listing, variant = "grid" }: ListingCardProps
                   )}
                 </div>
                 {listing.source_url && (
-                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
+                  <span className="flex items-center gap-1">
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted/80 text-muted-foreground font-medium">
+                      {getSourceDisplayName(listing.source_url)}
+                    </span>
+                    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
+                  </span>
                 )}
               </div>
 
@@ -233,7 +239,12 @@ export const ListingCard = memo(({ listing, variant = "grid" }: ListingCardProps
                 )}
               </div>
               {listing.source_url && (
-                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
+                <span className="flex items-center gap-1">
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted/80 text-muted-foreground font-medium">
+                    {getSourceDisplayName(listing.source_url)}
+                  </span>
+                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
+                </span>
               )}
             </div>
 

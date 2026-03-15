@@ -179,8 +179,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
     setUrlExtracted(null);
     setUrlFetching(false);
     setExtractionPartial(false);
-    setDuplicateWarning(null);
-    setDuplicateOverride(false);
+    setDuplicateInfo(null);
   };
 
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -355,72 +354,61 @@ CRITICAL RULES — MUST FOLLOW:
       return;
     }
     setUrlError("");
-    setDuplicateWarning(null);
-    setDuplicateOverride(false);
-    // Extract first, check duplicate in background (non-blocking)
+    setDuplicateInfo(null);
+    // Extract first, check duplicate in background (non-blocking hint only)
     const extractPromise = extractFromUrl(url);
-    if (url) checkDuplicate(url); // fire-and-forget, just sets warning
+    if (url) checkDuplicateHint(url);
     await extractPromise;
   };
 
-  // Check for duplicate listing by source_url
-  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
-  const [duplicateOverride, setDuplicateOverride] = useState(false);
+  // Soft duplicate info — NEVER blocks saving, purely informational
+  const [duplicateInfo, setDuplicateInfo] = useState<string | null>(null);
 
   /** Strip tracking/share params from URLs for consistent comparison */
   const normalizeUrl = (rawUrl: string): string => {
     try {
       const u = new URL(rawUrl);
-      // Remove common tracking params
       const stripParams = ["fbclid", "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "ref", "mibextid", "sfnsn", "s", "fs", "app"];
       stripParams.forEach((p) => u.searchParams.delete(p));
-      // Remove trailing slash
-      const cleaned = u.toString().replace(/\/+$/, "");
-      return cleaned;
+      return u.toString().replace(/\/+$/, "");
     } catch {
       return rawUrl;
     }
   };
 
-  const checkDuplicate = async (sourceUrl: string): Promise<boolean> => {
-    if (!user || !sourceUrl) return false;
-    if (duplicateOverride) return false; // User chose to add anyway
+  /** Non-blocking duplicate hint — never prevents saving */
+  const checkDuplicateHint = async (sourceUrl: string) => {
+    if (!user || !sourceUrl) return;
     try {
       const normalized = normalizeUrl(sourceUrl);
-      // Check both exact URL and normalized URL
       const { data } = await supabase
         .from("listings")
         .select("id, address, city, source_url")
         .eq("user_id", user.id)
-        .limit(50);
-      if (data && data.length > 0) {
+        .not("source_url", "is", null)
+        .limit(100);
+      if (data) {
         const match = data.find((row) => {
           if (!row.source_url) return false;
           return row.source_url === sourceUrl || normalizeUrl(row.source_url) === normalized;
         });
-        if (match) {
-          const label = match.address || match.city || "Unknown";
-          setDuplicateWarning(
+        if (match && (match.address || match.city)) {
+          const label = match.address || match.city;
+          setDuplicateInfo(
             language === "he"
-              ? `דירה זו כבר קיימת ברשימות שלך: "${label}".`
-              : `This listing already exists in your inbox: "${label}".`
+              ? `שים לב: דירה דומה אולי כבר קיימת ("${label}"). ניתן לשמור בכל מקרה.`
+              : `Note: A similar listing may exist ("${label}"). You can still save.`
           );
-          return true;
+          return;
         }
       }
     } catch { /* ignore */ }
-    setDuplicateWarning(null);
-    return false;
+    setDuplicateInfo(null);
   };
 
   // Step 2: Confirm and save extracted data
   const handleUrlSave = async () => {
     if (!urlExtracted) return;
-    // Check for duplicates (unless user chose to override)
-    if (url && !duplicateOverride) {
-      const isDupe = await checkDuplicate(url);
-      if (isDupe) return;
-    }
     const listing: Record<string, unknown> = {
       user_id: user!.id,
       source_url: normalizeUrl(url),
@@ -489,7 +477,7 @@ CRITICAL RULES — MUST FOLLOW:
                   <Input
                     placeholder={t("addListing.urlPlaceholder")}
                     value={url}
-                    onChange={(e) => { setUrl(e.target.value); setUrlError(""); setUrlExtracted(null); setExtractionPartial(false); setDuplicateWarning(null); setDuplicateOverride(false); }}
+                    onChange={(e) => { setUrl(e.target.value); setUrlError(""); setUrlExtracted(null); setExtractionPartial(false); setDuplicateInfo(null); }}
                     className="ps-10"
                     required
                   />
@@ -705,23 +693,21 @@ CRITICAL RULES — MUST FOLLOW:
                       </div>
                     )}
 
-                    {/* Duplicate warning */}
-                    {duplicateWarning && !duplicateOverride && (
+                    {/* Soft duplicate hint — informational only, never blocks */}
+                    {duplicateInfo && (
                       <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 space-y-2"
+                        className="text-xs text-blue-600 dark:text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2 flex items-start gap-2"
                       >
-                        <div className="flex items-start gap-2">
-                          <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                          <span className="font-medium">{duplicateWarning}</span>
-                        </div>
+                        <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                        <span>{duplicateInfo}</span>
                         <button
                           type="button"
-                          onClick={() => { setDuplicateOverride(true); setDuplicateWarning(null); setDuplicateOverride(false); }}
-                          className="text-[10px] underline underline-offset-2 text-amber-600 dark:text-amber-400 hover:text-foreground transition-colors"
+                          onClick={() => setDuplicateInfo(null)}
+                          className="ms-auto shrink-0"
                         >
-                          {language === "he" ? "הוסף בכל זאת" : "Add anyway"}
+                          <X className="h-3.5 w-3.5 text-blue-400 hover:text-foreground transition-colors" />
                         </button>
                       </motion.div>
                     )}
@@ -875,7 +861,7 @@ CRITICAL RULES — MUST FOLLOW:
                     type="button"
                     className="flex-1 gap-1.5 glow-primary"
                     onClick={handleUrlSave}
-                    disabled={isLoading || (!!duplicateWarning && !duplicateOverride)}
+                    disabled={isLoading}
                   >
                     {insertMutation.isPending ? (
                       <>
