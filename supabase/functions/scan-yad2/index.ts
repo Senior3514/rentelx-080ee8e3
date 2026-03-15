@@ -316,6 +316,164 @@ async function tryFetch(url: string, headers: Record<string, string>, timeoutMs:
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/* ── Madlan city name mapping ── */
+const MADLAN_CITY_NAMES: Record<string, string> = {
+  "tel-aviv": "תל אביב יפו",
+  "givatayim": "גבעתיים",
+  "ramat-gan": "רמת גן",
+  "holon": "חולון",
+  "bat-yam": "בת ים",
+  "bnei-brak": "בני ברק",
+  "petah-tikva": "פתח תקווה",
+  "herzliya": "הרצליה",
+  "rishon": "ראשון לציון",
+  "netanya": "נתניה",
+  "raanana": "רעננה",
+  "rehovot": "רחובות",
+};
+
+const MADLAN_HEADERS = {
+  "Accept": "application/json",
+  "Accept-Language": "he-IL,he;q=0.9",
+  "Content-Type": "application/json",
+  "Origin": "https://www.madlan.co.il",
+  "Referer": "https://www.madlan.co.il/",
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+};
+
+interface MadlanItem {
+  id?: string;
+  address?: string;
+  city?: string;
+  neighborhood?: string;
+  price?: number;
+  rooms?: number;
+  squareMeters?: number;
+  floor?: number;
+  totalFloors?: number;
+  description?: string;
+  images?: string[];
+  contactName?: string;
+  contactPhone?: string;
+  amenities?: string[];
+  updatedAt?: string;
+  createdAt?: string;
+  // Alternate field names
+  street?: string;
+  houseNumber?: string;
+  area?: number;
+  floorOutOf?: number;
+  propertySize?: number;
+  coverImage?: string;
+  mainImage?: string;
+  thumbnailUrl?: string;
+  image?: string;
+}
+
+function normalizeMadlanItem(item: MadlanItem, citySlug: string): ReturnType<typeof normalizeItem> {
+  const cityLabel = CITY_CODES[citySlug]?.label ?? MADLAN_CITY_NAMES[citySlug] ?? item.city ?? "";
+  const address = item.address ?? [item.street, item.houseNumber].filter(Boolean).join(" ") || null;
+  const sourceId = item.id ? String(item.id) : `madlan-${Math.random().toString(36).slice(2)}`;
+  const sourceUrl = item.id ? `https://www.madlan.co.il/listings/${item.id}` : null;
+
+  const coverImage = item.coverImage ?? item.mainImage ?? item.thumbnailUrl ?? item.image ?? item.images?.[0] ?? null;
+  const imageUrls = item.images?.slice(0, 10) ?? (coverImage ? [coverImage] : []);
+
+  return {
+    source_id: sourceId,
+    source: "madlan" as any,
+    source_url: sourceUrl,
+    address,
+    neighborhood: item.neighborhood ?? null,
+    city: cityLabel,
+    price: item.price ?? null,
+    rooms: item.rooms ?? null,
+    sqm: item.squareMeters ?? item.propertySize ?? (item.area ? Number(item.area) : null),
+    floor: item.floor ?? null,
+    total_floors: item.totalFloors ?? item.floorOutOf ?? null,
+    description: item.description ?? null,
+    amenities: item.amenities ?? [],
+    features: {
+      parking: false, balcony: false, elevator: false,
+      airConditioning: false, furnished: false, safeRoom: false, storage: false,
+    },
+    cover_image: coverImage,
+    image_urls: imageUrls,
+    contact_name: item.contactName ?? null,
+    contact_phone: sanitizePhone(item.contactPhone),
+    listed_at: item.updatedAt ?? item.createdAt ?? new Date().toISOString(),
+  };
+}
+
+async function fetchMadlanCity(
+  citySlug: string,
+  params: Record<string, string>,
+): Promise<ReturnType<typeof normalizeItem>[]> {
+  const cityName = MADLAN_CITY_NAMES[citySlug];
+  if (!cityName) return [];
+
+  // Madlan search API endpoints
+  const endpoints = [
+    // V1 search endpoint
+    `https://www.madlan.co.il/api/listings?city=${encodeURIComponent(cityName)}&dealType=rent&limit=50`,
+    // Search with filters
+    `https://www.madlan.co.il/api/search?q=${encodeURIComponent(cityName)}&type=rent&limit=50`,
+    // Nadlan search (older)
+    `https://api.madlan.co.il/v1/listings?city=${encodeURIComponent(cityName)}&dealType=rent`,
+    // GraphQL-style search
+    `https://www.madlan.co.il/api/nadlan/search?city=${encodeURIComponent(cityName)}&dealType=rent&limit=40`,
+  ];
+
+  // Add price/room filters to URLs
+  const priceFilter = params.price ? `&price=${params.price}` : "";
+  const roomsFilter = params.rooms ? `&rooms=${params.rooms}` : "";
+  const filterSuffix = priceFilter + roomsFilter;
+
+  for (const baseUrl of endpoints) {
+    const url = baseUrl + filterSuffix;
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch(url, {
+        headers: MADLAN_HEADERS,
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+
+      if (!res.ok) continue;
+      const contentType = res.headers.get("content-type") ?? "";
+      if (contentType.includes("text/html")) continue;
+
+      const text = await res.text();
+      if (!text || text.length < 10) continue;
+
+      let json: any;
+      try { json = JSON.parse(text); } catch { continue; }
+
+      // Try multiple response shapes
+      const items: MadlanItem[] =
+        json?.listings ?? json?.data?.listings ?? json?.results ?? json?.data?.results ??
+        json?.items ?? json?.data?.items ?? json?.data ?? [];
+
+      if (Array.isArray(items) && items.length > 0) {
+        const valid = items
+          .filter((item: any) => item && (item.price > 0 || item.address || item.rooms))
+          .map((item: any) => normalizeMadlanItem(item, citySlug));
+        if (valid.length > 0) {
+          console.log(`[madlan] ✓ ${valid.length} listings for ${cityName}`);
+          return valid;
+        }
+      }
+    } catch (e) {
+      console.warn(`[madlan] error for ${cityName}:`, (e as Error)?.message);
+    }
+    await delay(100 + Math.random() * 200);
+  }
+
+  console.warn(`[madlan] ✗ No listings for ${cityName}`);
+  return [];
+}
+
 async function fetchCityListings(
   city: typeof CITY_CODES[string],
   params: Record<string, string>,
@@ -396,36 +554,62 @@ serve(async (req) => {
     if (minPrice != null || maxPrice != null) params.price = `${minPrice ?? 0}-${maxPrice ?? 99999}`;
     if (minRooms != null || maxRooms != null) params.rooms = `${minRooms ?? 1}-${maxRooms ?? 10}`;
 
-    // Fetch cities in batches of 2 to avoid overwhelming Yad2
+    // Fetch from ALL sources in parallel: Yad2 + Madlan
     const validCities = cities.filter((c) => CITY_CODES[c]);
     const allListings: ReturnType<typeof normalizeItem>[] = [];
     const BATCH_SIZE = 3;
+    const sources: Record<string, number> = { yad2: 0, madlan: 0 };
 
+    // Run Yad2 and Madlan fetches in parallel per batch
     for (let i = 0; i < validCities.length; i += BATCH_SIZE) {
       const batch = validCities.slice(i, i + BATCH_SIZE);
-      const batchResults = await Promise.allSettled(
-        batch.map((c) => fetchCityListings(CITY_CODES[c], params))
-      );
+
+      const batchResults = await Promise.allSettled([
+        // Yad2 batch
+        ...batch.map((c) => fetchCityListings(CITY_CODES[c], params)),
+        // Madlan batch
+        ...batch.map((c) => fetchMadlanCity(c, params)),
+      ]);
+
       for (const r of batchResults) {
-        if (r.status === "fulfilled") allListings.push(...r.value);
+        if (r.status === "fulfilled" && r.value.length > 0) {
+          allListings.push(...r.value);
+        }
       }
-      if (i + BATCH_SIZE < validCities.length) await delay(200);
+      if (i + BATCH_SIZE < validCities.length) await delay(150);
     }
 
-    const listings = allListings.slice(0, 120);
+    // Deduplicate by address + price combo
+    const seen = new Set<string>();
+    const deduplicated = allListings.filter((listing) => {
+      const key = `${listing.address ?? ""}_${listing.price ?? ""}_${listing.rooms ?? ""}`.toLowerCase();
+      if (key === "__" || !seen.has(key)) {
+        if (key !== "__") seen.add(key);
+        return true;
+      }
+      return false;
+    });
 
+    // Count by source
+    for (const l of deduplicated) {
+      const src = (l as any).source ?? "yad2";
+      sources[src] = (sources[src] ?? 0) + 1;
+    }
+
+    const listings = deduplicated.slice(0, 150);
     const unavailable = listings.length === 0;
 
-    console.log(`[yad2] Returning ${listings.length} listings (unavailable=${unavailable})`);
+    console.log(`[scan] Returning ${listings.length} listings (yad2: ${sources.yad2}, madlan: ${sources.madlan}, unavailable=${unavailable})`);
 
     return new Response(
       JSON.stringify({
         listings,
         fetchedAt: new Date().toISOString(),
         unavailable,
+        sources,
         ...(unavailable ? {
-          error: "Yad2 is temporarily blocking automated requests. Please try again in a few minutes.",
-          errorHe: "יד2 חוסם בקשות אוטומטיות כרגע. נסו שוב בעוד מספר דקות.",
+          error: "No listings found from any source. Please try again in a few minutes.",
+          errorHe: "לא נמצאו דירות מאף מקור כרגע. נסו שוב בעוד מספר דקות.",
         } : {}),
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

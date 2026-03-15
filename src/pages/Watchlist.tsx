@@ -832,7 +832,7 @@ const Watchlist = () => {
             >
               <Radio className="h-3.5 w-3.5 text-primary animate-pulse" />
               <span className="text-primary font-medium">
-                {language === "he" ? "סורק יד2..." : "Scanning Yad2..."}
+                {language === "he" ? "סורק מקורות..." : "Scanning sources..."}
               </span>
             </motion.div>
           )}
@@ -906,7 +906,7 @@ const Watchlist = () => {
                   </p>
                   <p className="text-sm text-muted-foreground mt-1 max-w-sm">
                     {language === "he"
-                      ? "יד2 חוסם בקשות אוטומטיות כרגע. נסו שוב בעוד 1-2 דקות — בדרך כלל זה נפתר מהר."
+                      ? "לא נמצאו תוצאות כרגע. ייתכן שהמקורות חוסמים בקשות אוטומטיות. נסו שוב בעוד 1-2 דקות."
                       : "Yad2 is temporarily blocking automated requests. Try again in 1-2 minutes — this usually resolves quickly."}
                   </p>
                 </div>
@@ -957,13 +957,13 @@ const Watchlist = () => {
               </p>
               <p className="text-muted-foreground text-sm mt-1.5 max-w-sm mx-auto leading-relaxed">
                 {language === "he"
-                  ? "בחרו ערים, הפעילו סריקה אוטומטית, ומצאו את הדירה המושלמת. תוצאות מיד2 בזמן אמת."
+                  ? "בחרו ערים, הפעילו סריקה אוטומטית, ומצאו את הדירה המושלמת. תוצאות ממספר מקורות בזמן אמת."
                   : "Select cities, enable auto-scan, and find your perfect apartment. Live results from Yad2."}
               </p>
             </div>
             <Button onClick={doScan} disabled={scanning} className="gap-2 glow-primary">
               <Zap className="h-4 w-4" />
-              {language === "he" ? "סרוק יד2 עכשיו" : "Scan Yad2 Now"}
+              {language === "he" ? "סרוק עכשיו" : "Scan Now"}
             </Button>
           </motion.div>
         </Card>
