@@ -421,7 +421,7 @@ export default function KnowledgeBase() {
   if (selectedArticle) {
     const content = language === "he" ? selectedArticle.contentHe : selectedArticle.contentEn;
     return (
-      <div className="p-6 max-w-4xl mx-auto" dir={direction}>
+      <div className="p-6 w-full" dir={direction}>
         <Button
           variant="ghost"
           size="sm"
@@ -462,7 +462,7 @@ export default function KnowledgeBase() {
 
   // Main view
   return (
-    <div className="p-6 max-w-4xl mx-auto" dir={direction}>
+    <div className="p-6 w-full" dir={direction}>
       <div className="flex items-start justify-between gap-4 mb-6">
         <PageHeader
           title={t("knowledgeBase.title")}

@@ -62,7 +62,7 @@ interface MovingProfile {
   createdAt: string;
 }
 
-const MAX_PROFILES = 3;
+const MAX_PROFILES = 10;
 const PROFILES_STORAGE_KEY = "rentelx_relocation_profiles_v1";
 
 function loadProfiles(): MovingProfile[] {
@@ -302,18 +302,38 @@ function exportTasksCsv(tasks: Task[], filename: string) {
   URL.revokeObjectURL(url);
 }
 
+/* ─── Auto-create default profile if none exist ─── */
+function ensureDefaultProfile(lang: string): { profiles: MovingProfile[]; activeId: string } {
+  const existing = loadProfiles();
+  if (existing.length > 0) {
+    const savedActive = loadActiveProfileId();
+    const activeId = savedActive && existing.some(p => p.id === savedActive) ? savedActive : existing[0].id;
+    return { profiles: existing, activeId };
+  }
+  // Create default profile: 30 days from now
+  const id = Math.random().toString(36).slice(2);
+  const moveDate = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+  const defaultName = lang === "he" ? "מעבר דירה 1" : "Move 1";
+  const profile: MovingProfile = { id, name: defaultName, moveDate, createdAt: new Date().toISOString() };
+  saveProfiles([profile]);
+  saveActiveProfileId(id);
+  // Initialize default data
+  saveState(id, "tasks", buildDefaultTasks(lang));
+  saveState(id, "boxes", buildDefaultBoxes(lang));
+  saveState(id, "survival", buildSurvivalKit(lang));
+  saveState(id, "audit", buildDefaultAudit(lang));
+  saveState(id, "move_date", moveDate);
+  return { profiles: [profile], activeId: id };
+}
+
 /* ─── Main Component ─── */
 const Relocation = () => {
   const { direction, t, language } = useLanguage();
 
-  // Profile management state
-  const [profiles, setProfilesState] = useState<MovingProfile[]>(() => loadProfiles());
-  const [activeProfileId, setActiveProfileIdState] = useState<string | null>(() => {
-    const saved = loadActiveProfileId();
-    const profs = loadProfiles();
-    return saved && profs.some(p => p.id === saved) ? saved : (profs[0]?.id ?? null);
-  });
-  const [showProfileSetup, setShowProfileSetup] = useState(() => loadProfiles().length === 0);
+  // Profile management state — auto-creates default if none exist
+  const [profiles, setProfilesState] = useState<MovingProfile[]>(() => ensureDefaultProfile(language).profiles);
+  const [activeProfileId, setActiveProfileIdState] = useState<string | null>(() => ensureDefaultProfile(language).activeId);
+  const [showProfileSetup, setShowProfileSetup] = useState(false);
   const [newProfileName, setNewProfileName] = useState("");
   const [newProfileDate, setNewProfileDate] = useState("");
 
@@ -527,7 +547,7 @@ const Relocation = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-5 animate-fade-up pb-20">
+    <div className="w-full space-y-5 animate-fade-up pb-20">
 
       {/* ─── Profile Selector ─── */}
       <div className="flex items-center gap-2 flex-wrap">

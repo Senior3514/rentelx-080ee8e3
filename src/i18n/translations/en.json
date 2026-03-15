@@ -67,7 +67,8 @@
     "knowledgeBase": "Knowledge Base",
     "settings": "Settings",
     "logout": "Log Out",
-    "home": "Home"
+    "home": "Home",
+    "scan": "Scan"
   },
   "auth": {
     "login": "Log In",
@@ -295,6 +296,18 @@
     "scoringBy": "Scoring by profile",
     "generalScan": "General Scan",
     "filterHint": "Filter by cities, price and rooms via your active profile"
+  },
+  "scan": {
+    "title": "Real-Time Scan",
+    "subtitle": "Live scan of Yad2 listings — find new apartments in real-time",
+    "scanNow": "Scan Now",
+    "scanning": "Scanning...",
+    "filters": "Scan Filters",
+    "scoringBy": "Scoring by profile",
+    "lastScan": "Last scan",
+    "results": "listings found",
+    "empty": "Ready to Scan",
+    "emptyHint": "Click 'Scan Now' to search for live listings from Yad2 based on your city and profile filters"
   },
   "notFound": {
     "title": "404",
