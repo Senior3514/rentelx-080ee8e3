@@ -308,19 +308,19 @@ const Profiles = () => {
                     <p className="text-sm text-muted-foreground mt-1 ms-7">
                       ₪{p.min_price?.toLocaleString()}–₪{p.max_price?.toLocaleString()} · {p.min_rooms}–{p.max_rooms} {t("common.rooms")}
                     </p>
-                    {p.current_address && (
+                    {(p as any).current_address && (
                       <p className="text-sm text-muted-foreground mt-1 ms-7 flex items-center gap-1">
                         <Home className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">{p.current_address}</span>
+                        <span className="truncate">{(p as any).current_address}</span>
                       </p>
                     )}
-                    {p.desired_area && (
+                    {(p as any).desired_area && (
                       <p className="text-sm text-muted-foreground mt-1 ms-7 flex items-center gap-1">
                         <Navigation className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">{p.desired_area}</span>
+                        <span className="truncate">{(p as any).desired_area}</span>
                       </p>
                     )}
-                    {p.workplace_address && (
+                    {(p as any).workplace_address && (
                       <p className="text-sm text-muted-foreground mt-1 ms-7 flex items-center gap-1">
                         <Briefcase className="h-3.5 w-3.5 shrink-0" />
                         <span className="truncate">{p.workplace_address}</span>
