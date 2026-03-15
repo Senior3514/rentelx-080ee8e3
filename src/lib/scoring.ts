@@ -162,9 +162,13 @@ const COMMUTE_MATRIX: Record<string, Record<string, number>> = {
 function extractCityFromAddress(address: string): string | null {
   const cities = Object.keys(COMMUTE_MATRIX);
   const normalized = address.trim();
+  // Direct Hebrew match
   for (const city of cities) {
     if (normalized.includes(city)) return city;
   }
+  // Try converting the address from slug format (e.g. "tel-aviv" → "תל אביב")
+  const addressHe = cityToHebrew(normalized);
+  if (addressHe !== normalized && COMMUTE_MATRIX[addressHe]) return addressHe;
   return null;
 }
 
@@ -230,6 +234,13 @@ function getLocationScore(listing: ScoringListing, profile: ScoringProfile): num
     const commuteScore = getCommuteScore(city, profile.workplace_address);
     // Blend commute into location score (30% weight)
     score = score * 0.7 + commuteScore * 0.3;
+  }
+
+  // Proximity bonus if current_address is set — users often prefer staying near their current area
+  if (profile.current_address && city) {
+    const proximityScore = getCommuteScore(city, profile.current_address);
+    // Lighter blend (15% weight) — current location is a preference, not a hard constraint
+    score = score * 0.85 + proximityScore * 0.15;
   }
 
   return Math.round(Math.min(100, Math.max(0, score)));

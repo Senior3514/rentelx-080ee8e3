@@ -10,7 +10,7 @@
 
 export interface Yad2Listing {
   id: string;
-  source: "yad2" | "madlan" | "facebook" | "manual" | "other";
+  source: "yad2" | "madlan" | "facebook" | "manual" | "unknown" | "other";
   address: string | null;
   neighborhood: string | null;
   city: string;
@@ -73,41 +73,76 @@ export function isPropertyUrl(url: string): boolean {
   }
 }
 
+/** Known source hostname patterns → display name */
+const KNOWN_SOURCES: [string, string][] = [
+  ["yad2", "Yad2"],
+  ["madlan", "Madlan"],
+  ["facebook", "Facebook"],
+  ["fb.com", "Facebook"],
+  ["homeless", "Homeless"],
+  ["winwin", "WinWin"],
+  ["onmap", "OnMap"],
+  ["komo", "Komo"],
+  ["airbnb", "Airbnb"],
+  ["booking", "Booking"],
+  ["zillow", "Zillow"],
+  ["rightmove", "Rightmove"],
+  ["idealista", "Idealista"],
+  ["immobilienscout", "ImmobilienScout24"],
+  ["seloger", "SeLoger"],
+  ["realtor", "Realtor"],
+  ["redfin", "Redfin"],
+  ["trulia", "Trulia"],
+  ["apartments", "Apartments.com"],
+  ["spareroom", "SpareRoom"],
+  ["zoopla", "Zoopla"],
+  ["leboncoin", "Leboncoin"],
+  ["immowelt", "Immowelt"],
+  ["hemnet", "Hemnet"],
+  ["funda", "Funda"],
+  ["domain.com", "Domain"],
+  ["realestate.com", "RealEstate"],
+];
+
+/** Check if a URL matches a known source */
+export function isKnownSource(url: string): boolean {
+  try {
+    const { hostname } = new URL(url);
+    return KNOWN_SOURCES.some(([pattern]) => hostname.includes(pattern));
+  } catch {
+    return false;
+  }
+}
+
 /** Get a display-friendly source name for any URL */
 export function getSourceDisplayName(url: string): string {
   try {
     const { hostname } = new URL(url);
-    if (hostname.includes("yad2")) return "Yad2";
-    if (hostname.includes("madlan")) return "Madlan";
-    if (hostname.includes("facebook") || hostname.includes("fb.com")) return "Facebook";
-    if (hostname.includes("homeless")) return "Homeless";
-    if (hostname.includes("winwin")) return "WinWin";
-    if (hostname.includes("onmap")) return "OnMap";
-    if (hostname.includes("komo")) return "Komo";
-    if (hostname.includes("airbnb")) return "Airbnb";
-    if (hostname.includes("booking")) return "Booking";
-    if (hostname.includes("zillow")) return "Zillow";
-    if (hostname.includes("rightmove")) return "Rightmove";
-    if (hostname.includes("idealista")) return "Idealista";
-    if (hostname.includes("immobilienscout")) return "ImmobilienScout24";
-    if (hostname.includes("seloger")) return "SeLoger";
-    if (hostname.includes("realtor")) return "Realtor";
-    if (hostname.includes("redfin")) return "Redfin";
-    if (hostname.includes("trulia")) return "Trulia";
-    if (hostname.includes("apartments")) return "Apartments.com";
-    if (hostname.includes("spareroom")) return "SpareRoom";
-    if (hostname.includes("zoopla")) return "Zoopla";
-    if (hostname.includes("leboncoin")) return "Leboncoin";
-    if (hostname.includes("immowelt")) return "Immowelt";
-    if (hostname.includes("hemnet")) return "Hemnet";
-    if (hostname.includes("funda")) return "Funda";
-    if (hostname.includes("domain.com")) return "Domain";
-    if (hostname.includes("realestate.com")) return "RealEstate";
-    // Generic: strip www. and extract domain name
-    return hostname.replace(/^www\./, "").split(".")[0].charAt(0).toUpperCase() + hostname.replace(/^www\./, "").split(".")[0].slice(1);
+    for (const [pattern, name] of KNOWN_SOURCES) {
+      if (hostname.includes(pattern)) return name;
+    }
+    return "Unknown";
   } catch {
-    return "Web";
+    return "Unknown";
   }
+}
+
+/** Get numbered source name for unknown sources in a list context */
+export function getSourceDisplayNameNumbered(
+  url: string | null,
+  allListings: { source_url?: string | null }[],
+  language: string
+): string {
+  if (!url) return language === "he" ? "ידני" : "Manual";
+  const name = getSourceDisplayName(url);
+  if (name !== "Unknown") return name;
+  // Number unknowns by order of appearance
+  const unknowns = allListings
+    .filter((l) => l.source_url && !isKnownSource(l.source_url))
+    .map((l) => l.source_url);
+  const idx = unknowns.indexOf(url);
+  const num = idx >= 0 ? idx + 1 : unknowns.length + 1;
+  return `Unknown ${num}`;
 }
 
 /** Extract Yad2 listing ID from URL */
