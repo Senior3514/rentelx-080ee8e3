@@ -28,15 +28,15 @@ const ACTIONS = [
   { id: "export-csv", icon: FileDown, labelEn: "Export CSV", labelHe: "ייצוא CSV", keywordsHe: "ייצוא הורדה", keywordsEn: "export download" },
 ];
 
-// Shortcut hints for pages (G+key chord)
+// Shortcut hints for pages (Shift+key)
 const PAGE_SHORTCUTS: Record<string, string> = {
-  "/dashboard": "G → D",
-  "/inbox": "G → I",
-  "/watchlist": "G → W",
-  "/pipeline": "G → P",
-  "/settings": "G → S",
-  "/compare": "G → C",
-  "/relocation": "G → R",
+  "/dashboard": "⇧D",
+  "/inbox": "⇧I",
+  "/watchlist": "⇧W",
+  "/pipeline": "⇧P",
+  "/settings": "⇧S",
+  "/compare": "⇧C",
+  "/relocation": "⇧R",
 };
 
 /** Detect if running on macOS for keyboard shortcut display */

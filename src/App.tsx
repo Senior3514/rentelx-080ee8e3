@@ -10,6 +10,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { AppShell } from "@/components/layout/AppShell";
 import { AccessibilityWidget } from "./components/AccessibilityWidget";
+import { DeviceViewProvider } from "./components/DeviceViewSelector";
 
 // Lazy load all page components for code-splitting
 const Landing = lazy(() => import("./pages/Landing"));
@@ -43,6 +44,7 @@ const App = () => (
     <ThemeProvider>
       <LanguageProvider>
         <AuthProvider>
+          <DeviceViewProvider>
           <TooltipProvider>
             <Toaster />
             <Sonner />
@@ -76,6 +78,7 @@ const App = () => (
               <AccessibilityWidget />
             </BrowserRouter>
           </TooltipProvider>
+          </DeviceViewProvider>
         </AuthProvider>
       </LanguageProvider>
     </ThemeProvider>

@@ -267,7 +267,7 @@ const Compare = () => {
     : `User has ${listings.length} listings total. No listings selected for comparison yet.`;
 
   return (
-    <div className="w-full space-y-6 animate-fade-up pb-20">
+    <div className="w-full space-y-6 animate-fade-up pb-20 min-w-0">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
@@ -578,9 +578,9 @@ const Compare = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="overflow-x-auto"
+            className="overflow-x-auto -mx-3 px-3 sm:-mx-4 sm:px-4 md:-mx-6 md:px-6"
           >
-            <div className={`grid gap-3 min-w-0`} style={{ gridTemplateColumns: `160px repeat(${compareListing.length}, minmax(140px, 1fr))` }}>
+            <div className={`grid gap-3`} style={{ gridTemplateColumns: `140px repeat(${compareListing.length}, minmax(160px, 1fr))`, minWidth: `${140 + compareListing.length * 160}px` }}>
 
               {/* Column headers */}
               <div /> {/* empty label cell */}

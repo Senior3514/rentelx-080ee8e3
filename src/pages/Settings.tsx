@@ -395,12 +395,14 @@ const Settings = () => {
         <div className="grid gap-2 text-sm">
           {[
             { keys: "⌘K / Ctrl+K", labelHe: "חיפוש מהיר וניווט", labelEn: "Quick search & navigation" },
-            { keys: "⌘/", labelHe: "פתח/סגור צ'אט AI", labelEn: "Toggle AI chat" },
-            { keys: "G → D", labelHe: "עבור ללוח בקרה", labelEn: "Go to Dashboard" },
-            { keys: "G → I", labelHe: "עבור לספריית דירות", labelEn: "Go to Inbox" },
-            { keys: "G → W", labelHe: "עבור למעקב", labelEn: "Go to Watchlist" },
-            { keys: "G → P", labelHe: "עבור לתהליך", labelEn: "Go to Pipeline" },
-            { keys: "G → S", labelHe: "עבור להגדרות", labelEn: "Go to Settings" },
+            { keys: "⌘B / Ctrl+B", labelHe: "פתח/סגור סרגל צד", labelEn: "Toggle sidebar" },
+            { keys: "Shift+D", labelHe: "עבור ללוח בקרה", labelEn: "Go to Dashboard" },
+            { keys: "Shift+I", labelHe: "עבור לספריית דירות", labelEn: "Go to Inbox" },
+            { keys: "Shift+W", labelHe: "עבור למעקב", labelEn: "Go to Watchlist" },
+            { keys: "Shift+P", labelHe: "עבור לתהליך", labelEn: "Go to Pipeline" },
+            { keys: "Shift+S", labelHe: "עבור להגדרות", labelEn: "Go to Settings" },
+            { keys: "Shift+C", labelHe: "עבור להשוואה", labelEn: "Go to Compare" },
+            { keys: "Shift+R", labelHe: "עבור למעבר דירה", labelEn: "Go to Relocation" },
           ].map(({ keys, labelHe, labelEn }) => (
             <div key={keys} className="flex items-center justify-between py-1.5 border-b border-border/30 last:border-0">
               <span className="text-muted-foreground text-xs">{language === "he" ? labelHe : labelEn}</span>
