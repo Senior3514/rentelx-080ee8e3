@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ const DEMAND_LABELS = {
 
 export function NeighborhoodInsights() {
   const { language } = useLanguage();
+  const navigate = useNavigate();
   const [aiInsight, setAiInsight] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
@@ -134,7 +136,10 @@ export function NeighborhoodInsights() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.07, type: "spring", stiffness: 280, damping: 24 }}
           >
-            <Card className="p-3 border-border/60 card-hover overflow-hidden relative">
+            <Card
+              className="p-3 border-border/60 card-hover overflow-hidden relative cursor-pointer"
+              onClick={() => navigate("/watchlist")}
+            >
               <div className={`absolute top-0 start-0 w-1 h-full bg-gradient-to-b ${n.color} rounded-s-xl`} />
               <div className="ps-2">
                 <div className="flex items-start justify-between gap-1">

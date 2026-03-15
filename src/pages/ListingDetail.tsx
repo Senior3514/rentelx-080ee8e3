@@ -276,7 +276,7 @@ Be specific, concise, and practical.`
   // ─── Loading state ───
   if (isLoading) {
     return (
-      <div className="max-w-2xl mx-auto py-12">
+      <div className="w-full py-12">
         <div className="flex flex-col items-center gap-3">
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
           <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
@@ -288,7 +288,7 @@ Be specific, concise, and practical.`
   // ─── Error state ───
   if (error) {
     return (
-      <div className="max-w-2xl mx-auto text-center py-16">
+      <div className="w-full text-center py-16">
         <p className="text-muted-foreground">{t("listing.notFound")}</p>
         <Button variant="outline" onClick={() => navigate("/inbox")} className="mt-3 gap-1.5">
           <ArrowLeft className="h-4 w-4 flip-rtl" /> {t("common.back")}
@@ -299,7 +299,7 @@ Be specific, concise, and practical.`
 
   // ─── Not found ───
   if (!listing) return (
-    <div className="max-w-2xl mx-auto text-center py-16">
+    <div className="w-full text-center py-16">
       <p className="text-muted-foreground">{t("listing.notFound")}</p>
       <Button variant="outline" onClick={() => navigate("/inbox")} className="mt-3 gap-1.5">
         <ArrowLeft className="h-4 w-4 flip-rtl" /> {t("common.back")}
@@ -324,7 +324,7 @@ Be specific, concise, and practical.`
 
   return (
     <motion.div
-      className="max-w-2xl mx-auto space-y-6 pb-8"
+      className="w-full space-y-6 pb-8"
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: "easeOut" }}

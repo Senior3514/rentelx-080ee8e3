@@ -24,6 +24,7 @@ const Pipeline = lazy(() => import("./pages/Pipeline"));
 const Profiles = lazy(() => import("./pages/Profiles"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Watchlist = lazy(() => import("./pages/Watchlist"));
+const Scan = lazy(() => import("./pages/Scan"));
 const Compare = lazy(() => import("./pages/Compare"));
 const Relocation = lazy(() => import("./pages/Relocation"));
 const KnowledgeBase = lazy(() => import("./pages/KnowledgeBase"));
@@ -61,6 +62,7 @@ const App = () => (
                     <Route path="/listings/:id" element={<ListingDetail />} />
                     <Route path="/pipeline" element={<Pipeline />} />
                     <Route path="/watchlist" element={<Watchlist />} />
+                    <Route path="/scan" element={<Scan />} />
                     <Route path="/compare" element={<Compare />} />
                     <Route path="/relocation" element={<Relocation />} />
                     <Route path="/knowledge-base" element={<KnowledgeBase />} />

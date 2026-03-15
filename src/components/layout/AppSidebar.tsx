@@ -1,6 +1,7 @@
 import {
   LayoutDashboard, Inbox, Columns3, UserSearch, Settings,
-  LogOut, Sparkles, BookHeart, Scale, Truck, ChevronLeft, ChevronRight, BookOpen, Home
+  LogOut, Sparkles, BookHeart, Scale, Truck, ChevronLeft, ChevronRight, BookOpen, Home,
+  Radar
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -25,6 +26,7 @@ const navItems = [
   { titleKey: "nav.dashboard", url: "/dashboard", icon: LayoutDashboard, color: "text-blue-500" },
   { titleKey: "nav.inbox", url: "/inbox", icon: Inbox, color: "text-primary" },
   { titleKey: "nav.pipeline", url: "/pipeline", icon: Columns3, color: "text-violet-500" },
+  { titleKey: "nav.scan", url: "/scan", icon: Radar, color: "text-cyan-500" },
   { titleKey: "nav.watchlist", url: "/watchlist", icon: BookHeart, color: "text-rose-500" },
   { titleKey: "nav.compare", url: "/compare", icon: Scale, color: "text-teal-500" },
   { titleKey: "nav.relocation", url: "/relocation", icon: Truck, color: "text-orange-500" },

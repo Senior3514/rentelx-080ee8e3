@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,8 +14,29 @@ import {
   MapPin, BedDouble, Maximize, Building2, CheckCircle2, XCircle,
   BarChart3, Scale, Sparkles, Search, SlidersHorizontal, ArrowUpDown,
   TrendingDown, Crown, DollarSign, Star, Filter, X,
-  Loader2
+  Loader2, Save, FolderOpen, Trash2, Clock
 } from "lucide-react";
+
+/* ── Saved Comparisons ── */
+interface SavedComparison {
+  id: string;
+  name: string;
+  listingIds: string[];
+  aiSummary: string;
+  savedAt: string;
+}
+
+const SAVED_COMPARISONS_KEY = "rentelx_saved_comparisons";
+
+function loadSavedComparisons(): SavedComparison[] {
+  try {
+    return JSON.parse(localStorage.getItem(SAVED_COMPARISONS_KEY) || "[]");
+  } catch { return []; }
+}
+
+function persistSavedComparisons(items: SavedComparison[]) {
+  localStorage.setItem(SAVED_COMPARISONS_KEY, JSON.stringify(items));
+}
 
 type CompareSort = "score" | "price_asc" | "price_desc" | "rooms" | "sqm";
 
@@ -58,6 +79,35 @@ const Compare = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [aiSummary, setAiSummary] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [savedComparisons, setSavedComparisons] = useState<SavedComparison[]>(() => loadSavedComparisons());
+  const [showSaved, setShowSaved] = useState(false);
+  const [saveName, setSaveName] = useState("");
+
+  useEffect(() => { persistSavedComparisons(savedComparisons); }, [savedComparisons]);
+
+  const saveComparison = () => {
+    if (selected.length === 0) return;
+    const name = saveName.trim() || `${language === "he" ? "השוואה" : "Comparison"} ${savedComparisons.length + 1}`;
+    const saved: SavedComparison = {
+      id: Math.random().toString(36).slice(2),
+      name,
+      listingIds: [...selected],
+      aiSummary,
+      savedAt: new Date().toISOString(),
+    };
+    setSavedComparisons(prev => [saved, ...prev]);
+    setSaveName("");
+  };
+
+  const loadComparison = (comp: SavedComparison) => {
+    setSelected(comp.listingIds);
+    setAiSummary(comp.aiSummary || "");
+    setShowSaved(false);
+  };
+
+  const deleteComparison = (id: string) => {
+    setSavedComparisons(prev => prev.filter(c => c.id !== id));
+  };
 
   const { data: listings = [] } = useQuery({
     queryKey: ["listings", user?.id],
@@ -217,7 +267,7 @@ const Compare = () => {
     : `User has ${listings.length} listings total. No listings selected for comparison yet.`;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-fade-up pb-20">
+    <div className="w-full space-y-6 animate-fade-up pb-20">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
@@ -236,11 +286,28 @@ const Compare = () => {
             )}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {selected.length > 0 && (
-            <Button variant="outline" size="sm" onClick={clearAll} className="gap-1.5">
-              <X className="h-3.5 w-3.5" />
-              {language === "he" ? "נקה בחירה" : "Clear"}
+            <>
+              <Button variant="outline" size="sm" onClick={clearAll} className="gap-1.5">
+                <X className="h-3.5 w-3.5" />
+                {language === "he" ? "נקה" : "Clear"}
+              </Button>
+              <Button variant="outline" size="sm" onClick={saveComparison} className="gap-1.5">
+                <Save className="h-3.5 w-3.5" />
+                {language === "he" ? "שמור השוואה" : "Save"}
+              </Button>
+            </>
+          )}
+          {savedComparisons.length > 0 && (
+            <Button
+              variant={showSaved ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowSaved(!showSaved)}
+              className="gap-1.5"
+            >
+              <FolderOpen className="h-3.5 w-3.5" />
+              {language === "he" ? `שמורות (${savedComparisons.length})` : `Saved (${savedComparisons.length})`}
             </Button>
           )}
           <Button
@@ -266,6 +333,66 @@ const Compare = () => {
           </Button>
         </div>
       </div>
+
+      {/* Saved Comparisons Panel */}
+      <AnimatePresence>
+        {showSaved && savedComparisons.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+          >
+            <Card className="p-4 border-primary/20 bg-primary/5 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold flex items-center gap-2">
+                  <FolderOpen className="h-4 w-4 text-primary" />
+                  {language === "he" ? "השוואות שמורות" : "Saved Comparisons"}
+                </h3>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowSaved(false)}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {savedComparisons.map((comp) => {
+                  const validCount = comp.listingIds.filter(id => listings.some(l => l.id === id)).length;
+                  return (
+                    <Card
+                      key={comp.id}
+                      className="p-3 border-border/60 cursor-pointer hover:border-primary/40 transition-colors group"
+                      onClick={() => loadComparison(comp)}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold truncate">{comp.name}</p>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                            <Clock className="h-3 w-3" />
+                            {new Date(comp.savedAt).toLocaleDateString(language === "he" ? "he-IL" : "en-US")}
+                            <span className="mx-1">·</span>
+                            {validCount} {language === "he" ? "דירות" : "listings"}
+                          </p>
+                          {comp.aiSummary && (
+                            <p className="text-[10px] text-muted-foreground/70 mt-1 line-clamp-1">
+                              {comp.aiSummary.slice(0, 80)}...
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive shrink-0"
+                          onClick={(e) => { e.stopPropagation(); deleteComparison(comp.id); }}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Filters */}
       <AnimatePresence>

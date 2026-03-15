@@ -192,7 +192,7 @@ const Pipeline = () => {
         </div>
       ) : (
         // Desktop: kanban board
-        <div className="flex gap-3 overflow-x-auto pb-4 -mx-1 px-1">
+        <div className="grid grid-cols-7 gap-3 pb-4">
           {STAGES.map((stage, stageIdx) => {
             const stageEntries = entries.filter((e: any) => e.stage === stage);
             const isMax = stage === maxStage;
@@ -202,7 +202,7 @@ const Pipeline = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: stageIdx * 0.06, type: "spring", stiffness: 260, damping: 22 }}
-                className={`flex-shrink-0 w-56 bg-muted/50 rounded-xl p-3 min-h-[300px] border border-border/40 transition-all duration-300 ${
+                className={`min-w-0 bg-muted/50 rounded-xl p-3 min-h-[300px] border border-border/40 transition-all duration-300 ${
                   isMax ? "ring-2 ring-primary/40 shadow-[0_0_16px_hsl(var(--primary)/0.15)]" : ""
                 }`}
                 onDragOver={(e) => e.preventDefault()}
