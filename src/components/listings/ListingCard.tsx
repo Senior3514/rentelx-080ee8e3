@@ -1,17 +1,17 @@
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { MapPin, BedDouble, Maximize, Building2, Clock, ExternalLink, Phone, User, Image as ImageIcon } from "lucide-react";
+import { MapPin, BedDouble, Maximize, Building2, Clock, ExternalLink, Phone, User, Image as ImageIcon, Pencil } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 import { he } from "date-fns/locale";
-import { useState } from "react";
+import { memo, useState } from "react";
 
 interface ListingCardProps {
   listing: any;
 }
 
-export const ListingCard = ({ listing }: ListingCardProps) => {
+export const ListingCard = memo(({ listing }: ListingCardProps) => {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [imgError, setImgError] = useState(false);
@@ -78,7 +78,7 @@ export const ListingCard = ({ listing }: ListingCardProps) => {
         </div>
       )}
 
-      <div className="p-4">
+      <div className="p-3.5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
@@ -86,7 +86,7 @@ export const ListingCard = ({ listing }: ListingCardProps) => {
                 <MapPin className="h-3.5 w-3.5 text-primary" />
               </div>
               <div className="min-w-0 flex-1">
-                <span className="font-semibold truncate block">{listing.address || listing.city || "Unknown"}</span>
+                <span className="font-semibold truncate block text-sm">{listing.address || listing.city || "Unknown"}</span>
                 {listing.city && listing.address && (
                   <span className="text-xs text-muted-foreground">{listing.city}</span>
                 )}
@@ -96,7 +96,7 @@ export const ListingCard = ({ listing }: ListingCardProps) => {
               )}
             </div>
 
-            <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
+            <div className="flex items-center gap-2.5 text-sm text-muted-foreground flex-wrap">
               {listing.price && !hasImages && (
                 <span className="font-bold text-primary text-base">
                   {t("common.shekel")}{listing.price.toLocaleString()}
@@ -104,38 +104,37 @@ export const ListingCard = ({ listing }: ListingCardProps) => {
                 </span>
               )}
               {listing.rooms && (
-                <span className="flex items-center gap-1 text-xs">
-                  <BedDouble className="h-3.5 w-3.5" />
-                  {listing.rooms} {t("common.rooms")}
+                <span className="flex items-center gap-1 text-xs bg-muted/60 rounded-md px-1.5 py-0.5">
+                  <BedDouble className="h-3 w-3" />
+                  {listing.rooms}
                 </span>
               )}
               {listing.sqm && (
-                <span className="flex items-center gap-1 text-xs">
-                  <Maximize className="h-3.5 w-3.5" />
-                  {listing.sqm} {t("common.sqm")}
+                <span className="flex items-center gap-1 text-xs bg-muted/60 rounded-md px-1.5 py-0.5">
+                  <Maximize className="h-3 w-3" />
+                  {listing.sqm}m²
                 </span>
               )}
               {listing.floor != null && (
-                <span className="flex items-center gap-1 text-xs">
-                  <Building2 className="h-3.5 w-3.5" />
-                  {t("common.floor")} {listing.floor}
-                  {listing.total_floors ? `/${listing.total_floors}` : ""}
+                <span className="flex items-center gap-1 text-xs bg-muted/60 rounded-md px-1.5 py-0.5">
+                  <Building2 className="h-3 w-3" />
+                  {listing.floor}{listing.total_floors ? `/${listing.total_floors}` : ""}
                 </span>
               )}
-              <span className="flex items-center gap-1 text-xs ms-auto">
-                <Clock className="h-3 w-3" />
+              <span className="flex items-center gap-1 text-[10px] text-muted-foreground/70 ms-auto">
+                <Clock className="h-2.5 w-2.5" />
                 {timeAgo}
               </span>
             </div>
 
             {listing.amenities?.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
-                {listing.amenities.slice(0, 5).map((a: string) => (
-                  <span key={a} className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded-full font-medium">{a}</span>
+                {listing.amenities.slice(0, 4).map((a: string) => (
+                  <span key={a} className="text-[10px] bg-primary/8 text-primary/90 border border-primary/15 px-1.5 py-0.5 rounded-full">{a}</span>
                 ))}
-                {listing.amenities.length > 5 && (
-                  <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded-full">
-                    +{listing.amenities.length - 5}
+                {listing.amenities.length > 4 && (
+                  <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded-full text-muted-foreground">
+                    +{listing.amenities.length - 4}
                   </span>
                 )}
               </div>
@@ -143,15 +142,15 @@ export const ListingCard = ({ listing }: ListingCardProps) => {
 
             {/* Contact info */}
             {(listing.contact_name || listing.contact_phone) && (
-              <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border/40 text-xs text-muted-foreground">
+              <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border/30 text-xs text-muted-foreground">
                 {listing.contact_name && (
                   <span className="flex items-center gap-1">
                     <User className="h-3 w-3" />
-                    {listing.contact_name}
+                    <span className="truncate max-w-[100px]">{listing.contact_name}</span>
                   </span>
                 )}
                 {listing.contact_phone && (
-                  <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1" dir="ltr">
                     <Phone className="h-3 w-3" />
                     {listing.contact_phone}
                   </span>
@@ -213,4 +212,6 @@ export const ListingCard = ({ listing }: ListingCardProps) => {
     </Card>
     </motion.div>
   );
-};
+});
+
+ListingCard.displayName = "ListingCard";

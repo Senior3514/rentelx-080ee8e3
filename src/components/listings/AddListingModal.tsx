@@ -53,7 +53,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
   const [urlError, setUrlError] = useState("");
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
-    address: "", city: "", price: "", rooms: "", sqm: "", floor: "",
+    address: "", city: "", price: "", rooms: "", sqm: "", floor: "", total_floors: "",
     description: "", contact_name: "", contact_phone: "", source_url: "",
   });
   const [urlFetching, setUrlFetching] = useState(false);
@@ -172,7 +172,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
     setUrl("");
     setUrlError("");
     setFormErrors({});
-    setForm({ address: "", city: "", price: "", rooms: "", sqm: "", floor: "", description: "", contact_name: "", contact_phone: "", source_url: "" });
+    setForm({ address: "", city: "", price: "", rooms: "", sqm: "", floor: "", total_floors: "", description: "", contact_name: "", contact_phone: "", source_url: "" });
     imagePreviews.forEach((p) => URL.revokeObjectURL(p));
     setImageFiles([]);
     setImagePreviews([]);
@@ -201,6 +201,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
     }
     setFormErrors({});
     const d = result.data;
+    const totalFloors = form.total_floors ? Number(form.total_floors) || null : null;
     insertMutation.mutate({
       user_id: user!.id,
       address: d.address || null,
@@ -209,6 +210,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
       rooms: d.rooms,
       sqm: d.sqm,
       floor: d.floor,
+      total_floors: totalFloors,
       description: d.description || null,
       contact_name: d.contact_name || null,
       contact_phone: d.contact_phone || null,
@@ -262,8 +264,27 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
               messages: [{
                 role: "user",
                 content: attempt === 0
-                  ? `Extract all rental listing data from this ${source} listing URL: ${inputUrl}`
-                  : `Please try again to extract rental listing data from this ${source} listing URL: ${inputUrl}. This is attempt ${attempt + 1}. Make sure to fetch the actual page content and extract every available field.`,
+                  ? `Extract ALL rental listing data from this ${source} listing URL: ${inputUrl}
+
+You MUST return a JSON object with these exact fields (use null if not found):
+{
+  "address": "full street address",
+  "neighborhood": "neighborhood name",
+  "city": "city name",
+  "price": number (monthly rent in NIS),
+  "rooms": number,
+  "sqm": number (square meters),
+  "floor": number,
+  "total_floors": number,
+  "description": "full listing description text",
+  "amenities": ["elevator", "parking", "balcony", "AC", ...],
+  "contact_name": "landlord/agent name",
+  "contact_phone": "phone number",
+  "image_urls": ["url1", "url2", ...]
+}
+
+Extract EVERY detail from the page. For amenities, translate Hebrew names (מעלית=elevator, חניה=parking, מרפסת=balcony, מיזוג=AC, ממ"ד=safe room, מחסן=storage, דוד שמש=solar heater, סורגים=window bars, גישה לנכים=accessible, מזגן טורנדו=AC unit, משופצת=renovated, ריהוט=furnished, חיות מחמד=pets allowed, מתאים לשותפים=roommate friendly, מטבח כשר=kosher kitchen). Keep original Hebrew amenity names as-is too.`
+                  : `Please try again to extract rental listing data from this ${source} listing URL: ${inputUrl}. This is attempt ${attempt + 1}. Make sure to fetch the actual page content and extract every available field. Return a JSON object with: address, neighborhood, city, price, rooms, sqm, floor, total_floors, description, amenities, contact_name, contact_phone, image_urls.`,
               }],
             },
           });
@@ -494,15 +515,38 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                       </span>
                     </div>
 
-                    {/* Partial extraction warning */}
+                    {/* Partial extraction warning with specific missing fields */}
                     {extractionPartial && (
                       <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="flex items-start gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2"
+                        className="text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 space-y-1.5"
                       >
-                        <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                        <span>{t("addListingExtra.dataMissing")}</span>
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                          <span className="font-medium">{t("addListingExtra.dataMissing")}</span>
+                        </div>
+                        {(() => {
+                          const missing: string[] = [];
+                          if (!urlExtracted?.address) missing.push(t("addListing.address"));
+                          if (!urlExtracted?.city) missing.push(t("addListing.city"));
+                          if (!urlExtracted?.price) missing.push(t("addListing.price"));
+                          if (!urlExtracted?.rooms) missing.push(t("addListing.rooms"));
+                          if (!urlExtracted?.sqm) missing.push(t("addListing.sqm"));
+                          if (urlExtracted?.floor == null) missing.push(t("addListing.floor"));
+                          if (!urlExtracted?.contact_name) missing.push(t("addListing.contactName"));
+                          if (!urlExtracted?.contact_phone) missing.push(t("addListing.contactPhone"));
+                          if (missing.length === 0) return null;
+                          return (
+                            <div className="flex flex-wrap gap-1 ps-5">
+                              {missing.map((field) => (
+                                <span key={field} className="px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/25 text-[10px] font-medium">
+                                  {field}
+                                </span>
+                              ))}
+                            </div>
+                          );
+                        })()}
                       </motion.div>
                     )}
 
@@ -783,11 +827,14 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                 </div>
               </div>
 
-              {/* Floor + Phone */}
-              <div className="grid grid-cols-2 gap-2">
+              {/* Floor / Total Floors + Phone */}
+              <div className="grid grid-cols-3 gap-2">
                 <div>
                   <Input placeholder={t("addListing.floor")} type="number" {...f("floor")} min={-5} max={100} className="text-sm" />
                   {renderFieldError("floor")}
+                </div>
+                <div>
+                  <Input placeholder={language === "he" ? "מתוך קומות" : "Total floors"} type="number" {...f("total_floors")} min={1} max={100} className="text-sm" />
                 </div>
                 <div>
                   <div className="relative">
