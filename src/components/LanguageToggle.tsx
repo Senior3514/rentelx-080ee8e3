@@ -12,6 +12,7 @@ const LANGUAGES: { code: Language; label: string; flag: string; nativeLabel: str
   { code: "en", label: "English", flag: "🇬🇧", nativeLabel: "EN" },
   { code: "he", label: "עברית", flag: "🇮🇱", nativeLabel: "עב" },
   { code: "es", label: "Español", flag: "🇪🇸", nativeLabel: "ES" },
+  { code: "ru", label: "Русский", flag: "🇷🇺", nativeLabel: "РУ" },
 ];
 
 export const LanguageToggle = () => {

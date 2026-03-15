@@ -23,13 +23,13 @@ const STAGES = ["new", "contacted", "viewing_scheduled", "viewed", "negotiating"
 type Stage = (typeof STAGES)[number];
 
 const STAGE_LABELS: Record<string, Record<string, string>> = {
-  new: { en: "New", he: "חדש" },
-  contacted: { en: "Contacted", he: "נוצר קשר" },
-  viewing_scheduled: { en: "Viewing", he: "ביקור" },
-  viewed: { en: "Viewed", he: "נצפה" },
-  negotiating: { en: "Negotiating", he: 'מו"מ' },
-  signed: { en: "Signed", he: "חתום" },
-  lost: { en: "Lost", he: "אבוד" },
+  new: { en: "New", he: "חדש", es: "Nuevo", ru: "Новое" },
+  contacted: { en: "Contacted", he: "נוצר קשר", es: "Contactado", ru: "Связались" },
+  viewing_scheduled: { en: "Viewing", he: "ביקור", es: "Visita", ru: "Просмотр" },
+  viewed: { en: "Viewed", he: "נצפה", es: "Visto", ru: "Осмотрено" },
+  negotiating: { en: "Negotiating", he: 'מו"מ', es: "Negociando", ru: "Торг" },
+  signed: { en: "Signed", he: "חתום", es: "Firmado", ru: "Подписано" },
+  lost: { en: "Lost", he: "אבוד", es: "Perdido", ru: "Потеряно" },
 };
 
 const STAGE_COLORS: Record<string, string> = {
