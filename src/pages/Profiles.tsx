@@ -308,22 +308,22 @@ const Profiles = () => {
                     <p className="text-sm text-muted-foreground mt-1 ms-7">
                       ₪{p.min_price?.toLocaleString()}–₪{p.max_price?.toLocaleString()} · {p.min_rooms}–{p.max_rooms} {t("common.rooms")}
                     </p>
-                    {p.current_address && (
+                    {(p as any).current_address && (
                       <p className="text-sm text-muted-foreground mt-1 ms-7 flex items-center gap-1">
                         <Home className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">{p.current_address}</span>
+                        <span className="truncate">{(p as any).current_address}</span>
                       </p>
                     )}
-                    {p.desired_area && (
+                    {(p as any).desired_area && (
                       <p className="text-sm text-muted-foreground mt-1 ms-7 flex items-center gap-1">
                         <Navigation className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">{p.desired_area}</span>
+                        <span className="truncate">{(p as any).desired_area}</span>
                       </p>
                     )}
-                    {p.workplace_address && (
+                    {(p as any).workplace_address && (
                       <p className="text-sm text-muted-foreground mt-1 ms-7 flex items-center gap-1">
                         <Briefcase className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">{p.workplace_address}</span>
+                        <span className="truncate">{(p as any).workplace_address}</span>
                       </p>
                     )}
                     {p.must_haves?.length > 0 && (
@@ -354,9 +354,9 @@ const Profiles = () => {
                         max_rooms: p.max_rooms,
                         must_haves: p.must_haves,
                         nice_to_haves: p.nice_to_haves,
-                        workplace_address: p.workplace_address,
-                        current_address: p.current_address,
-                        desired_area: p.desired_area,
+                        workplace_address: (p as any).workplace_address,
+                        current_address: (p as any).current_address,
+                        desired_area: (p as any).desired_area,
                       })}
                       title={language === "he" ? "חשב ציונים מחדש" : "Re-score listings"}
                       className="text-primary"

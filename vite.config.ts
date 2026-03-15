@@ -17,17 +17,6 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-  },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          "vendor-react": ["react", "react-dom", "react-router-dom"],
-          "vendor-ui": ["framer-motion", "@radix-ui/react-dialog", "@radix-ui/react-tooltip", "@radix-ui/react-tabs"],
-          "vendor-charts": ["recharts"],
-          "vendor-query": ["@tanstack/react-query"],
-        },
-      },
-    },
+    dedupe: ["react", "react-dom"],
   },
 }));
