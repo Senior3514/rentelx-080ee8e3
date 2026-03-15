@@ -180,6 +180,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
     setUrlFetching(false);
     setExtractionPartial(false);
     setDuplicateWarning(null);
+    setDuplicateOverride(false);
   };
 
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -355,34 +356,57 @@ CRITICAL RULES — MUST FOLLOW:
     }
     setUrlError("");
     setDuplicateWarning(null);
-    // Check for duplicate before extracting
-    if (url) {
-      await checkDuplicate(url);
-    }
-    await extractFromUrl(url);
+    setDuplicateOverride(false);
+    // Extract first, check duplicate in background (non-blocking)
+    const extractPromise = extractFromUrl(url);
+    if (url) checkDuplicate(url); // fire-and-forget, just sets warning
+    await extractPromise;
   };
 
   // Check for duplicate listing by source_url
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+  const [duplicateOverride, setDuplicateOverride] = useState(false);
+
+  /** Strip tracking/share params from URLs for consistent comparison */
+  const normalizeUrl = (rawUrl: string): string => {
+    try {
+      const u = new URL(rawUrl);
+      // Remove common tracking params
+      const stripParams = ["fbclid", "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "ref", "mibextid", "sfnsn", "s", "fs", "app"];
+      stripParams.forEach((p) => u.searchParams.delete(p));
+      // Remove trailing slash
+      const cleaned = u.toString().replace(/\/+$/, "");
+      return cleaned;
+    } catch {
+      return rawUrl;
+    }
+  };
 
   const checkDuplicate = async (sourceUrl: string): Promise<boolean> => {
     if (!user || !sourceUrl) return false;
+    if (duplicateOverride) return false; // User chose to add anyway
     try {
+      const normalized = normalizeUrl(sourceUrl);
+      // Check both exact URL and normalized URL
       const { data } = await supabase
         .from("listings")
-        .select("id, address, city")
+        .select("id, address, city, source_url")
         .eq("user_id", user.id)
-        .eq("source_url", sourceUrl)
-        .limit(1);
+        .limit(50);
       if (data && data.length > 0) {
-        const existing = data[0];
-        const label = existing.address || existing.city || "Unknown";
-        setDuplicateWarning(
-          language === "he"
-            ? `דירה זו כבר קיימת ברשימות שלך: "${label}". לא ניתן להוסיף אותה פעמיים.`
-            : `This listing already exists in your inbox: "${label}". Cannot add it twice.`
-        );
-        return true;
+        const match = data.find((row) => {
+          if (!row.source_url) return false;
+          return row.source_url === sourceUrl || normalizeUrl(row.source_url) === normalized;
+        });
+        if (match) {
+          const label = match.address || match.city || "Unknown";
+          setDuplicateWarning(
+            language === "he"
+              ? `דירה זו כבר קיימת ברשימות שלך: "${label}".`
+              : `This listing already exists in your inbox: "${label}".`
+          );
+          return true;
+        }
       }
     } catch { /* ignore */ }
     setDuplicateWarning(null);
@@ -392,14 +416,14 @@ CRITICAL RULES — MUST FOLLOW:
   // Step 2: Confirm and save extracted data
   const handleUrlSave = async () => {
     if (!urlExtracted) return;
-    // Check for duplicates first
-    if (url) {
+    // Check for duplicates (unless user chose to override)
+    if (url && !duplicateOverride) {
       const isDupe = await checkDuplicate(url);
       if (isDupe) return;
     }
     const listing: Record<string, unknown> = {
       user_id: user!.id,
-      source_url: url,
+      source_url: normalizeUrl(url),
       address: urlExtracted.address || null,
       city: urlExtracted.city || null,
       price: urlExtracted.price || null,
@@ -465,7 +489,7 @@ CRITICAL RULES — MUST FOLLOW:
                   <Input
                     placeholder={t("addListing.urlPlaceholder")}
                     value={url}
-                    onChange={(e) => { setUrl(e.target.value); setUrlError(""); setUrlExtracted(null); setExtractionPartial(false); setDuplicateWarning(null); }}
+                    onChange={(e) => { setUrl(e.target.value); setUrlError(""); setUrlExtracted(null); setExtractionPartial(false); setDuplicateWarning(null); setDuplicateOverride(false); }}
                     className="ps-10"
                     required
                   />
@@ -682,14 +706,23 @@ CRITICAL RULES — MUST FOLLOW:
                     )}
 
                     {/* Duplicate warning */}
-                    {duplicateWarning && (
+                    {duplicateWarning && !duplicateOverride && (
                       <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2 flex items-start gap-2"
+                        className="text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 space-y-2"
                       >
-                        <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                        <span className="font-medium">{duplicateWarning}</span>
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                          <span className="font-medium">{duplicateWarning}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { setDuplicateOverride(true); setDuplicateWarning(null); setDuplicateOverride(false); }}
+                          className="text-[10px] underline underline-offset-2 text-amber-600 dark:text-amber-400 hover:text-foreground transition-colors"
+                        >
+                          {language === "he" ? "הוסף בכל זאת" : "Add anyway"}
+                        </button>
                       </motion.div>
                     )}
 
@@ -842,7 +875,7 @@ CRITICAL RULES — MUST FOLLOW:
                     type="button"
                     className="flex-1 gap-1.5 glow-primary"
                     onClick={handleUrlSave}
-                    disabled={isLoading || !!duplicateWarning}
+                    disabled={isLoading || (!!duplicateWarning && !duplicateOverride)}
                   >
                     {insertMutation.isPending ? (
                       <>
