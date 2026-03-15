@@ -357,10 +357,15 @@ const Watchlist = () => {
 
       {/* ── City filters ── */}
       <Card className="p-4 border-border/60">
-        <p className="text-sm font-semibold mb-3 flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-primary" />
-          {t("watchlist.cities")}
-        </p>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-semibold flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-primary" />
+            {language === "he" ? "סריקה כללית — פילטרים" : "General Scan — Filters"}
+          </p>
+          <span className="text-[10px] text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-full">
+            {language === "he" ? `${selectedCities.length} ערים נבחרו` : `${selectedCities.length} cities selected`}
+          </span>
+        </div>
         <div className="flex flex-wrap gap-2">
           {CITIES.map((city) => {
             const active = selectedCities.includes(city.key);
