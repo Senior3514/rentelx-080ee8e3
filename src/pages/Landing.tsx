@@ -72,12 +72,12 @@ function FlowDot({ delay = 0, color = "hsl(var(--primary))", rtl = false }: { de
   );
 }
 
-/* ─── Demo listings for Tel Aviv / Givatayim / Ramat Gan ─── */
+/* ─── Demo listings for Tel Aviv / Givatayim / Ramat Gan — Q1 2026 market prices ─── */
 const DEMO_LISTINGS = [
-  { address: "רוטשילד 45", city: "תל אביב", price: 6800, rooms: 3, sqm: 85, score: 94, neighborhood: "לב העיר" },
-  { address: "הרצל 12", city: "גבעתיים", price: 4800, rooms: 2.5, sqm: 68, score: 89, neighborhood: "גבעת רמב\"ם" },
-  { address: "ביאליק 7", city: "רמת גן", price: 5200, rooms: 3, sqm: 78, score: 82, neighborhood: "גבעת עליה" },
-  { address: "דיזנגוף 88", city: "תל אביב", price: 7400, rooms: 3.5, sqm: 95, score: 77, neighborhood: "דיזנגוף" },
+  { address: "רוטשילד 45", city: "תל אביב", price: 9800, rooms: 3, sqm: 82, score: 94, neighborhood: "לב העיר" },
+  { address: "הרצל 12", city: "גבעתיים", price: 6400, rooms: 3, sqm: 75, score: 89, neighborhood: "נווה שאנן" },
+  { address: "ביאליק 7", city: "רמת גן", price: 6800, rooms: 3, sqm: 80, score: 82, neighborhood: "רמת הבורסה" },
+  { address: "דיזנגוף 88", city: "תל אביב", price: 11200, rooms: 3.5, sqm: 95, score: 77, neighborhood: "הצפון הישן" },
 ];
 
 const Landing = () => {
