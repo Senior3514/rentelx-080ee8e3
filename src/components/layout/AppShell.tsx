@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
@@ -9,6 +10,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GlobalSearch } from "@/components/GlobalSearch";
 
 /* Map pathnames to page title keys */
 const PAGE_TITLES: Record<string, string> = {
@@ -27,6 +29,36 @@ export const AppShell = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { direction, t } = useLanguage();
+  const gPressedRef = useRef(false);
+
+  // Keyboard shortcuts: G+D (dashboard), G+I (inbox), G+W (watchlist), G+P (pipeline), G+S (settings)
+  useEffect(() => {
+    const SHORTCUTS: Record<string, string> = { d: "/dashboard", i: "/inbox", w: "/watchlist", p: "/pipeline", s: "/settings", c: "/compare", r: "/relocation" };
+    let gTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
+
+      if (e.key === "g" && !e.metaKey && !e.ctrlKey) {
+        gPressedRef.current = true;
+        if (gTimer) clearTimeout(gTimer);
+        gTimer = setTimeout(() => { gPressedRef.current = false; }, 1000);
+        return;
+      }
+
+      if (gPressedRef.current && SHORTCUTS[e.key]) {
+        e.preventDefault();
+        gPressedRef.current = false;
+        if (gTimer) clearTimeout(gTimer);
+        navigate(SHORTCUTS[e.key]);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => { document.removeEventListener("keydown", handleKeyDown); if (gTimer) clearTimeout(gTimer); };
+  }, [navigate]);
 
   const titleKey = Object.entries(PAGE_TITLES).find(([path]) =>
     location.pathname === path || location.pathname.startsWith(path + "/")
@@ -56,7 +88,8 @@ export const AppShell = () => {
                 </AnimatePresence>
               )}
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
+              <GlobalSearch />
               <Button
                 variant="ghost"
                 size="icon"

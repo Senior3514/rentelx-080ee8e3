@@ -390,9 +390,16 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
   if (isFacebook) {
     // Try different user agents for Facebook
     const fbUserAgents = [
-      "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+      // Facebook's own crawler gets the best OG data
       "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
+      // Googlebot also gets good data from Facebook
       "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+      // Mobile user agent
+      "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+      // WhatsApp link preview bot (Facebook respects its own ecosystem)
+      "WhatsApp/2.23.20 A",
+      // Telegram bot
+      "TelegramBot (like TwitterBot)",
     ];
 
     const fbUrls = getFacebookUrls(url);
@@ -401,7 +408,18 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
     for (const fbUrl of fbUrls) {
       for (const ua of fbUserAgents) {
         const fbHeaders = { ...BROWSER_HEADERS, "User-Agent": ua };
-        console.log(`[fetch-url] Trying Facebook URL: ${fbUrl} with UA: ${ua.slice(0, 30)}...`);
+        // Remove browser-specific headers for bots
+        if (ua.includes("externalhit") || ua.includes("Googlebot") || ua.includes("WhatsApp") || ua.includes("TelegramBot")) {
+          delete fbHeaders["sec-ch-ua"];
+          delete fbHeaders["sec-ch-ua-mobile"];
+          delete fbHeaders["sec-ch-ua-platform"];
+          delete fbHeaders["sec-fetch-dest"];
+          delete fbHeaders["sec-fetch-mode"];
+          delete fbHeaders["sec-fetch-site"];
+          delete fbHeaders["sec-fetch-user"];
+          delete fbHeaders["Upgrade-Insecure-Requests"];
+        }
+        console.log(`[fetch-url] Trying Facebook URL: ${fbUrl} with UA: ${ua.slice(0, 40)}...`);
         const html = await fetchSingleUrl(fbUrl, fbHeaders);
         if (!html) {
           await new Promise(r => setTimeout(r, 500));
@@ -429,15 +447,17 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
           }
         }
 
-        await new Promise(r => setTimeout(r, 500));
-        // If we got OG data with this UA, no need to try more UAs for this URL
-        if (bestResult && bestResult.text.length > 100) break;
+        await new Promise(r => setTimeout(r, 400));
+        // If we got good OG data, no need to try more UAs for this URL
+        if (bestResult && bestResult.text.length > 200) break;
       }
+      // If we have good enough data, stop trying more URLs
+      if (bestResult && bestResult.text.length > 200) break;
     }
 
     // Return the best result we got (even if partial from OG meta)
     if (bestResult) {
-      console.log(`[fetch-url] Using Facebook OG meta fallback (${bestResult.text.length} chars)`);
+      console.log(`[fetch-url] Using Facebook result (${bestResult.text.length} chars)`);
       return { text: bestResult.text.slice(0, 15000), images: bestResult.images.slice(0, 15) };
     }
 
@@ -450,22 +470,31 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
     const madlanUserAgents = [
       // Googlebot gets the full server-rendered page from Next.js sites
       "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+      // Facebook's crawler also gets good SSR content
+      "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
       BROWSER_HEADERS["User-Agent"],
       "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
     ];
 
-    // Try mobile version first (simpler HTML, easier to parse), plus API endpoint
-    const madlanUrls = [url];
+    // Build URL variants to try
+    const madlanUrls: string[] = [];
     try {
       const parsed = new URL(url);
+      // Original URL first (most likely to work)
+      madlanUrls.push(url);
+      // Mobile version (simpler HTML)
       const mobileUrl = `https://m.madlan.co.il${parsed.pathname}${parsed.search}`;
-      if (!madlanUrls.includes(mobileUrl)) madlanUrls.unshift(mobileUrl);
-      // Try the API endpoint if it's a listing page
+      if (!madlanUrls.includes(mobileUrl)) madlanUrls.push(mobileUrl);
+      // API endpoint for listing pages
       const listingIdMatch = parsed.pathname.match(/\/listings\/([^/?]+)/);
       if (listingIdMatch) {
         madlanUrls.push(`https://www.madlan.co.il/api/listings/${listingIdMatch[1]}`);
+        // Also try GraphQL endpoint variant
+        madlanUrls.push(`https://www.madlan.co.il/api/v1/listings/${listingIdMatch[1]}`);
       }
-    } catch { /* skip */ }
+    } catch {
+      madlanUrls.push(url);
+    }
 
     let bestResult: { text: string; images: string[] } | null = null;
 
@@ -476,18 +505,27 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
         if (madlanUrl.includes("/api/")) {
           madlanHeaders["Accept"] = "application/json";
         }
+        // Clean up bot headers
+        if (ua.includes("Googlebot") || ua.includes("externalhit")) {
+          delete madlanHeaders["sec-ch-ua"];
+          delete madlanHeaders["sec-ch-ua-mobile"];
+          delete madlanHeaders["sec-ch-ua-platform"];
+          delete madlanHeaders["sec-fetch-dest"];
+          delete madlanHeaders["sec-fetch-mode"];
+          delete madlanHeaders["sec-fetch-site"];
+        }
         console.log(`[fetch-url] Trying Madlan URL: ${madlanUrl} with UA: ${ua.slice(0, 30)}...`);
         const html = await fetchSingleUrl(madlanUrl, madlanHeaders);
         if (!html) {
-          await new Promise(r => setTimeout(r, 500));
+          await new Promise(r => setTimeout(r, 400));
           continue;
         }
 
         // Check if we got JSON response (API endpoint or __NEXT_DATA__)
-        if (html.trim().startsWith("{")) {
+        if (html.trim().startsWith("{") || html.trim().startsWith("[")) {
           try {
             const data = JSON.parse(html);
-            const jsonText = `STRUCTURED DATA (API): ${JSON.stringify(data, null, 0).slice(0, 8000)}`;
+            const jsonText = `STRUCTURED DATA (API): ${JSON.stringify(data, null, 0).slice(0, 10000)}`;
             return { text: jsonText, images: extractImagesFromHtml(html).slice(0, 15) };
           } catch { /* not JSON, continue */ }
         }
@@ -515,13 +553,14 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
           }
         }
 
-        await new Promise(r => setTimeout(r, 500));
-        if (bestResult && bestResult.text.length > 200) break;
+        await new Promise(r => setTimeout(r, 400));
+        if (bestResult && bestResult.text.length > 300) break;
       }
+      if (bestResult && bestResult.text.length > 300) break;
     }
 
     if (bestResult) {
-      console.log(`[fetch-url] Using Madlan fallback data (${bestResult.text.length} chars)`);
+      console.log(`[fetch-url] Using Madlan result (${bestResult.text.length} chars)`);
       return { text: bestResult.text.slice(0, 18000), images: bestResult.images.slice(0, 15) };
     }
   }
@@ -770,17 +809,20 @@ serve(async (req) => {
               `SOURCE URL: ${url}`,
               fetched.images.length > 0 ? `\nIMAGES FOUND ON PAGE (${fetched.images.length}):\n${fetched.images.join("\n")}` : "",
               `\n--- PAGE CONTENT START ---\n${fetched.text}\n--- PAGE CONTENT END ---`,
-              `\nINSTRUCTIONS:`,
-              `1. Extract ONLY data that appears in the content above. Return JSON only.`,
-              `2. For price: look for numbers near ₪, ש"ח, שקל, NIS, שכירות, rent, להשכרה, or "price" fields in structured data.`,
-              `3. For rooms: look for חדרים, חד', rooms, X.5 patterns, or "rooms" fields in structured data.`,
-              `4. For sqm: look for מ"ר, מטר, sqm, m², or "area"/"size" fields in structured data.`,
-              `5. For floor: look for קומה, floor, or floor/total patterns. Extract BOTH floor and total_floors.`,
-              `6. For images: include ALL image URLs found on the page that look like listing/property photos.`,
-              `7. For amenities: look for ALL Hebrew amenity terms AND structured amenity lists. Extract EVERY mentioned amenity.`,
-              `8. For contact: extract name, phone (Israeli patterns: 05X-XXXXXXX, 0X-XXXXXXX, +972).`,
-              `9. For address: extract full street + number. For city: extract city name in Hebrew.`,
-              `10. For description: clean up the text, remove HTML artifacts, provide the listing description.`,
+              `\nCRITICAL INSTRUCTIONS:`,
+              `1. Extract ONLY data that ACTUALLY appears in the content above. Return JSON only.`,
+              `2. DO NOT invent, fabricate, or guess ANY data. If something is NOT explicitly in the text, use null or empty array.`,
+              `3. For amenities: ONLY list amenities that are EXPLICITLY mentioned in the text above. If an amenity is NOT mentioned, do NOT include it. An empty array [] is perfectly acceptable.`,
+              `4. For price: look for numbers near ₪, ש"ח, שקל, NIS, שכירות, rent, להשכרה, or "price" fields in structured data.`,
+              `5. For rooms: look for חדרים, חד', rooms, X.5 patterns, or "rooms" fields in structured data.`,
+              `6. For sqm: look for מ"ר, מטר, sqm, m², or "area"/"size" fields in structured data.`,
+              `7. For floor: look for קומה, floor, or floor/total patterns. Extract BOTH floor and total_floors.`,
+              `8. For images: include ALL image URLs from the page that are property/listing photos. Include the IMAGES FOUND ON PAGE list above.`,
+              `9. For contact: extract name, phone (Israeli patterns: 05X-XXXXXXX, 0X-XXXXXXX, +972).`,
+              `10. For address: extract full street + number. For city: extract city name (preferably in Hebrew).`,
+              `11. For description: clean up the text, remove HTML artifacts, provide the listing description.`,
+              `\nAMENITIES LIST — Only include if EXPLICITLY found in text:`,
+              `מעלית, חניה, מרפסת, מיזוג/מזגן, ממ"ד, מחסן, דוד שמש, סורגים, גישה לנכים, מזגן טורנדו, משופצת, ריהוט/מרוהטת, חיות מחמד, מתאים לשותפים, מטבח כשר, דלתות רב בריח, ארונות קיר, גינה, תריסים חשמליים, גז מרכזי`,
               ...sourceNotes,
             ].join("\n"),
           }];

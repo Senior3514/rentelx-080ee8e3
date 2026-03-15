@@ -264,26 +264,27 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
               messages: [{
                 role: "user",
                 content: attempt === 0
-                  ? `Extract ALL rental listing data from this ${source} listing URL: ${inputUrl}
+                  ? `Extract rental listing data from this ${source} listing URL: ${inputUrl}
 
-You MUST return a JSON object with these exact fields (use null if not found):
+Return a JSON object with these exact fields (use null if not found):
 {
-  "address": "full street address",
-  "neighborhood": "neighborhood name",
-  "city": "city name",
-  "price": number (monthly rent in NIS),
-  "rooms": number,
-  "sqm": number (square meters),
-  "floor": number,
-  "total_floors": number,
-  "description": "full listing description text",
-  "amenities": ["elevator", "parking", "balcony", "AC", ...],
-  "contact_name": "landlord/agent name",
-  "contact_phone": "phone number",
+  "address": "full street address or null",
+  "neighborhood": "neighborhood name or null",
+  "city": "city name or null",
+  "price": number or null,
+  "rooms": number or null,
+  "sqm": number or null,
+  "floor": number or null,
+  "total_floors": number or null,
+  "description": "listing description text or null",
+  "amenities": ["only amenities ACTUALLY found on the page"],
+  "contact_name": "name or null",
+  "contact_phone": "phone or null",
   "image_urls": ["url1", "url2", ...]
 }
 
-Extract EVERY detail from the page. For amenities, translate Hebrew names (מעלית=elevator, חניה=parking, מרפסת=balcony, מיזוג=AC, ממ"ד=safe room, מחסן=storage, דוד שמש=solar heater, סורגים=window bars, גישה לנכים=accessible, מזגן טורנדו=AC unit, משופצת=renovated, ריהוט=furnished, חיות מחמד=pets allowed, מתאים לשותפים=roommate friendly, מטבח כשר=kosher kitchen). Keep original Hebrew amenity names as-is too.`
+CRITICAL: Extract ONLY data that ACTUALLY appears on the page. Do NOT invent or guess any data.
+For amenities: ONLY include amenities that are EXPLICITLY listed on the page. Keep original Hebrew names as they appear (מעלית, חניה, מרפסת, מיזוג, ממ"ד, מחסן, דוד שמש, סורגים, גישה לנכים, מזגן טורנדו, משופצת, ריהוט, חיות מחמד, מתאים לשותפים, מטבח כשר, דלתות רב בריח). If NO amenities are mentioned, return an EMPTY array [].`
                   : `Please try again to extract rental listing data from this ${source} listing URL: ${inputUrl}. This is attempt ${attempt + 1}. Make sure to fetch the actual page content and extract every available field. Return a JSON object with: address, neighborhood, city, price, rooms, sqm, floor, total_floors, description, amenities, contact_name, contact_phone, image_urls.`,
               }],
             },
@@ -457,41 +458,69 @@ Extract EVERY detail from the page. For amenities, translate Hebrew names (מע�
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
-                    className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10 p-4 space-y-3"
+                    className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 via-primary/8 to-accent/5 p-5 space-y-4 relative overflow-hidden"
                   >
-                    <div className="flex items-center gap-2 text-sm text-primary font-medium">
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                    {/* Animated scan line */}
+                    <motion.div
+                      className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent"
+                      initial={{ top: 0 }}
+                      animate={{ top: ["0%", "100%", "0%"] }}
+                      transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                    />
+
+                    <div className="flex items-center gap-2.5 text-sm text-primary font-semibold">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                      >
+                        <Sparkles className="h-4.5 w-4.5" />
+                      </motion.div>
                       {t("addListingExtra.fetchingData")}
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       {[
-                        { step: t("addListingExtra.fetchStep1"), delay: 0 },
-                        { step: t("addListingExtra.fetchStep2"), delay: 0.3 },
-                        { step: t("addListingExtra.fetchStep3"), delay: 0.6 },
-                      ].map(({ step, delay }, i) => (
+                        { step: t("addListingExtra.fetchStep1"), icon: "🌐", delay: 0 },
+                        { step: t("addListingExtra.fetchStep2"), icon: "🔍", delay: 0.5 },
+                        { step: t("addListingExtra.fetchStep3"), icon: "📸", delay: 1.0 },
+                      ].map(({ step, icon, delay }, i) => (
                         <motion.div
                           key={i}
-                          initial={{ opacity: 0, x: -8 }}
+                          initial={{ opacity: 0, x: direction === "rtl" ? 12 : -12 }}
                           animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay }}
-                          className="flex items-center gap-2 text-xs text-muted-foreground"
+                          transition={{ delay, type: "spring", stiffness: 300, damping: 22 }}
+                          className="flex items-center gap-2.5 text-xs"
                         >
-                          <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
-                            <span className="text-[10px] font-bold text-primary">{i + 1}</span>
-                          </div>
-                          {step}
+                          <motion.div
+                            className="w-6 h-6 rounded-lg bg-primary/15 flex items-center justify-center shrink-0"
+                            animate={{ scale: [1, 1.15, 1] }}
+                            transition={{ delay: delay + 0.3, duration: 0.6 }}
+                          >
+                            <span className="text-xs">{icon}</span>
+                          </motion.div>
+                          <span className="text-muted-foreground">{step}</span>
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: delay + 1.2 }}
+                            className="ms-auto"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5 text-primary/60" />
+                          </motion.div>
                         </motion.div>
                       ))}
                     </div>
-                    {/* Progress bar */}
-                    <div className="h-1 bg-primary/10 rounded-full overflow-hidden">
+                    {/* Progress bar with gradient */}
+                    <div className="h-1.5 bg-primary/10 rounded-full overflow-hidden">
                       <motion.div
-                        className="h-full bg-primary rounded-full"
+                        className="h-full rounded-full bg-gradient-to-r from-primary via-primary to-accent"
                         initial={{ width: "0%" }}
-                        animate={{ width: "85%" }}
-                        transition={{ duration: 8, ease: "easeOut" }}
+                        animate={{ width: "90%" }}
+                        transition={{ duration: 10, ease: "easeOut" }}
                       />
                     </div>
+                    <p className="text-[10px] text-muted-foreground/60 text-center">
+                      {language === "he" ? "מנתח נתונים מהדף — אנא המתינו..." : "Analyzing page data — please wait..."}
+                    </p>
                   </motion.div>
                 )}
               </AnimatePresence>

@@ -386,6 +386,32 @@ const Settings = () => {
         </div>
       </Card>
 
+      {/* Keyboard Shortcuts */}
+      <Card className="p-4 space-y-3">
+        <h3 className="font-semibold flex items-center gap-1.5">
+          <span className="text-base">⌨️</span>
+          {language === "he" ? "קיצורי מקלדת" : "Keyboard Shortcuts"}
+        </h3>
+        <div className="grid gap-2 text-sm">
+          {[
+            { keys: "⌘K / Ctrl+K", labelHe: "חיפוש מהיר וניווט", labelEn: "Quick search & navigation" },
+            { keys: "⌘/", labelHe: "פתח/סגור צ'אט AI", labelEn: "Toggle AI chat" },
+            { keys: "G → D", labelHe: "עבור ללוח בקרה", labelEn: "Go to Dashboard" },
+            { keys: "G → I", labelHe: "עבור לספריית דירות", labelEn: "Go to Inbox" },
+            { keys: "G → W", labelHe: "עבור למעקב", labelEn: "Go to Watchlist" },
+            { keys: "G → P", labelHe: "עבור לתהליך", labelEn: "Go to Pipeline" },
+            { keys: "G → S", labelHe: "עבור להגדרות", labelEn: "Go to Settings" },
+          ].map(({ keys, labelHe, labelEn }) => (
+            <div key={keys} className="flex items-center justify-between py-1.5 border-b border-border/30 last:border-0">
+              <span className="text-muted-foreground text-xs">{language === "he" ? labelHe : labelEn}</span>
+              <kbd className="inline-flex h-6 items-center rounded border bg-muted px-2 text-[10px] font-mono text-muted-foreground">
+                {keys}
+              </kbd>
+            </div>
+          ))}
+        </div>
+      </Card>
+
       <Button variant="destructive" onClick={signOut} className="w-full gap-1.5">
         <LogOut className="h-4 w-4" /> {t("nav.logout")}
       </Button>
