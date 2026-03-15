@@ -18,7 +18,7 @@ import {
 type Priority = "P0" | "P1" | "P2";
 type TaskStatus = "pending" | "in_progress" | "completed";
 type Week = "4_weeks" | "2_weeks" | "moving_day" | "after_move";
-type ProviderType = "movers" | "internet" | "electricity" | "gas" | "water" | "other";
+type ProviderType = "movers" | "internet" | "electricity" | "gas" | "water" | "insurance" | "cleaning" | "locksmith" | "arnona" | "vaad_bayit" | "cable_tv" | "pest_control" | "painter" | "other";
 type View = "dashboard" | "tasks" | "boxes" | "providers" | "audit";
 
 interface Task {
@@ -243,12 +243,20 @@ const PRIORITY_COLORS: Record<Priority, string> = {
 };
 
 const PROVIDER_ICONS: Record<ProviderType, { icon: React.ElementType; color: string }> = {
-  movers:      { icon: Truck,       color: "from-violet-500 to-violet-600" },
-  internet:    { icon: Wifi,        color: "from-blue-500 to-blue-600" },
-  electricity: { icon: Bolt,        color: "from-yellow-500 to-amber-500" },
-  gas:         { icon: Activity,    color: "from-orange-500 to-red-500" },
-  water:       { icon: Droplets,    color: "from-cyan-500 to-blue-500" },
-  other:       { icon: Building2,   color: "from-gray-500 to-gray-600" },
+  movers:       { icon: Truck,       color: "from-violet-500 to-violet-600" },
+  internet:     { icon: Wifi,        color: "from-blue-500 to-blue-600" },
+  electricity:  { icon: Bolt,        color: "from-yellow-500 to-amber-500" },
+  gas:          { icon: Activity,    color: "from-orange-500 to-red-500" },
+  water:        { icon: Droplets,    color: "from-cyan-500 to-blue-500" },
+  insurance:    { icon: Shield,      color: "from-indigo-500 to-indigo-600" },
+  cleaning:     { icon: Zap,         color: "from-sky-400 to-sky-500" },
+  locksmith:    { icon: Shield,      color: "from-slate-500 to-slate-600" },
+  arnona:       { icon: Building2,   color: "from-emerald-500 to-emerald-600" },
+  vaad_bayit:   { icon: Users,       color: "from-amber-500 to-amber-600" },
+  cable_tv:     { icon: Wifi,        color: "from-rose-500 to-rose-600" },
+  pest_control: { icon: Shield,      color: "from-lime-500 to-lime-600" },
+  painter:      { icon: Activity,    color: "from-fuchsia-500 to-fuchsia-600" },
+  other:        { icon: Building2,   color: "from-gray-500 to-gray-600" },
 };
 
 const STATUS_COLORS: Record<Provider["status"], string> = {

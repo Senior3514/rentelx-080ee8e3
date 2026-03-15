@@ -217,7 +217,7 @@ const Settings = () => {
   ];
 
   return (
-    <div className="max-w-lg mx-auto space-y-6 pb-20">
+    <div className="max-w-2xl mx-auto space-y-6 pb-20 w-full">
       <h1 className="text-2xl font-display font-bold">{t("nav.settings")}</h1>
 
       {/* Account */}
@@ -310,7 +310,7 @@ const Settings = () => {
         <h3 className="font-semibold flex items-center gap-1.5">
           <Palette className="h-4 w-4" /> {t("settings.colorScheme")}
         </h3>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-3">
           {([
             { value: "default" as const, label: t("settings.schemeDefault"), colors: ["hsl(16,65%,52%)", "hsl(38,75%,55%)"] },
             { value: "ocean" as const, label: t("settings.schemeOcean"), colors: ["hsl(200,65%,48%)", "hsl(180,55%,42%)"] },

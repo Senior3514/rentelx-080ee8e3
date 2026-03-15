@@ -19,16 +19,22 @@ import { AiSectionHelper } from "@/components/ui/ai-section-helper";
 import { formatDistanceToNow } from "date-fns";
 import { he } from "date-fns/locale";
 
-const CITIES: Array<{ key: ScanCity; labelEn: string; labelHe: string; color: string }> = [
-  { key: "tel-aviv",    labelEn: "Tel Aviv",      labelHe: "תל אביב",      color: "blue"   },
-  { key: "givatayim",   labelEn: "Givatayim",     labelHe: "גבעתיים",      color: "violet" },
-  { key: "ramat-gan",   labelEn: "Ramat Gan",     labelHe: "רמת גן",       color: "teal"   },
-  { key: "holon",       labelEn: "Holon",         labelHe: "חולון",         color: "indigo" },
-  { key: "bat-yam",     labelEn: "Bat Yam",       labelHe: "בת ים",         color: "sky"    },
-  { key: "bnei-brak",   labelEn: "Bnei Brak",     labelHe: "בני ברק",      color: "emerald"},
-  { key: "petah-tikva", labelEn: "Petah Tikva",   labelHe: "פתח תקווה",    color: "orange" },
-  { key: "herzliya",    labelEn: "Herzliya",      labelHe: "הרצליה",        color: "pink"   },
-  { key: "rishon",      labelEn: "Rishon LeZion", labelHe: "ראשון לציון",   color: "amber"  },
+const CITIES: Array<{ key: ScanCity; labelEn: string; labelHe: string; color: string; region?: string }> = [
+  // Gush Dan
+  { key: "tel-aviv",    labelEn: "Tel Aviv",      labelHe: "תל אביב",      color: "blue",    region: "gush-dan" },
+  { key: "ramat-gan",   labelEn: "Ramat Gan",     labelHe: "רמת גן",       color: "teal",    region: "gush-dan" },
+  { key: "givatayim",   labelEn: "Givatayim",     labelHe: "גבעתיים",      color: "violet",  region: "gush-dan" },
+  { key: "bnei-brak",   labelEn: "Bnei Brak",     labelHe: "בני ברק",      color: "emerald", region: "gush-dan" },
+  { key: "holon",       labelEn: "Holon",         labelHe: "חולון",         color: "indigo",  region: "gush-dan" },
+  { key: "bat-yam",     labelEn: "Bat Yam",       labelHe: "בת ים",         color: "sky",     region: "gush-dan" },
+  // Sharon & Center
+  { key: "herzliya",    labelEn: "Herzliya",      labelHe: "הרצליה",        color: "pink",    region: "sharon" },
+  { key: "raanana",     labelEn: "Ra'anana",      labelHe: "רעננה",         color: "lime",    region: "sharon" },
+  { key: "netanya",     labelEn: "Netanya",       labelHe: "נתניה",         color: "cyan",    region: "sharon" },
+  { key: "petah-tikva", labelEn: "Petah Tikva",   labelHe: "פתח תקווה",    color: "orange",  region: "center" },
+  // South
+  { key: "rishon",      labelEn: "Rishon LeZion", labelHe: "ראשון לציון",   color: "amber",   region: "south" },
+  { key: "rehovot",     labelEn: "Rehovot",       labelHe: "רחובות",        color: "rose",    region: "south" },
 ];
 
 const CITY_COLOR: Record<string, string> = {
@@ -41,6 +47,9 @@ const CITY_COLOR: Record<string, string> = {
   orange:  "bg-orange-500/10 border-orange-500/40 text-orange-600 dark:text-orange-400",
   pink:    "bg-pink-500/10 border-pink-500/40 text-pink-600 dark:text-pink-400",
   amber:   "bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400",
+  lime:    "bg-lime-500/10 border-lime-500/40 text-lime-600 dark:text-lime-400",
+  cyan:    "bg-cyan-500/10 border-cyan-500/40 text-cyan-600 dark:text-cyan-400",
+  rose:    "bg-rose-500/10 border-rose-500/40 text-rose-600 dark:text-rose-400",
 };
 
 const CITY_ACTIVE: Record<string, string> = {
@@ -53,6 +62,9 @@ const CITY_ACTIVE: Record<string, string> = {
   orange:  "bg-orange-500 border-orange-500 text-white shadow-orange-500/30",
   pink:    "bg-pink-500 border-pink-500 text-white shadow-pink-500/30",
   amber:   "bg-amber-500 border-amber-500 text-white shadow-amber-500/30",
+  lime:    "bg-lime-500 border-lime-500 text-white shadow-lime-500/30",
+  cyan:    "bg-cyan-500 border-cyan-500 text-white shadow-cyan-500/30",
+  rose:    "bg-rose-500 border-rose-500 text-white shadow-rose-500/30",
 };
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
@@ -155,13 +167,11 @@ const Watchlist = () => {
 
       // Unavailable = Yad2 blocked or returned nothing — retry up to 2 more times
       if (result.unavailable || result.listings.length === 0) {
-        for (let attempt = 0; attempt < 2 && result.listings.length === 0; attempt++) {
-          await new Promise((r) => setTimeout(r, 2000 + attempt * 1500));
-          const retryResult = await scanYad2(scanParams);
-          if (retryResult.listings.length > 0) {
-            result = retryResult;
-            break;
-          }
+        // Single quick retry
+        await new Promise((r) => setTimeout(r, 1500));
+        const retryResult = await scanYad2(scanParams);
+        if (retryResult.listings.length > 0) {
+          result = retryResult;
         }
         if (result.listings.length === 0) {
           setUnavailable(true);
@@ -601,6 +611,9 @@ const Watchlist = () => {
                 "פתח תקווה": "petah-tikva",
                 "הרצליה": "herzliya",
                 "ראשון לציון": "rishon",
+                "רעננה": "raanana",
+                "נתניה": "netanya",
+                "רחובות": "rehovot",
               };
               const cityKey = Object.entries(CITY_HE_MAP).find(([he]) => listing.city.includes(he))?.[1];
               const cityInfo = CITIES.find((c) => c.key === cityKey);

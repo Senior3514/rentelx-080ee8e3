@@ -444,6 +444,14 @@
       "electricity": "Electricity",
       "gas": "Gas",
       "water": "Water",
+      "insurance": "Home Insurance",
+      "cleaning": "Cleaning Service",
+      "locksmith": "Locksmith",
+      "arnona": "Arnona (Municipal Tax)",
+      "vaad_bayit": "Building Committee",
+      "cable_tv": "Cable / TV",
+      "pest_control": "Pest Control",
+      "painter": "Painter / Handyman",
       "other": "Other"
     },
     "providerStatus": {

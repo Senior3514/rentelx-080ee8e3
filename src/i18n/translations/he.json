@@ -444,6 +444,14 @@
       "electricity": "חשמל",
       "gas": "גז",
       "water": "מים",
+      "insurance": "ביטוח דירה",
+      "cleaning": "חברת ניקיון",
+      "locksmith": "מנעולן",
+      "arnona": "ארנונה (עירייה)",
+      "vaad_bayit": "ועד בית",
+      "cable_tv": "כבלים / טלוויזיה",
+      "pest_control": "הדברה",
+      "painter": "צבע / שיפוצניק",
       "other": "אחר"
     },
     "providerStatus": {

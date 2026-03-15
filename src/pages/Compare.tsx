@@ -474,7 +474,7 @@ const Compare = () => {
             </span>
           </p>
         </div>
-        <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
+        <div className="flex flex-wrap gap-2.5 max-h-64 overflow-y-auto p-1">
           {filteredListings.map((l) => {
             const isSelected = selected.includes(l.id);
             const score = topScore(l);
@@ -485,7 +485,7 @@ const Compare = () => {
                 onClick={() => addToCompare(l.id)}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className={`px-3 py-2 rounded-xl text-xs font-medium border transition-all duration-200 text-start ${
+                className={`px-3.5 py-2.5 rounded-xl text-sm font-medium border transition-all duration-200 text-start ${
                   isSelected
                     ? "bg-primary text-primary-foreground border-primary shadow-md"
                     : `bg-muted/50 border-border/60 hover:border-primary/40 text-foreground ${scoreClass ? `ring-1 ${scoreClass}` : ""}`
@@ -580,7 +580,7 @@ const Compare = () => {
             exit={{ opacity: 0, y: -10 }}
             className="overflow-x-auto -mx-3 px-3 sm:-mx-4 sm:px-4 md:-mx-6 md:px-6"
           >
-            <div className={`grid gap-3`} style={{ gridTemplateColumns: `140px repeat(${compareListing.length}, minmax(160px, 1fr))`, minWidth: `${140 + compareListing.length * 160}px` }}>
+            <div className={`grid gap-3`} style={{ gridTemplateColumns: `160px repeat(${compareListing.length}, minmax(200px, 1fr))`, minWidth: `${160 + compareListing.length * 200}px` }}>
 
               {/* Column headers */}
               <div /> {/* empty label cell */}

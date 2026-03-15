@@ -308,30 +308,17 @@ async function fetchCityListings(
   const { id, topArea, area } = city;
 
   const attempts: Array<{ url: string; headers: Record<string, string> }> = [
-    // Primary endpoints (known working patterns)
     { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&topArea=${topArea}&area=${area}&${qs}`, headers: DESKTOP_HEADERS },
     { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
     { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&propertyGroup=apartments&${qs}`, headers: DESKTOP_V2_HEADERS },
-    // Alternative API versions
     { url: `https://gw.yad2.co.il/search/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
-    { url: `https://gw.yad2.co.il/realestate-feed/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_V2_HEADERS },
-    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&deal_type=rent&${qs}`, headers: DESKTOP_HEADERS },
-    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&rows=40&${qs}`, headers: DESKTOP_V2_HEADERS },
-    // Newer API versions
-    { url: `https://gw.yad2.co.il/api/feed/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
-    { url: `https://gw.yad2.co.il/api/v3/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
-    { url: `https://gw.yad2.co.il/api/v2/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_V2_HEADERS },
-    // Mobile API endpoints
+    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&page=1&${qs}`, headers: DESKTOP_V2_HEADERS },
     { url: `https://mobile-api.yad2.co.il/api/2/feed/realestate/rent?city=${id}&${qs}`, headers: MOBILE_HEADERS },
-    { url: `https://mobile-api.yad2.co.il/api/3/realestate/rent?city=${id}&${qs}`, headers: MOBILE_HEADERS },
-    // Fallback with page parameter
-    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&page=1&${qs}`, headers: DESKTOP_HEADERS },
-    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&topArea=${topArea}&page=1&${qs}`, headers: DESKTOP_V2_HEADERS },
   ];
 
   for (let i = 0; i < attempts.length; i++) {
     const { url, headers } = attempts[i];
-    const items = await tryFetch(url, headers, 12000);
+    const items = await tryFetch(url, headers, 8000);
     if (items.length > 0) {
       const valid = items
         .filter((item) => {
@@ -347,7 +334,7 @@ async function fetchCityListings(
         return valid;
       }
     }
-    if (i < attempts.length - 1) await delay(300);
+    if (i < attempts.length - 1) await delay(150);
   }
 
   console.warn(`[yad2] ✗ No listings for city ${city.label} (${city.id}) — all endpoints blocked`);
@@ -366,7 +353,7 @@ serve(async (req) => {
 
     const cities = (Array.isArray(raw.cities) ? raw.cities : VALID_CITIES)
       .filter((c: unknown): c is string => typeof c === "string" && VALID_CITIES.includes(c))
-      .slice(0, 5);
+      .slice(0, 8);
 
     const minPrice = typeof raw.minPrice === "number" && raw.minPrice >= 0 ? raw.minPrice : undefined;
     const maxPrice = typeof raw.maxPrice === "number" && raw.maxPrice <= 100000 ? raw.maxPrice : undefined;
@@ -380,7 +367,7 @@ serve(async (req) => {
     // Fetch cities in batches of 2 to avoid overwhelming Yad2
     const validCities = cities.filter((c) => CITY_CODES[c]);
     const allListings: ReturnType<typeof normalizeItem>[] = [];
-    const BATCH_SIZE = 2;
+    const BATCH_SIZE = 3;
 
     for (let i = 0; i < validCities.length; i += BATCH_SIZE) {
       const batch = validCities.slice(i, i + BATCH_SIZE);
@@ -390,10 +377,10 @@ serve(async (req) => {
       for (const r of batchResults) {
         if (r.status === "fulfilled") allListings.push(...r.value);
       }
-      if (i + BATCH_SIZE < validCities.length) await delay(500);
+      if (i + BATCH_SIZE < validCities.length) await delay(200);
     }
 
-    const listings = allListings.slice(0, 80);
+    const listings = allListings.slice(0, 120);
 
     const unavailable = listings.length === 0;
 
