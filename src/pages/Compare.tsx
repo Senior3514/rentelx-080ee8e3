@@ -43,9 +43,11 @@ type CompareSort = "score" | "price_asc" | "price_desc" | "rooms" | "sqm";
 function ScoreBar({ value, max = 100 }: { value: number; max?: number }) {
   const pct = Math.round((value / max) * 100);
   const color = pct >= 80 ? "bg-score-high" : pct >= 50 ? "bg-score-medium" : "bg-score-low";
+  const textColor = pct >= 80 ? "text-score-high" : pct >= 50 ? "text-score-medium" : "text-score-low";
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-2.5 bg-muted rounded-full overflow-hidden">
+    <div className="flex items-center gap-2.5">
+      <span className={`text-lg font-bold tabular-nums ${textColor}`}>{value}</span>
+      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
         <motion.div
           className={`h-full rounded-full ${color}`}
           initial={{ width: 0 }}
@@ -53,7 +55,6 @@ function ScoreBar({ value, max = 100 }: { value: number; max?: number }) {
           transition={{ duration: 0.7, ease: "easeOut" }}
         />
       </div>
-      <span className="text-xs font-bold w-7 text-end">{value}</span>
     </div>
   );
 }
@@ -242,10 +243,10 @@ const Compare = () => {
   }, [compareListing, language]);
 
   const rows = [
-    { label: language === "he" ? "מחיר" : "Price", key: "price", icon: DollarSign, render: (l: any) => l.price ? `₪${l.price.toLocaleString()}/mo` : "—" },
+    { label: language === "he" ? "מחיר" : "Price", key: "price", icon: DollarSign, render: (l: any) => l.price ? `₪${l.price.toLocaleString()}/${language === "he" ? "חודש" : "mo"}` : "—" },
     { label: language === "he" ? "מחיר למ״ר" : "Price/sqm", key: "pps", icon: TrendingDown, render: (l: any) => <PricePerSqm price={l.price} sqm={l.sqm} language={language} /> },
     { label: language === "he" ? "חדרים" : "Rooms", key: "rooms", icon: BedDouble, render: (l: any) => l.rooms ? `${l.rooms} ${t("common.rooms")}` : "—" },
-    { label: language === "he" ? "גודל" : "Size", key: "sqm", icon: Maximize, render: (l: any) => l.sqm ? `${l.sqm} ${t("common.sqm")}` : "—" },
+    { label: language === "he" ? "גודל" : "Size", key: "sqm", icon: Maximize, render: (l: any) => l.sqm ? `${l.sqm} ${language === "he" ? "מ״ר" : "sqm"}` : "—" },
     { label: language === "he" ? "קומה" : "Floor", key: "floor", icon: Building2, render: (l: any) => l.floor != null ? `${l.floor}${l.total_floors ? `/${l.total_floors}` : ""}` : "—" },
     { label: language === "he" ? "עיר" : "City", key: "city", icon: MapPin, render: (l: any) => l.city ?? "—" },
   ];
