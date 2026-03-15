@@ -266,10 +266,9 @@ export function AIChatBubble() {
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.22, ease: "easeInOut" }}
                   className="flex flex-col overflow-hidden"
-                  style={{ maxHeight: "calc(65vh - 56px)" }}
                 >
                   {/* Messages */}
-                  <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 min-h-0">
+                  <div className="overflow-y-auto px-3 py-3 space-y-3" style={{ maxHeight: "min(50vh, 400px)" }}>
                     {messages.map((m, i) => (
                       <motion.div
                         key={m.ts + i}
