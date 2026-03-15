@@ -14,6 +14,7 @@ import { ListingCard } from "@/components/listings/ListingCard";
 import { AddListingModal } from "@/components/listings/AddListingModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { AiSectionHelper } from "@/components/ui/ai-section-helper";
+import { escapeHtml } from "@/lib/sanitize";
 
 type SortOption = "newest" | "score_desc" | "price_asc" | "price_desc";
 
@@ -82,11 +83,11 @@ const InboxPage = () => {
     const isRtl = language === "he";
     const rows = filtered.map((l) => {
       const score = l.listing_scores?.length ? Math.max(...l.listing_scores.map((s: any) => s.score)) : "—";
-      const amenities = Array.isArray(l.amenities) ? (l.amenities as string[]).join(", ") : "";
+      const amenities = Array.isArray(l.amenities) ? (l.amenities as string[]).map(a => escapeHtml(String(a))).join(", ") : "";
       return `
         <tr>
-          <td>${l.address ?? "—"}</td>
-          <td>${l.city ?? "—"}</td>
+          <td>${escapeHtml(String(l.address ?? "—"))}</td>
+          <td>${escapeHtml(String(l.city ?? "—"))}</td>
           <td>₪${l.price?.toLocaleString() ?? "—"}</td>
           <td>${l.rooms ?? "—"}</td>
           <td>${l.sqm ?? "—"}</td>
