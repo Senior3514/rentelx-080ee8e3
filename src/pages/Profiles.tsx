@@ -354,9 +354,9 @@ const Profiles = () => {
                         max_rooms: p.max_rooms,
                         must_haves: p.must_haves,
                         nice_to_haves: p.nice_to_haves,
-                        workplace_address: p.workplace_address,
-                        current_address: p.current_address,
-                        desired_area: p.desired_area,
+                        workplace_address: (p as any).workplace_address,
+                        current_address: (p as any).current_address,
+                        desired_area: (p as any).desired_area,
                       })}
                       title={language === "he" ? "חשב ציונים מחדש" : "Re-score listings"}
                       className="text-primary"
