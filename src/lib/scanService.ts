@@ -3,7 +3,7 @@ import { scoreListing } from "@/lib/scoring";
 
 export interface ScannedListing {
   source_id: string;
-  source: "yad2";
+  source: "yad2" | "madlan";
   source_url: string | null;
   address: string | null;
   neighborhood: string | null;

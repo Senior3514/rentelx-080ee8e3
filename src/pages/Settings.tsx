@@ -214,6 +214,7 @@ const Settings = () => {
     { code: "en" as const, label: "English", flag: "🇬🇧" },
     { code: "he" as const, label: "עברית", flag: "🇮🇱" },
     { code: "es" as const, label: "Español", flag: "🇪🇸" },
+    { code: "ru" as const, label: "Русский", flag: "🇷🇺" },
   ];
 
   return (

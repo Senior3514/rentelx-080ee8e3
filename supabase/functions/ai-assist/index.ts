@@ -290,20 +290,22 @@ function extractOgMeta(html: string): Record<string, string> {
 function getFacebookUrls(url: string): string[] {
   const urls: string[] = [];
 
-  // Try mbasic.facebook.com version (simplest HTML, best for scraping)
   try {
     const parsed = new URL(url);
-    // Convert share URLs: facebook.com/share/XXX
-    if (parsed.pathname.startsWith("/share/")) {
-      // Try mbasic version of share URL
-      urls.push(`https://mbasic.facebook.com${parsed.pathname}`);
-      // Also try mobile version
-      urls.push(`https://m.facebook.com${parsed.pathname}`);
+    const path = parsed.pathname;
+
+    // For share URLs (/share/p/ID or /share/ID) — try original first (it redirects)
+    // then mbasic and mobile variants
+    if (path.startsWith("/share/")) {
+      // Original URL follows the redirect to actual post
+      urls.push(url);
+      urls.push(`https://mbasic.facebook.com${path}`);
+      urls.push(`https://m.facebook.com${path}`);
     }
+
     // For standard post/group URLs
     const mbasicUrl = url.replace(/www\.facebook\.com/, "mbasic.facebook.com").replace(/m\.facebook\.com/, "mbasic.facebook.com");
     if (!urls.includes(mbasicUrl)) urls.push(mbasicUrl);
-    // Also try mobile version
     const mobileUrl = url.replace(/www\.facebook\.com/, "m.facebook.com").replace(/mbasic\.facebook\.com/, "m.facebook.com");
     if (!urls.includes(mobileUrl)) urls.push(mobileUrl);
     // Original URL as fallback
@@ -318,7 +320,7 @@ function getFacebookUrls(url: string): string[] {
 /* ── Fetch a single URL and return HTML ── */
 async function fetchSingleUrl(url: string, headers: Record<string, string>): Promise<string | null> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 20000);
+  const timer = setTimeout(() => controller.abort(), 25000);
   try {
     const res = await fetch(url, {
       headers,
@@ -326,6 +328,12 @@ async function fetchSingleUrl(url: string, headers: Record<string, string>): Pro
       redirect: "follow",
     });
     clearTimeout(timer);
+    // For Facebook share URLs, follow the redirect manually if needed
+    if ((res.status === 301 || res.status === 302) && res.headers.get("location")) {
+      const redirectUrl = res.headers.get("location")!;
+      console.log(`[fetch-url] Following redirect: ${redirectUrl}`);
+      return fetchSingleUrl(redirectUrl, headers);
+    }
     if (!res.ok) {
       console.warn(`[fetch-url] HTTP ${res.status} from ${url}`);
       return null;
@@ -439,15 +447,10 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
         const text = htmlToText(html);
 
         // Check if this result has useful content (not just a login page)
-        const isLoginPage = html.includes("login_form") || html.includes("/login/") ||
-          (text.length < 200 && !ogMeta.description && !ogMeta.title);
+        const isLoginPage = html.includes("login_form") || html.includes("/login/");
+        const hasGoodContent = !isLoginPage && text.length > 100;
 
-        if (!isLoginPage && text.length > 100) {
-          console.log(`[fetch-url] Got ${text.length} chars from ${fbUrl}`);
-          return { text: text.slice(0, 15000), images: images.slice(0, 15) };
-        }
-
-        // Even if it's a login page, OG meta tags may have useful data
+        // Collect OG meta regardless — even login pages have OG tags
         if (ogMeta.description || ogMeta.title) {
           const metaText = buildFacebookMetaText(ogMeta, text);
           if (!bestResult || metaText.length > bestResult.text.length) {
@@ -455,9 +458,14 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
           }
         }
 
+        if (hasGoodContent) {
+          console.log(`[fetch-url] Got ${text.length} chars from ${fbUrl}`);
+          return { text: text.slice(0, 15000), images: images.slice(0, 15) };
+        }
+
         await new Promise(r => setTimeout(r, 400));
         // If we got good OG data, no need to try more UAs for this URL
-        if (bestResult && bestResult.text.length > 200) break;
+        if (bestResult && bestResult.text.length > 150) break;
       }
       // If we have good enough data, stop trying more URLs
       if (bestResult && bestResult.text.length > 200) break;
@@ -866,10 +874,40 @@ function extractMadlanStructured(html: string): string {
 }
 
 /* ── Extract URL from message content ── */
+/** Strip tracking/share/analytics query params from listing URLs so fetch hits the clean page */
+function cleanListingUrl(rawUrl: string): string {
+  try {
+    const u = new URL(rawUrl);
+    const trackingParams = [
+      "tracking_event", "tracking_source", "tracking_medium", "tracking_campaign",
+      "fbclid", "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term",
+      "ref", "mibextid", "sfnsn", "s", "fs", "app", "gclid", "dclid",
+      "mc_cid", "mc_eid", "source", "medium", "campaign",
+      "_branch_match_id", "_branch_referrer",
+    ];
+    trackingParams.forEach((p) => u.searchParams.delete(p));
+    // For Madlan: strip ALL query params — clean path is the listing ID
+    if (u.hostname.includes("madlan.co.il") && u.pathname.startsWith("/listings/")) {
+      u.search = "";
+    }
+    // For Yad2: strip tracking params but keep item ID params
+    if (u.hostname.includes("yad2.co.il")) {
+      const keep = new URLSearchParams();
+      for (const [key, val] of u.searchParams.entries()) {
+        if (!trackingParams.includes(key)) keep.set(key, val);
+      }
+      u.search = keep.toString() ? `?${keep.toString()}` : "";
+    }
+    return u.toString().replace(/\/+$/, "");
+  } catch {
+    return rawUrl;
+  }
+}
+
 function extractUrlFromMessage(messages: Array<{ role: string; content: string }>): string | null {
   for (const msg of messages) {
     const urlMatch = msg.content.match(/https?:\/\/[^\s"'<>]+/);
-    if (urlMatch) return urlMatch[0];
+    if (urlMatch) return cleanListingUrl(urlMatch[0]);
   }
   return null;
 }

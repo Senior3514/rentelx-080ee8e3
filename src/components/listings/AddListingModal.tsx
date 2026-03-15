@@ -252,7 +252,9 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
     setUrlExtracted(null);
     setExtractionPartial(false);
     try {
-      const source = detectSource(inputUrl);
+      // Clean URL: strip tracking params so the edge function fetches the right page
+      const cleanUrl = normalizeUrl(inputUrl);
+      const source = detectSource(cleanUrl);
 
       let extracted: Record<string, any> | null = null;
       const MAX_RETRIES = 3;
@@ -264,7 +266,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
               type: "extract",
               messages: [{
                 role: "user",
-                content: `Extract rental listing data from this ${source} listing URL: ${inputUrl}
+                content: `Extract rental listing data from this ${source} listing URL: ${cleanUrl}
 ${attempt > 0 ? `\nThis is attempt ${attempt + 1}. Previous attempt returned incomplete data. Try HARDER to extract ALL fields. Look more carefully at structured data (JSON-LD, __NEXT_DATA__), OG meta tags, aria-labels, and free text.` : ""}
 
 Return a JSON object with these exact fields (use null if not found):
@@ -326,7 +328,14 @@ CRITICAL RULES — MUST FOLLOW:
       }
 
       // If AI truly returned nothing, provide helpful message but don't block
-      toast.warning(t("addListingExtra.extractPartial"));
+      const isFb = inputUrl.includes("facebook.com") || inputUrl.includes("fb.com");
+      toast.warning(
+        isFb
+          ? (language === "he"
+              ? "פייסבוק חוסם גישה אוטומטית. מלאו את הפרטים ידנית ושמרו — הקישור יישמר."
+              : "Facebook blocks automated access. Fill in the details manually and save — the link will be saved.")
+          : t("addListingExtra.extractPartial")
+      );
       // Set minimal extracted data so user can still save with the URL
       const minimal = {
         address: null, neighborhood: null, city: null,
@@ -364,12 +373,22 @@ CRITICAL RULES — MUST FOLLOW:
   // Soft duplicate info — NEVER blocks saving, purely informational
   const [duplicateInfo, setDuplicateInfo] = useState<string | null>(null);
 
-  /** Strip tracking/share params from URLs for consistent comparison */
+  /** Strip tracking/share params from URLs for consistent comparison and clean fetching */
   const normalizeUrl = (rawUrl: string): string => {
     try {
       const u = new URL(rawUrl);
-      const stripParams = ["fbclid", "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "ref", "mibextid", "sfnsn", "s", "fs", "app"];
+      const stripParams = [
+        "fbclid", "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term",
+        "ref", "mibextid", "sfnsn", "s", "fs", "app", "gclid", "dclid",
+        "tracking_event", "tracking_source", "tracking_medium", "tracking_campaign",
+        "mc_cid", "mc_eid", "source", "medium", "campaign",
+        "_branch_match_id", "_branch_referrer",
+      ];
       stripParams.forEach((p) => u.searchParams.delete(p));
+      // For Madlan: strip ALL query params — clean path is the listing ID
+      if (u.hostname.includes("madlan.co.il") && u.pathname.startsWith("/listings/")) {
+        u.search = "";
+      }
       return u.toString().replace(/\/+$/, "");
     } catch {
       return rawUrl;
@@ -385,6 +404,7 @@ CRITICAL RULES — MUST FOLLOW:
         .from("listings")
         .select("id, address, city, source_url")
         .eq("user_id", user.id)
+        .eq("status", "active")
         .not("source_url", "is", null)
         .limit(100);
       if (data) {

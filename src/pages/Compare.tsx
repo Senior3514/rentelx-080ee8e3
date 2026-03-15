@@ -578,7 +578,7 @@ const Compare = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="overflow-x-auto -mx-3 px-3 sm:-mx-4 sm:px-4 md:-mx-6 md:px-6"
+            className="overflow-x-auto -mx-3 px-3 sm:-mx-4 sm:px-4 md:-mx-6 md:px-6 pb-4 -mb-4 scrollbar-thin"
           >
             <div className={`grid gap-3`} style={{ gridTemplateColumns: `160px repeat(${compareListing.length}, minmax(200px, 1fr))`, minWidth: `${160 + compareListing.length * 200}px` }}>
 
