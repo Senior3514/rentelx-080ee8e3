@@ -82,13 +82,16 @@ export function NeighborhoodInsights() {
   const [scanning, setScanning] = useState(false);
   const [lastScanTime, setLastScanTime] = useState<Date | null>(null);
 
-  // Load cached data on mount
+  // Load cached data on mount, with fallback timeout
   useEffect(() => {
     const cached = getCachedData();
     if (cached) {
       setLiveData(cached.data);
       setLastScanTime(new Date(cached.ts));
     } else {
+      // Show fallback immediately, then try to fetch live data
+      setLiveData(FALLBACK_DATA);
+      setLastScanTime(new Date());
       fetchLiveData();
     }
   }, []);
@@ -97,9 +100,15 @@ export function NeighborhoodInsights() {
     setScanning(true);
     try {
       const cities = CITY_CONFIGS.map(c => c.key);
-      const res = await supabase.functions.invoke("scan-yad2", {
+
+      // Race against a 15-second timeout
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Scan timeout")), 15000)
+      );
+      const scan = supabase.functions.invoke("scan-yad2", {
         body: { cities, minRooms: 2, maxRooms: 4 },
       });
+      const res = await Promise.race([scan, timeout]);
 
       if (res.error) throw res.error;
       const listings: any[] = res.data?.listings ?? [];
@@ -196,11 +205,9 @@ export function NeighborhoodInsights() {
       }
     } catch (err) {
       console.error("Market scan error:", err);
-      // Show fallback data on error
-      if (liveData.length === 0) {
-        setLiveData(FALLBACK_DATA);
-        setLastScanTime(new Date());
-      }
+      // Always ensure we have data to show
+      setLiveData(prev => prev.length > 0 ? prev : FALLBACK_DATA);
+      setLastScanTime(prev => prev ?? new Date());
     } finally {
       setScanning(false);
     }

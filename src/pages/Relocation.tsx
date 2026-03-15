@@ -11,7 +11,8 @@ import {
   Phone, Mail, Plus, Trash2, Search, Zap, Shield,
   Building2, Wifi, Bolt, Droplets, Truck, BookMarked,
   ChevronDown, ChevronRight, Target, Activity, FileDown,
-  LayoutDashboard, ListTodo, BookOpen, Users
+  LayoutDashboard, ListTodo, BookOpen, Users,
+  GripVertical, ArrowUp, ArrowDown, Pencil
 } from "lucide-react";
 
 /* ─── Types ─── */
@@ -462,7 +463,32 @@ const Relocation = () => {
   };
 
   const toggleBoxScanned = (id: string) => setBoxes((prev) => prev.map((b) => b.id === id ? { ...b, scanned: !b.scanned } : b));
-  const deleteBox = (id: string) => setBoxes((prev) => prev.filter((b) => b.id !== id));
+  const deleteBox = (id: string) => setBoxes((prev) => {
+    const updated = prev.filter((b) => b.id !== id);
+    return updated.map((b, i) => ({ ...b, number: i + 1 }));
+  });
+
+  // Reorder boxes and auto-renumber
+  const moveBox = (fromIdx: number, toIdx: number) => {
+    if (fromIdx === toIdx) return;
+    setBoxes((prev) => {
+      const arr = [...prev];
+      const [moved] = arr.splice(fromIdx, 1);
+      arr.splice(toIdx, 0, moved);
+      return arr.map((b, i) => ({ ...b, number: i + 1 }));
+    });
+  };
+  const moveBoxUp = (idx: number) => { if (idx > 0) moveBox(idx, idx - 1); };
+  const moveBoxDown = (idx: number) => { if (idx < boxes.length - 1) moveBox(idx, idx + 1); };
+
+  // Edit box inline
+  const updateBox = (id: string, field: keyof Box, val: string | boolean) => {
+    setBoxes((prev) => prev.map((b) => b.id === id ? { ...b, [field]: val } : b));
+  };
+
+  // Drag & edit state for boxes
+  const [dragBoxId, setDragBoxId] = useState<string | null>(null);
+  const [editingBoxId, setEditingBoxId] = useState<string | null>(null);
 
   const addProvider = (type: ProviderType) => {
     setProviders((prev) => [...prev, { id: uid(), type, name: "", phone: "", email: "", status: "not_contacted" }]);
@@ -1211,39 +1237,107 @@ const Relocation = () => {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-[60vh] overflow-y-auto pe-1">
               <AnimatePresence>
-                {filteredBoxes.map((box, i) => (
-                  <motion.div
-                    key={box.id}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ delay: i * 0.03 }}
-                  >
-                    <Card className={`p-3 border-border/60 flex items-center gap-3 group ${box.scanned ? "opacity-70" : ""}`}>
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${box.scanned ? "bg-score-high/20 text-score-high" : "bg-primary/10 text-primary"}`}>
-                        #{box.number}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-semibold">{box.room}</span>
-                          {box.fragile && <Badge variant="outline" className="text-xs border-amber-500/40 text-amber-500">⚠ {t("relocation.fragile")}</Badge>}
-                          {box.scanned && <Badge variant="outline" className="text-xs border-green-500/40 text-green-500">✓ {t("relocation.scanned")}</Badge>}
+                {filteredBoxes.map((box) => {
+                  const realIdx = boxes.findIndex((b) => b.id === box.id);
+                  const isEditing = editingBoxId === box.id;
+                  return (
+                    <motion.div
+                      key={box.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0, scale: dragBoxId === box.id ? 1.02 : 1 }}
+                      exit={{ opacity: 0, height: 0 }}
+                      draggable={!boxSearch && !isEditing}
+                      onDragStart={() => setDragBoxId(box.id)}
+                      onDragEnd={() => setDragBoxId(null)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (dragBoxId && dragBoxId !== box.id) {
+                          const fromIdx = boxes.findIndex((b) => b.id === dragBoxId);
+                          moveBox(fromIdx, realIdx);
+                        }
+                        setDragBoxId(null);
+                      }}
+                      className={`${dragBoxId === box.id ? "opacity-50" : ""}`}
+                    >
+                      <Card className={`p-3 border-border/60 group transition-all ${box.scanned ? "opacity-70" : ""} ${dragBoxId && dragBoxId !== box.id ? "border-primary/30 border-dashed" : ""}`}>
+                        <div className="flex items-center gap-2">
+                          {/* Drag handle */}
+                          {!boxSearch && (
+                            <div className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground shrink-0 touch-none">
+                              <GripVertical className="h-4 w-4" />
+                            </div>
+                          )}
+                          {/* Number badge */}
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${box.scanned ? "bg-score-high/20 text-score-high" : "bg-primary/10 text-primary"}`}>
+                            #{box.number}
+                          </div>
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            {isEditing ? (
+                              <div className="space-y-1.5">
+                                <Input
+                                  value={box.room}
+                                  onChange={(e) => updateBox(box.id, "room", e.target.value)}
+                                  className="h-7 text-xs font-semibold"
+                                  placeholder={t("relocation.boxRoom")}
+                                />
+                                <Input
+                                  value={box.contents}
+                                  onChange={(e) => updateBox(box.id, "contents", e.target.value)}
+                                  className="h-7 text-xs"
+                                  placeholder={t("relocation.contents")}
+                                />
+                                <div className="flex items-center gap-2">
+                                  <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                                    <input type="checkbox" checked={box.fragile} onChange={(e) => updateBox(box.id, "fragile", e.target.checked)} className="rounded" />
+                                    {t("relocation.fragile")}
+                                  </label>
+                                  <Button size="sm" variant="outline" className="h-6 text-[10px] ms-auto" onClick={() => setEditingBoxId(null)}>
+                                    {language === "he" ? "סיום" : "Done"}
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-sm font-semibold">{box.room}</span>
+                                  {box.fragile && <Badge variant="outline" className="text-xs border-amber-500/40 text-amber-500">⚠ {t("relocation.fragile")}</Badge>}
+                                  {box.scanned && <Badge variant="outline" className="text-xs border-green-500/40 text-green-500">✓ {t("relocation.scanned")}</Badge>}
+                                </div>
+                                {box.contents && <p className="text-xs text-muted-foreground mt-0.5 truncate">{box.contents}</p>}
+                              </>
+                            )}
+                          </div>
+                          {/* Actions */}
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            {!boxSearch && (
+                              <>
+                                <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => moveBoxUp(realIdx)} disabled={realIdx === 0}>
+                                  <ArrowUp className="h-3 w-3" />
+                                </Button>
+                                <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => moveBoxDown(realIdx)} disabled={realIdx === boxes.length - 1}>
+                                  <ArrowDown className="h-3 w-3" />
+                                </Button>
+                              </>
+                            )}
+                            <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setEditingBoxId(isEditing ? null : box.id)}>
+                              <Pencil className="h-3 w-3 text-muted-foreground" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => toggleBoxScanned(box.id)}>
+                              <CheckCircle2 className={`h-3.5 w-3.5 ${box.scanned ? "text-score-high" : "text-muted-foreground"}`} />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteBox(box.id)}>
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
+                          </div>
                         </div>
-                        {box.contents && <p className="text-xs text-muted-foreground mt-0.5 truncate">{box.contents}</p>}
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => toggleBoxScanned(box.id)}>
-                          <CheckCircle2 className={`h-3.5 w-3.5 ${box.scanned ? "text-score-high" : "text-muted-foreground"}`} />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteBox(box.id)}>
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                        </Button>
-                      </div>
-                    </Card>
-                  </motion.div>
-                ))}
+                      </Card>
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
 
               {filteredBoxes.length === 0 && !boxSearch && (

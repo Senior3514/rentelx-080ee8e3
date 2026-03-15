@@ -18,7 +18,6 @@ const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "nav.dashboard",
   "/inbox": "nav.inbox",
   "/pipeline": "nav.pipeline",
-  "/scan": "nav.scan",
   "/watchlist": "nav.watchlist",
   "/compare": "nav.compare",
   "/relocation": "nav.relocation",
