@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import React, { useState, useMemo, useRef, useCallback } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Inbox, MapPin, BedDouble, MoreHorizontal, ArrowRight, Trash2, ExternalLink, GripVertical } from "lucide-react";
+import { Inbox, MapPin, BedDouble, MoreHorizontal, ArrowRight, Trash2, ExternalLink, GripVertical, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AiSectionHelper } from "@/components/ui/ai-section-helper";
 import {
@@ -49,7 +49,17 @@ const Pipeline = () => {
   const qc = useQueryClient();
   const [dragging, setDragging] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+  const [collapsedStages, setCollapsedStages] = useState<Set<string>>(new Set());
   const isMobile = useIsMobile();
+
+  const toggleStage = (stage: string) => {
+    setCollapsedStages((prev) => {
+      const next = new Set(prev);
+      if (next.has(stage)) next.delete(stage);
+      else next.add(stage);
+      return next;
+    });
+  };
 
   // Touch drag state
   const touchRef = useRef<{
@@ -280,26 +290,47 @@ const Pipeline = () => {
 
       {isMobile ? (
         /* ── Mobile: grouped list with stage menus ── */
-        <div className="space-y-4">
+        <div className="space-y-3">
           {STAGES.map((stage) => {
             const stageEntries = entries.filter((e: any) => e.stage === stage);
+            const isCollapsed = collapsedStages.has(stage);
             return (
-              <div key={stage}>
-                <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
-                  <span className={`w-2 h-2 rounded-full ${STAGE_COLORS[stage]}`} />
-                  {STAGE_LABELS[stage]?.[language] || stage}
+              <div key={stage} className="rounded-xl border border-border/40 overflow-hidden">
+                <button
+                  onClick={() => toggleStage(stage)}
+                  className="w-full flex items-center gap-1.5 px-3 py-2.5 bg-muted/30 hover:bg-muted/50 transition-colors"
+                >
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${STAGE_COLORS[stage]}`} />
+                  <span className="text-sm font-semibold text-muted-foreground">
+                    {STAGE_LABELS[stage]?.[language] || stage}
+                  </span>
                   <span className="text-xs bg-muted rounded-full px-1.5 py-0.5">{stageEntries.length}</span>
-                </h3>
-                {stageEntries.length === 0 ? (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground/60 py-3 px-3 bg-muted/30 rounded-lg">
-                    <Inbox className="h-3.5 w-3.5" />
-                    {t("pipeline.empty")}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <AnimatePresence>{stageEntries.map((e: any) => renderEntryCard(e, stage))}</AnimatePresence>
-                  </div>
-                )}
+                  <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground ms-auto transition-transform duration-200 ${isCollapsed ? "-rotate-90" : "rotate-0"}`} />
+                </button>
+                <AnimatePresence initial={false}>
+                  {!isCollapsed && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-2">
+                        {stageEntries.length === 0 ? (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground/60 py-3 px-3 bg-muted/20 rounded-lg">
+                            <Inbox className="h-3.5 w-3.5" />
+                            {t("pipeline.empty")}
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <AnimatePresence>{stageEntries.map((e: any) => renderEntryCard(e, stage))}</AnimatePresence>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             );
           })}

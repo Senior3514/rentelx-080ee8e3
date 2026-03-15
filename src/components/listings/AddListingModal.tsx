@@ -59,6 +59,8 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
   const [urlFetching, setUrlFetching] = useState(false);
   const [urlExtracted, setUrlExtracted] = useState<Record<string, any> | null>(null);
   const [extractionPartial, setExtractionPartial] = useState(false);
+  const [pastedContent, setPastedContent] = useState("");
+  const [pasteExtracting, setPasteExtracting] = useState(false);
 
   // Image upload state
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -180,6 +182,8 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
     setUrlFetching(false);
     setExtractionPartial(false);
     setDuplicateInfo(null);
+    setPastedContent("");
+    setPasteExtracting(false);
   };
 
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -355,6 +359,44 @@ CRITICAL RULES — MUST FOLLOW:
     }
   };
 
+  // Extract listing data from pasted text content (Facebook post copy-paste)
+  const extractFromPastedContent = async () => {
+    if (!pastedContent.trim()) return;
+    setPasteExtracting(true);
+    try {
+      const res = await supabase.functions.invoke("ai-assist", {
+        body: {
+          type: "extract",
+          messages: [{
+            role: "user",
+            content: `Extract rental listing data from this Facebook post text that the user copied and pasted:\n\n--- POST CONTENT START ---\n${pastedContent.trim()}\n--- POST CONTENT END ---\n\nReturn JSON with all extracted fields. This is raw text copied from a Facebook listing post.`,
+          }],
+        },
+      });
+
+      if (res.data && !res.error) {
+        const content = typeof res.data === "string" ? res.data : res.data?.content;
+        if (content) {
+          const extracted = parseExtractedJson(content);
+          if (extracted && (extracted.address || extracted.city || extracted.price || extracted.rooms || extracted.description)) {
+            setUrlExtracted(extracted);
+            const hasAllFields = extracted.address && extracted.price && extracted.rooms;
+            setExtractionPartial(!hasAllFields);
+            toast.success(t("addListingExtra.extractSuccess"));
+            setPastedContent("");
+          } else {
+            toast.warning(language === "he" ? "לא הצלחנו לחלץ נתונים מהטקסט. נסו להדביק יותר טקסט." : "Could not extract data from text. Try pasting more text.");
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Paste extraction error:", err);
+      toast.error(language === "he" ? "שגיאה בחילוץ נתונים" : "Error extracting data");
+    } finally {
+      setPasteExtracting(false);
+    }
+  };
+
   // Step 1: Extract data preview from URL
   const handleUrlExtract = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -462,7 +504,7 @@ CRITICAL RULES — MUST FOLLOW:
   const renderFieldError = (field: string) =>
     formErrors[field] ? <p className="text-xs text-destructive mt-0.5">{formErrors[field]}</p> : null;
 
-  const isLoading = insertMutation.isPending || uploading || urlFetching;
+  const isLoading = insertMutation.isPending || uploading || urlFetching || pasteExtracting;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) resetForm(); }}>
@@ -681,6 +723,46 @@ CRITICAL RULES — MUST FOLLOW:
                             </div>
                           );
                         })()}
+                      </motion.div>
+                    )}
+
+                    {/* Paste content fallback for Facebook when extraction is partial/empty */}
+                    {extractionPartial && (url.includes("facebook.com") || url.includes("fb.com")) && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="space-y-2"
+                      >
+                        <p className="text-[11px] text-muted-foreground font-medium">
+                          {language === "he"
+                            ? "💡 פייסבוק חוסם גישה אוטומטית. הדביקו את טקסט הפוסט כאן והAI יחלץ את הנתונים:"
+                            : "💡 Facebook blocks automated access. Paste the post text here and AI will extract the data:"}
+                        </p>
+                        <Textarea
+                          value={pastedContent}
+                          onChange={(e) => setPastedContent(e.target.value)}
+                          placeholder={language === "he"
+                            ? "הדביקו כאן את הטקסט מהפוסט בפייסבוק (העתיקו את כל הפוסט)..."
+                            : "Paste the Facebook post text here (copy the entire post)..."}
+                          className="text-xs min-h-[80px] resize-none"
+                          dir="auto"
+                        />
+                        {pastedContent.trim() && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={extractFromPastedContent}
+                            disabled={pasteExtracting}
+                            className="w-full gap-1.5"
+                          >
+                            {pasteExtracting ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Sparkles className="h-3.5 w-3.5" />
+                            )}
+                            {language === "he" ? "שלוף מהטקסט" : "Extract from text"}
+                          </Button>
+                        )}
                       </motion.div>
                     )}
 

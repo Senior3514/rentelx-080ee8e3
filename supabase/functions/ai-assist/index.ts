@@ -286,6 +286,72 @@ function extractOgMeta(html: string): Record<string, string> {
   return meta;
 }
 
+/* ── Resolve Facebook share URL redirect to get actual post URL ── */
+async function resolveFacebookShareUrl(shareUrl: string): Promise<string | null> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    // Use HEAD with redirect: "manual" to capture the Location header
+    const res = await fetch(shareUrl, {
+      method: "HEAD",
+      redirect: "manual",
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
+      },
+    });
+    clearTimeout(timer);
+    const location = res.headers.get("location");
+    if (location && location !== shareUrl && !location.includes("/login")) {
+      console.log(`[fb-resolve] /share/ → ${location}`);
+      return location;
+    }
+    // Also try GET with redirect: "manual"
+    const controller2 = new AbortController();
+    const timer2 = setTimeout(() => controller2.abort(), 10000);
+    const res2 = await fetch(shareUrl, {
+      method: "GET",
+      redirect: "manual",
+      signal: controller2.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+      },
+    });
+    clearTimeout(timer2);
+    const location2 = res2.headers.get("location");
+    if (location2 && location2 !== shareUrl && !location2.includes("/login")) {
+      console.log(`[fb-resolve] /share/ GET → ${location2}`);
+      return location2;
+    }
+  } catch (e) {
+    console.warn(`[fb-resolve] Error resolving share URL:`, (e as Error)?.message);
+  }
+  return null;
+}
+
+/* ── Try Facebook oEmbed endpoint for metadata ── */
+async function tryFacebookOEmbed(url: string): Promise<{ title?: string; description?: string; html?: string } | null> {
+  try {
+    const encodedUrl = encodeURIComponent(url);
+    const oembedUrl = `https://www.facebook.com/plugins/post/oembed.json/?url=${encodedUrl}`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    const res = await fetch(oembedUrl, {
+      signal: controller.signal,
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
+    });
+    clearTimeout(timer);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.html || data.title) {
+        console.log(`[fb-oembed] Got oEmbed data for ${url}`);
+        return data;
+      }
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
 /* ── Convert Facebook share URL to mbasic URL for better scraping ── */
 function getFacebookUrls(url: string): string[] {
   const urls: string[] = [];
@@ -404,6 +470,31 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
 
   // ── Facebook: try multiple URL variants (mbasic, mobile, original) ──
   if (isFacebook) {
+    // Step 1: For /share/ URLs, resolve the redirect to get the actual post URL
+    const parsed = new URL(url);
+    let resolvedUrl: string | null = null;
+    if (parsed.pathname.startsWith("/share/")) {
+      resolvedUrl = await resolveFacebookShareUrl(url);
+    }
+
+    // Step 2: Try oEmbed for extra metadata
+    const oembedData = await tryFacebookOEmbed(resolvedUrl || url);
+    let oembedText = "";
+    if (oembedData) {
+      const parts: string[] = [];
+      if (oembedData.title) parts.push(`OEMBED TITLE: ${oembedData.title}`);
+      if (oembedData.html) {
+        // oEmbed HTML contains the actual post content in an iframe/embed
+        const cleanHtml = oembedData.html
+          .replace(/<[^>]+>/g, " ")
+          .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+          .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ")
+          .replace(/\s+/g, " ").trim();
+        if (cleanHtml.length > 20) parts.push(`OEMBED CONTENT: ${cleanHtml}`);
+      }
+      oembedText = parts.join("\n");
+    }
+
     // Try different user agents for Facebook
     const fbUserAgents = [
       // Facebook's own crawler gets the best OG data
@@ -418,7 +509,15 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
       "TelegramBot (like TwitterBot)",
     ];
 
+    // Build URL list: resolved URL first (if different), then standard variants
     const fbUrls = getFacebookUrls(url);
+    if (resolvedUrl && !fbUrls.includes(resolvedUrl)) {
+      fbUrls.unshift(resolvedUrl);
+      // Also add mbasic/mobile versions of resolved URL
+      const resolvedMbasic = resolvedUrl.replace(/www\.facebook\.com/, "mbasic.facebook.com");
+      if (!fbUrls.includes(resolvedMbasic)) fbUrls.splice(1, 0, resolvedMbasic);
+    }
+
     let bestResult: { text: string; images: string[]; ogMeta: Record<string, string> } | null = null;
 
     for (const fbUrl of fbUrls) {
@@ -471,10 +570,20 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
       if (bestResult && bestResult.text.length > 200) break;
     }
 
-    // Return the best result we got (even if partial from OG meta)
+    // Return the best result we got (even if partial from OG meta), enriched with oEmbed
     if (bestResult) {
-      console.log(`[fetch-url] Using Facebook result (${bestResult.text.length} chars)`);
-      return { text: bestResult.text.slice(0, 15000), images: bestResult.images.slice(0, 15) };
+      let finalText = bestResult.text;
+      if (oembedText && !finalText.includes(oembedText)) {
+        finalText = oembedText + "\n" + finalText;
+      }
+      console.log(`[fetch-url] Using Facebook result (${finalText.length} chars)`);
+      return { text: finalText.slice(0, 15000), images: bestResult.images.slice(0, 15) };
+    }
+
+    // If all fetches failed but oEmbed has data, use that
+    if (oembedText) {
+      console.log(`[fetch-url] Using Facebook oEmbed-only data (${oembedText.length} chars)`);
+      return { text: oembedText.slice(0, 15000), images: [] };
     }
 
     console.warn(`[fetch-url] All Facebook URL variants failed for ${url}`);
