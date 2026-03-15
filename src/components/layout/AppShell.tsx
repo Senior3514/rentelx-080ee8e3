@@ -36,7 +36,7 @@ const DEVICE_WIDTHS: Record<string, string> = {
 export const AppShell = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { direction, t } = useLanguage();
+  const { t } = useLanguage();
   const { deviceView } = useDeviceView();
 
   // Keyboard shortcuts: Shift+D (dashboard), Shift+I (inbox), Shift+W (watchlist), Shift+P (pipeline), Shift+S (settings), Shift+C (compare), Shift+R (relocation)
@@ -78,7 +78,7 @@ export const AppShell = () => {
 
   return (
     <SidebarProvider>
-      <div className={`min-h-screen flex w-full bg-background ${direction === "rtl" ? "flex-row-reverse" : "flex-row"}`}>
+      <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* ── App Header ── */}
