@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { scanYad2, scoreScannedListing, SCAN_KEY, ScannedListing, ScanCity } from "@/lib/scanService";
 import { AiSectionHelper } from "@/components/ui/ai-section-helper";
 import { ViewToggle } from "@/components/ui/view-toggle";
+import { CITY_HE_TO_SLUG, cityDisplayName } from "@/lib/cityMap";
 import { formatDistanceToNow } from "date-fns";
 import { he } from "date-fns/locale";
 
@@ -70,20 +71,8 @@ const CITY_ACTIVE: Record<string, string> = {
   rose:    "bg-rose-500 border-rose-500 text-white shadow-rose-500/30",
 };
 
-const CITY_HE_MAP: Record<string, ScanCity> = {
-  "תל אביב": "tel-aviv",
-  "גבעתיים": "givatayim",
-  "רמת גן": "ramat-gan",
-  "חולון": "holon",
-  "בת ים": "bat-yam",
-  "בני ברק": "bnei-brak",
-  "פתח תקווה": "petah-tikva",
-  "הרצליה": "herzliya",
-  "ראשון לציון": "rishon",
-  "רעננה": "raanana",
-  "נתניה": "netanya",
-  "רחובות": "rehovot",
-};
+// Use centralized mapping from cityMap.ts — cast to ScanCity
+const CITY_HE_MAP = CITY_HE_TO_SLUG as Record<string, ScanCity>;
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
 

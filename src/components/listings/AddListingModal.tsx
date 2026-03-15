@@ -180,6 +180,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
     setUrlFetching(false);
     setExtractionPartial(false);
     setDuplicateWarning(null);
+    setDuplicateOverride(false);
   };
 
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -355,34 +356,57 @@ CRITICAL RULES — MUST FOLLOW:
     }
     setUrlError("");
     setDuplicateWarning(null);
-    // Check for duplicate before extracting
-    if (url) {
-      await checkDuplicate(url);
-    }
-    await extractFromUrl(url);
+    setDuplicateOverride(false);
+    // Extract first, check duplicate in background (non-blocking)
+    const extractPromise = extractFromUrl(url);
+    if (url) checkDuplicate(url); // fire-and-forget, just sets warning
+    await extractPromise;
   };
 
   // Check for duplicate listing by source_url
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+  const [duplicateOverride, setDuplicateOverride] = useState(false);
+
+  /** Strip tracking/share params from URLs for consistent comparison */
+  const normalizeUrl = (rawUrl: string): string => {
+    try {
+      const u = new URL(rawUrl);
+      // Remove common tracking params
+      const stripParams = ["fbclid", "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "ref", "mibextid", "sfnsn", "s", "fs", "app"];
+      stripParams.forEach((p) => u.searchParams.delete(p));
+      // Remove trailing slash
+      const cleaned = u.toString().replace(/\/+$/, "");
+      return cleaned;
+    } catch {
+      return rawUrl;
+    }
+  };
 
   const checkDuplicate = async (sourceUrl: string): Promise<boolean> => {
     if (!user || !sourceUrl) return false;
+    if (duplicateOverride) return false; // User chose to add anyway
     try {
+      const normalized = normalizeUrl(sourceUrl);
+      // Check both exact URL and normalized URL
       const { data } = await supabase
         .from("listings")
-        .select("id, address, city")
+        .select("id, address, city, source_url")
         .eq("user_id", user.id)
-        .eq("source_url", sourceUrl)
-        .limit(1);
+        .limit(50);
       if (data && data.length > 0) {
-        const existing = data[0];
-        const label = existing.address || existing.city || "Unknown";
-        setDuplicateWarning(
-          language === "he"
-            ? `דירה זו כבר קיימת ברשימות שלך: "${label}". לא ניתן להוסיף אותה פעמיים.`
-            : `This listing already exists in your inbox: "${label}". Cannot add it twice.`
-        );
-        return true;
+        const match = data.find((row) => {
+          if (!row.source_url) return false;
+          return row.source_url === sourceUrl || normalizeUrl(row.source_url) === normalized;
+        });
+        if (match) {
+          const label = match.address || match.city || "Unknown";
+          setDuplicateWarning(
+            language === "he"
+              ? `דירה זו כבר קיימת ברשימות שלך: "${label}".`
+              : `This listing already exists in your inbox: "${label}".`
+          );
+          return true;
+        }
       }
     } catch { /* ignore */ }
     setDuplicateWarning(null);
@@ -392,14 +416,14 @@ CRITICAL RULES — MUST FOLLOW:
   // Step 2: Confirm and save extracted data
   const handleUrlSave = async () => {
     if (!urlExtracted) return;
-    // Check for duplicates first
-    if (url) {
+    // Check for duplicates (unless user chose to override)
+    if (url && !duplicateOverride) {
       const isDupe = await checkDuplicate(url);
       if (isDupe) return;
     }
     const listing: Record<string, unknown> = {
       user_id: user!.id,
-      source_url: url,
+      source_url: normalizeUrl(url),
       address: urlExtracted.address || null,
       city: urlExtracted.city || null,
       price: urlExtracted.price || null,
@@ -465,7 +489,7 @@ CRITICAL RULES — MUST FOLLOW:
                   <Input
                     placeholder={t("addListing.urlPlaceholder")}
                     value={url}
-                    onChange={(e) => { setUrl(e.target.value); setUrlError(""); setUrlExtracted(null); setExtractionPartial(false); setDuplicateWarning(null); }}
+                    onChange={(e) => { setUrl(e.target.value); setUrlError(""); setUrlExtracted(null); setExtractionPartial(false); setDuplicateWarning(null); setDuplicateOverride(false); }}
                     className="ps-10"
                     required
                   />
@@ -505,50 +529,74 @@ CRITICAL RULES — MUST FOLLOW:
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
-                    className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 via-primary/8 to-accent/5 p-5 space-y-4 relative overflow-hidden"
+                    className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 via-primary/10 to-accent/5 p-5 space-y-4 relative overflow-hidden"
                   >
-                    {/* Animated scan line */}
+                    {/* Dual animated scan lines */}
                     <motion.div
-                      className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent"
+                      className="absolute inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-primary/70 to-transparent"
                       initial={{ top: 0 }}
                       animate={{ top: ["0%", "100%", "0%"] }}
-                      transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                      transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                    <motion.div
+                      className="absolute inset-y-0 w-[2px] bg-gradient-to-b from-transparent via-accent/40 to-transparent"
+                      initial={{ left: 0 }}
+                      animate={{ left: ["0%", "100%", "0%"] }}
+                      transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
                     />
 
-                    <div className="flex items-center gap-2.5 text-sm text-primary font-semibold">
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                    {/* Source badge */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5 text-sm text-primary font-semibold">
+                        <motion.div
+                          className="w-8 h-8 rounded-xl bg-primary/15 flex items-center justify-center"
+                          animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.05, 1] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        >
+                          <Sparkles className="h-4 w-4" />
+                        </motion.div>
+                        {t("addListingExtra.fetchingData")}
+                      </div>
+                      <motion.span
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium"
                       >
-                        <Sparkles className="h-4.5 w-4.5" />
-                      </motion.div>
-                      {t("addListingExtra.fetchingData")}
+                        {getSourceDisplayName(url)}
+                      </motion.span>
                     </div>
-                    <div className="space-y-2.5">
+
+                    {/* Steps with stagger */}
+                    <div className="space-y-2">
                       {[
-                        { step: t("addListingExtra.fetchStep1"), icon: "🌐", delay: 0 },
-                        { step: t("addListingExtra.fetchStep2"), icon: "🔍", delay: 0.5 },
-                        { step: t("addListingExtra.fetchStep3"), icon: "📸", delay: 1.0 },
-                      ].map(({ step, icon, delay }, i) => (
+                        { step: language === "he" ? "מתחבר לדף..." : "Connecting to page...", delay: 0 },
+                        { step: language === "he" ? "קורא תוכן ונתונים מובנים..." : "Reading content & structured data...", delay: 1.5 },
+                        { step: language === "he" ? "מזהה תמונות ופרטי דירה..." : "Identifying images & listing details...", delay: 3 },
+                        { step: language === "he" ? "AI מנתח ומפיק נתונים..." : "AI analyzing & extracting data...", delay: 5 },
+                      ].map(({ step, delay }, i) => (
                         <motion.div
                           key={i}
-                          initial={{ opacity: 0, x: direction === "rtl" ? 12 : -12 }}
+                          initial={{ opacity: 0, x: direction === "rtl" ? 16 : -16 }}
                           animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay, type: "spring", stiffness: 300, damping: 22 }}
-                          className="flex items-center gap-2.5 text-xs"
+                          transition={{ delay, type: "spring", stiffness: 260, damping: 20 }}
+                          className="flex items-center gap-2 text-xs"
                         >
                           <motion.div
-                            className="w-6 h-6 rounded-lg bg-primary/15 flex items-center justify-center shrink-0"
-                            animate={{ scale: [1, 1.15, 1] }}
-                            transition={{ delay: delay + 0.3, duration: 0.6 }}
+                            className="w-5 h-5 rounded-md bg-primary/10 flex items-center justify-center shrink-0"
+                            animate={{ backgroundColor: ["hsl(var(--primary) / 0.1)", "hsl(var(--primary) / 0.25)", "hsl(var(--primary) / 0.1)"] }}
+                            transition={{ delay: delay + 0.5, duration: 1.5, repeat: Infinity }}
                           >
-                            <span className="text-xs">{icon}</span>
+                            <motion.div
+                              className="w-1.5 h-1.5 rounded-full bg-primary"
+                              animate={{ scale: [1, 1.5, 1] }}
+                              transition={{ delay: delay + 0.3, duration: 0.8, repeat: Infinity }}
+                            />
                           </motion.div>
                           <span className="text-muted-foreground">{step}</span>
                           <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: delay + 1.2 }}
+                            initial={{ opacity: 0, scale: 0 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: delay + 2 }}
                             className="ms-auto"
                           >
                             <CheckCircle2 className="h-3.5 w-3.5 text-primary/60" />
@@ -556,13 +604,15 @@ CRITICAL RULES — MUST FOLLOW:
                         </motion.div>
                       ))}
                     </div>
-                    {/* Progress bar with gradient */}
+
+                    {/* Progress bar */}
                     <div className="h-1.5 bg-primary/10 rounded-full overflow-hidden">
                       <motion.div
-                        className="h-full rounded-full bg-gradient-to-r from-primary via-primary to-accent"
+                        className="h-full rounded-full bg-gradient-to-r from-primary via-accent to-primary"
                         initial={{ width: "0%" }}
-                        animate={{ width: "90%" }}
-                        transition={{ duration: 10, ease: "easeOut" }}
+                        animate={{ width: "92%" }}
+                        transition={{ duration: 12, ease: "easeOut" }}
+                        style={{ backgroundSize: "200% 100%" }}
                       />
                     </div>
                     <p className="text-[10px] text-muted-foreground/60 text-center">
@@ -656,14 +706,23 @@ CRITICAL RULES — MUST FOLLOW:
                     )}
 
                     {/* Duplicate warning */}
-                    {duplicateWarning && (
+                    {duplicateWarning && !duplicateOverride && (
                       <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2 flex items-start gap-2"
+                        className="text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 space-y-2"
                       >
-                        <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                        <span className="font-medium">{duplicateWarning}</span>
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                          <span className="font-medium">{duplicateWarning}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { setDuplicateOverride(true); setDuplicateWarning(null); setDuplicateOverride(false); }}
+                          className="text-[10px] underline underline-offset-2 text-amber-600 dark:text-amber-400 hover:text-foreground transition-colors"
+                        >
+                          {language === "he" ? "הוסף בכל זאת" : "Add anyway"}
+                        </button>
                       </motion.div>
                     )}
 
@@ -816,7 +875,7 @@ CRITICAL RULES — MUST FOLLOW:
                     type="button"
                     className="flex-1 gap-1.5 glow-primary"
                     onClick={handleUrlSave}
-                    disabled={isLoading || !!duplicateWarning}
+                    disabled={isLoading || (!!duplicateWarning && !duplicateOverride)}
                   >
                     {insertMutation.isPending ? (
                       <>

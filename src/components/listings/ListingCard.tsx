@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { cityDisplayName, amenityDisplayName } from "@/lib/cityMap";
 import { MapPin, BedDouble, Maximize, Building2, Clock, ExternalLink, Phone, User, Image as ImageIcon, Pencil } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
@@ -83,10 +84,10 @@ export const ListingCard = memo(({ listing, variant = "grid" }: ListingCardProps
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="font-semibold text-sm leading-snug truncate">
-                    {listing.address || listing.city || "Unknown"}
+                    {listing.address || (listing.city ? cityDisplayName(listing.city, language) : "Unknown")}
                   </p>
                   {listing.city && listing.address && (
-                    <span className="text-xs text-muted-foreground">{listing.city}</span>
+                    <span className="text-xs text-muted-foreground">{cityDisplayName(listing.city, language)}</span>
                   )}
                 </div>
                 {listing.source_url && (
@@ -226,7 +227,7 @@ export const ListingCard = memo(({ listing, variant = "grid" }: ListingCardProps
                 <MapPin className="h-3.5 w-3.5 text-primary" />
               </div>
               <div className="min-w-0 flex-1">
-                <span className="font-semibold truncate block text-sm">{listing.address || listing.city || "Unknown"}</span>
+                <span className="font-semibold truncate block text-sm">{listing.address || (listing.city ? cityDisplayName(listing.city, language) : "Unknown")}</span>
                 {listing.city && listing.address && (
                   <span className="text-xs text-muted-foreground">{listing.city}</span>
                 )}

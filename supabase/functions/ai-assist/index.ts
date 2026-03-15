@@ -367,10 +367,10 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
   const BROWSER_HEADERS: Record<string, string> = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     "Cache-Control": "no-cache",
     "Pragma": "no-cache",
-    "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+    "sec-ch-ua": '"Chromium";v="131", "Google Chrome";v="131", "Not_A Brand";v="24"',
     "sec-ch-ua-mobile": "?0",
     "sec-ch-ua-platform": '"Windows"',
     "sec-fetch-dest": "document",
@@ -403,7 +403,7 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
       // Googlebot also gets good data from Facebook
       "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
       // Mobile user agent
-      "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+      "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
       // WhatsApp link preview bot (Facebook respects its own ecosystem)
       "WhatsApp/2.23.20 A",
       // Telegram bot
@@ -481,7 +481,7 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
       // Facebook's crawler also gets good SSR content
       "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
       BROWSER_HEADERS["User-Agent"],
-      "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+      "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
     ];
 
     // Build URL variants to try
@@ -599,7 +599,7 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
     // Try different user agents on retries
     const headers = { ...BROWSER_HEADERS };
     if (attempt === 1) {
-      headers["User-Agent"] = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36";
+      headers["User-Agent"] = "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36";
     } else if (attempt === 2) {
       headers["User-Agent"] = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
     }
