@@ -21,14 +21,40 @@ const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } 
 const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 
 const STAGE_LABELS: Record<string, Record<string, string>> = {
-  new: { en: "New", he: "חדש" },
-  contacted: { en: "Contacted", he: "נוצר קשר" },
-  viewing_scheduled: { en: "Viewing", he: "ביקור" },
-  viewed: { en: "Viewed", he: "נצפה" },
-  negotiating: { en: "Negotiating", he: 'מו"מ' },
-  signed: { en: "Signed", he: "חתום" },
-  lost: { en: "Lost", he: "אבוד" },
+  new: { en: "New", he: "חדש", es: "Nuevo", ru: "Новое" },
+  contacted: { en: "Contacted", he: "נוצר קשר", es: "Contactado", ru: "Связались" },
+  viewing_scheduled: { en: "Viewing", he: "ביקור", es: "Visita", ru: "Просмотр" },
+  viewed: { en: "Viewed", he: "נצפה", es: "Visto", ru: "Осмотрено" },
+  negotiating: { en: "Negotiating", he: 'מו"מ', es: "Negociando", ru: "Торг" },
+  signed: { en: "Signed", he: "חתום", es: "Firmado", ru: "Подписано" },
+  lost: { en: "Lost", he: "אבוד", es: "Perdido", ru: "Потеряно" },
 };
+
+function getGreeting(language: string): string {
+  const hour = new Date().getHours();
+  if (language === "he") {
+    if (hour < 6) return "לילה טוב";
+    if (hour < 12) return "בוקר טוב";
+    if (hour < 17) return "צהריים טובים";
+    if (hour < 21) return "ערב טוב";
+    return "לילה טוב";
+  }
+  if (language === "ru") {
+    if (hour < 6) return "Доброй ночи";
+    if (hour < 12) return "Доброе утро";
+    if (hour < 17) return "Добрый день";
+    if (hour < 21) return "Добрый вечер";
+    return "Доброй ночи";
+  }
+  if (language === "es") {
+    if (hour < 12) return "Buenos días";
+    if (hour < 20) return "Buenas tardes";
+    return "Buenas noches";
+  }
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -145,10 +171,18 @@ const Dashboard = () => {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold tracking-tight">
-            {t("dashboard.welcome")}, {displayName} 👋
+          <motion.p
+            className="text-sm text-muted-foreground font-medium"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            {getGreeting(language)}
+          </motion.p>
+          <h1 className="text-3xl font-display font-bold tracking-tight mt-0.5">
+            {displayName}
           </h1>
-          <p className="text-muted-foreground mt-1">{t("app.tagline")}</p>
+          <p className="text-muted-foreground mt-1 text-sm">{t("app.tagline")}</p>
         </div>
         <Button onClick={() => setShowAdd(true)} className="gap-1.5 glow-primary shrink-0">
           <Plus className="h-4 w-4" /> {t("inbox.addListing")}
@@ -157,19 +191,23 @@ const Dashboard = () => {
 
       {/* Animated Stats */}
       <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4" variants={container} initial="hidden" animate="show">
-        {stats.map((s) => (
+        {stats.map((s, i) => (
           <motion.div key={s.label} variants={item}>
             <Card
-              className="p-4 flex flex-col items-center text-center gap-1 card-hover shine-overlay border-border/60 cursor-pointer"
+              className="p-4 flex items-center gap-3 card-hover shine-overlay border-border/60 cursor-pointer group relative overflow-hidden"
               onClick={() => navigate(s.path)}
             >
-              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center mb-1">
-                <s.icon className="h-4 w-4 text-primary" />
+              <div className="w-10 h-10 rounded-xl bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center shrink-0 transition-colors">
+                <s.icon className="h-4.5 w-4.5 text-primary" />
               </div>
-              <p className="text-2xl font-bold stat-number text-gradient">
-                <AnimatedCounter value={s.value} />
-              </p>
-              <p className="text-xs text-muted-foreground">{s.label}</p>
+              <div className="min-w-0">
+                <p className="text-2xl font-bold stat-number leading-none">
+                  <AnimatedCounter value={s.value} />
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{s.label}</p>
+              </div>
+              {/* Subtle gradient accent */}
+              <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             </Card>
           </motion.div>
         ))}
