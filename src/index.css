@@ -687,3 +687,23 @@
 
 /* Selection color */
 ::selection { background: hsl(var(--primary) / 0.2); color: hsl(var(--foreground)); }
+
+/* ═══ Scrollbar thin variant ═══ */
+.scrollbar-thin::-webkit-scrollbar { width: 4px; height: 4px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 2px; }
+
+/* ═══ Smooth image loading ═══ */
+img[loading="lazy"] {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+/* ═══ Better touch targets on mobile ═══ */
+@media (max-width: 640px) {
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .text-xs { font-size: 0.8rem; }
+}

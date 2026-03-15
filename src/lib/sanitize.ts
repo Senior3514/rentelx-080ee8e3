@@ -13,8 +13,9 @@ export function stripHtml(input: string): string {
     .replace(/&quot;/g, '"')
     .replace(/&#x27;/g, "'")
     .replace(/&#x2F;/g, '/')
+    .replace(/&nbsp;/g, ' ')
     // eslint-disable-next-line no-control-regex
-    .replace(/[\x00]/g, ''); // null bytes
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ''); // control characters
 }
 
 /** Normalize whitespace — collapse multiple spaces/newlines */

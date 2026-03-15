@@ -608,12 +608,13 @@ const Watchlist = () => {
                   <Card className="border-border/60 card-hover group overflow-hidden">
                     <div className="flex gap-0">
                       {/* Cover image or gradient placeholder */}
-                      <div className="relative w-28 sm:w-36 shrink-0">
+                      <div className="relative w-28 sm:w-36 shrink-0 overflow-hidden">
                         {listing.cover_image ? (
                           <img
                             src={listing.cover_image}
                             alt={listing.address ?? listing.city}
-                            className="w-full h-full object-cover min-h-[120px]"
+                            className="w-full h-full object-cover min-h-[120px] transition-transform duration-300 group-hover:scale-105"
+                            loading="lazy"
                           />
                         ) : (
                           <div className="w-full h-full min-h-[120px] bg-gradient-to-br from-primary/20 via-primary/10 to-transparent flex items-center justify-center">
@@ -622,7 +623,7 @@ const Watchlist = () => {
                         )}
                         {/* Score badge over image */}
                         {s !== null && (
-                          <div className={`absolute top-2 start-2 px-2 py-0.5 rounded-full text-xs font-bold shadow-md ${scoreColor(s)} ${s >= 80 ? "animate-glow" : ""}`}>
+                          <div className={`absolute top-2 start-2 px-2 py-0.5 rounded-xl text-xs font-bold shadow-md backdrop-blur-sm ${scoreColor(s)} ${s >= 80 ? "animate-glow" : ""}`}>
                             {s}
                           </div>
                         )}

@@ -90,14 +90,14 @@ const Dashboard = () => {
 
   const totalListings = listings.length;
 
-  const avgScore = listings.length
+  const avgScore = useMemo(() => listings.length
     ? Math.round(
         listings.reduce((sum, l) => {
           const top = l.listing_scores?.reduce((m: number, s: any) => Math.max(m, s.score), 0) ?? 0;
           return sum + top;
         }, 0) / listings.length
       )
-    : 0;
+    : 0, [listings]);
 
   const displayName = profile?.display_name || user?.email?.split("@")[0] || "";
 

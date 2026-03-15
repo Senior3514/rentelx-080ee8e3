@@ -54,8 +54,11 @@ export const DashboardCharts = ({ listings, pipelineData, weeklyActivity }: Dash
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {/* Score Distribution */}
-      <Card className="p-4">
-        <h3 className="font-semibold text-sm mb-3">{t("dashboard.scoreDistribution")}</h3>
+      <Card className="p-4 border-border/60">
+        <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-primary" />
+          {t("dashboard.scoreDistribution")}
+        </h3>
         {listings.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-8">{t("dashboard.noData")}</p>
         ) : (
@@ -75,8 +78,11 @@ export const DashboardCharts = ({ listings, pipelineData, weeklyActivity }: Dash
       </Card>
 
       {/* Pipeline Funnel */}
-      <Card className="p-4">
-        <h3 className="font-semibold text-sm mb-3">{t("dashboard.pipelineFunnel")}</h3>
+      <Card className="p-4 border-border/60">
+        <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-score-medium" />
+          {t("dashboard.pipelineFunnel")}
+        </h3>
         {pieData.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-8">{t("dashboard.noData")}</p>
         ) : (
@@ -113,8 +119,11 @@ export const DashboardCharts = ({ listings, pipelineData, weeklyActivity }: Dash
       </Card>
 
       {/* Weekly Activity */}
-      <Card className="p-4">
-        <h3 className="font-semibold text-sm mb-3">{t("dashboard.weeklyActivity")}</h3>
+      <Card className="p-4 border-border/60">
+        <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-score-high" />
+          {t("dashboard.weeklyActivity")}
+        </h3>
         {weeklyActivity.every((d) => d.count === 0) ? (
           <p className="text-xs text-muted-foreground text-center py-8">{t("dashboard.noData")}</p>
         ) : (

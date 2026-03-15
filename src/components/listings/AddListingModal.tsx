@@ -429,23 +429,47 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                 </p>
               )}
 
-              {/* Loading state with progress */}
+              {/* Loading state with animated progress */}
               <AnimatePresence>
                 {urlFetching && (
                   <motion.div
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
-                    className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-2"
+                    className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10 p-4 space-y-3"
                   >
                     <div className="flex items-center gap-2 text-sm text-primary font-medium">
                       <Loader2 className="h-4 w-4 animate-spin" />
                       {t("addListingExtra.fetchingData")}
                     </div>
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <p>1. {t("addListingExtra.fetchStep1")}</p>
-                      <p>2. {t("addListingExtra.fetchStep2")}</p>
-                      <p>3. {t("addListingExtra.fetchStep3")}</p>
+                    <div className="space-y-2">
+                      {[
+                        { step: t("addListingExtra.fetchStep1"), delay: 0 },
+                        { step: t("addListingExtra.fetchStep2"), delay: 0.3 },
+                        { step: t("addListingExtra.fetchStep3"), delay: 0.6 },
+                      ].map(({ step, delay }, i) => (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, x: -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay }}
+                          className="flex items-center gap-2 text-xs text-muted-foreground"
+                        >
+                          <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                            <span className="text-[10px] font-bold text-primary">{i + 1}</span>
+                          </div>
+                          {step}
+                        </motion.div>
+                      ))}
+                    </div>
+                    {/* Progress bar */}
+                    <div className="h-1 bg-primary/10 rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full bg-primary rounded-full"
+                        initial={{ width: "0%" }}
+                        animate={{ width: "85%" }}
+                        transition={{ duration: 8, ease: "easeOut" }}
+                      />
                     </div>
                   </motion.div>
                 )}
@@ -458,21 +482,28 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
-                    className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3"
+                    className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 to-transparent p-4 space-y-3"
                   >
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      {t("addListingExtra.dataExtracted")}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        {t("addListingExtra.dataExtracted")}
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium capitalize">
+                        {detectSource(url)}
+                      </span>
                     </div>
 
                     {/* Partial extraction warning */}
                     {extractionPartial && (
-                      <div className="flex items-start gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 rounded-lg px-3 py-2">
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="flex items-start gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2"
+                      >
                         <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                        <span>
-                          {t("addListingExtra.dataMissing")}
-                        </span>
-                      </div>
+                        <span>{t("addListingExtra.dataMissing")}</span>
+                      </motion.div>
                     )}
 
                     {/* Extracted images */}
@@ -482,67 +513,78 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                           <ImageIcon className="h-3 w-3" />
                           {urlExtracted.image_urls.length} {t("addListingExtra.imagesFound")}
                         </div>
-                        <div className="flex gap-1.5 overflow-x-auto pb-1">
-                          {urlExtracted.image_urls.slice(0, 4).map((imgUrl: string, i: number) => (
-                            <img
+                        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                          {urlExtracted.image_urls.slice(0, 5).map((imgUrl: string, i: number) => (
+                            <motion.img
                               key={i}
                               src={imgUrl}
                               alt=""
-                              className="w-16 h-16 rounded-lg object-cover ring-1 ring-border/40 shrink-0"
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: i * 0.1 }}
+                              className="w-16 h-16 rounded-lg object-cover ring-1 ring-border/40 shrink-0 hover:ring-primary/60 transition-all"
                               onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                             />
                           ))}
-                          {urlExtracted.image_urls.length > 4 && (
-                            <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center text-xs text-muted-foreground shrink-0">
-                              +{urlExtracted.image_urls.length - 4}
+                          {urlExtracted.image_urls.length > 5 && (
+                            <div className="w-16 h-16 rounded-lg bg-muted/80 flex items-center justify-center text-xs text-muted-foreground shrink-0 font-medium">
+                              +{urlExtracted.image_urls.length - 5}
                             </div>
                           )}
                         </div>
                       </div>
                     )}
 
+                    {/* Main data - price highlight + details grid */}
+                    {urlExtracted.price && (
+                      <div className="flex items-baseline gap-1 px-2">
+                        <DollarSign className="h-4 w-4 text-primary shrink-0" />
+                        <span className="text-xl font-bold text-primary">₪{Number(urlExtracted.price).toLocaleString()}</span>
+                        <span className="text-xs text-muted-foreground">{t("common.perMonth")}</span>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       {urlExtracted.address && (
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
-                          <span className="truncate">{urlExtracted.address}</span>
+                        <div className="flex items-center gap-1.5 col-span-2">
+                          <MapPin className="h-3 w-3 text-primary shrink-0" />
+                          <span className="truncate font-medium">{urlExtracted.address}</span>
+                          {urlExtracted.city && (
+                            <span className="text-muted-foreground shrink-0">· {urlExtracted.city}</span>
+                          )}
                         </div>
                       )}
-                      {urlExtracted.city && (
+                      {!urlExtracted.address && urlExtracted.city && (
                         <div className="flex items-center gap-1.5">
-                          <Building2 className="h-3 w-3 text-muted-foreground shrink-0" />
-                          <span>{urlExtracted.city}</span>
-                        </div>
-                      )}
-                      {urlExtracted.price && (
-                        <div className="flex items-center gap-1.5">
-                          <DollarSign className="h-3 w-3 text-muted-foreground shrink-0" />
-                          <span className="font-semibold">₪{Number(urlExtracted.price).toLocaleString()}</span>
-                          <span className="text-muted-foreground">/mo</span>
+                          <Building2 className="h-3 w-3 text-primary shrink-0" />
+                          <span className="font-medium">{urlExtracted.city}</span>
                         </div>
                       )}
                       {urlExtracted.rooms && (
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 bg-muted/40 rounded-lg px-2 py-1.5">
                           <BedDouble className="h-3 w-3 text-muted-foreground shrink-0" />
-                          <span>{urlExtracted.rooms} {t("common.rooms")}</span>
+                          <span className="font-medium">{urlExtracted.rooms}</span>
+                          <span className="text-muted-foreground">{t("common.rooms")}</span>
                         </div>
                       )}
                       {urlExtracted.sqm && (
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 bg-muted/40 rounded-lg px-2 py-1.5">
                           <Maximize className="h-3 w-3 text-muted-foreground shrink-0" />
-                          <span>{urlExtracted.sqm}m²</span>
+                          <span className="font-medium">{urlExtracted.sqm}</span>
+                          <span className="text-muted-foreground">m²</span>
                         </div>
                       )}
                       {urlExtracted.floor != null && (
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 bg-muted/40 rounded-lg px-2 py-1.5">
                           <Building2 className="h-3 w-3 text-muted-foreground shrink-0" />
-                          <span>
+                          <span className="font-medium">
                             {t("common.floor")} {urlExtracted.floor}
                             {urlExtracted.total_floors ? `/${urlExtracted.total_floors}` : ""}
                           </span>
                         </div>
                       )}
                     </div>
+
                     {/* Amenities */}
                     {urlExtracted.amenities?.length > 0 && (
                       <div className="flex flex-wrap gap-1">
@@ -553,26 +595,28 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
                         ))}
                       </div>
                     )}
+
                     {/* Description preview */}
                     {urlExtracted.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                      <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed bg-muted/30 rounded-lg px-2.5 py-2">
                         {urlExtracted.description}
                       </p>
                     )}
+
                     {/* Contact info */}
                     {(urlExtracted.contact_name || urlExtracted.contact_phone) && (
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1 border-t border-primary/10">
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t border-primary/10">
                         {urlExtracted.contact_name && (
                           <span className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
+                            <User className="h-3 w-3 text-primary/70" />
                             {urlExtracted.contact_name}
                           </span>
                         )}
                         {urlExtracted.contact_phone && (
-                          <span className="flex items-center gap-1">
+                          <a href={`tel:${urlExtracted.contact_phone}`} className="flex items-center gap-1 text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
                             <Phone className="h-3 w-3" />
-                            {urlExtracted.contact_phone}
-                          </span>
+                            <span dir="ltr">{urlExtracted.contact_phone}</span>
+                          </a>
                         )}
                       </div>
                     )}
