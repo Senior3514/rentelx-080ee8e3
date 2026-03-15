@@ -291,8 +291,6 @@ export type Database = {
         Row: {
           cities: string[]
           created_at: string
-          current_address: string | null
-          desired_area: string | null
           id: string
           is_active: boolean
           max_price: number
@@ -304,13 +302,10 @@ export type Database = {
           nice_to_haves: string[]
           updated_at: string
           user_id: string
-          workplace_address: string | null
         }
         Insert: {
           cities?: string[]
           created_at?: string
-          current_address?: string | null
-          desired_area?: string | null
           id?: string
           is_active?: boolean
           max_price?: number
@@ -322,13 +317,10 @@ export type Database = {
           nice_to_haves?: string[]
           updated_at?: string
           user_id: string
-          workplace_address?: string | null
         }
         Update: {
           cities?: string[]
           created_at?: string
-          current_address?: string | null
-          desired_area?: string | null
           id?: string
           is_active?: boolean
           max_price?: number
@@ -340,7 +332,6 @@ export type Database = {
           nice_to_haves?: string[]
           updated_at?: string
           user_id?: string
-          workplace_address?: string | null
         }
         Relationships: []
       }
