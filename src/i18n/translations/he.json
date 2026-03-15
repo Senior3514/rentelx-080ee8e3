@@ -517,7 +517,11 @@
     "invalidSourceUrl": "כתובת URL לא תקינה",
     "extractSuccess": "הנתונים נשלפו בהצלחה! בדקו ושמרו.",
     "extractPartial": "השליפה החזירה תוצאות חלקיות. ניתן להשלים ידנית ולשמור.",
-    "extractError": "שגיאה בשליפת הנתונים. נסו שוב."
+    "extractError": "שגיאה בשליפת הנתונים. נסו שוב.",
+    "missingFields": "שדות חסרים",
+    "totalFloors": "סה\"כ קומות",
+    "addAmenity": "הוסף מאפיין...",
+    "editHint": "לחצו ערוך כדי לשנות כל שדה"
   },
   "settingsExtra": {
     "noDataToExport": "אין נתונים לייצוא",

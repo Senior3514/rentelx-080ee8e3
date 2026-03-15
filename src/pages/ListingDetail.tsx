@@ -12,11 +12,12 @@ import { toast } from "sonner";
 import {
   MapPin, BedDouble, Maximize, Building2, ArrowLeft, Plus, StickyNote,
   Columns3, Sparkles, Ban, ExternalLink, Phone, User, Pencil, Save,
-  X, FileDown, Info
+  X, FileDown, Info, Layers, Tag, Link2
 } from "lucide-react";
 import { ImageGallery } from "@/components/listings/ImageGallery";
 import { motion, AnimatePresence } from "framer-motion";
 import { AiSectionHelper } from "@/components/ui/ai-section-helper";
+import { sanitizeText, sanitizePhone, isSafeUrl } from "@/lib/sanitize";
 
 /* ─── Score Legend ─── */
 const SCORE_LEGEND = {
@@ -220,6 +221,8 @@ Be specific, concise, and practical.`
     toast.success(language === "he" ? "הקובץ הורד" : "File downloaded");
   };
 
+  const [newAmenity, setNewAmenity] = useState("");
+
   const startEditing = () => {
     if (!listing) return;
     setEditForm({
@@ -229,24 +232,44 @@ Be specific, concise, and practical.`
       rooms: listing.rooms || "",
       sqm: listing.sqm || "",
       floor: listing.floor ?? "",
+      total_floors: listing.total_floors ?? "",
       description: listing.description || "",
       contact_name: listing.contact_name || "",
       contact_phone: listing.contact_phone || "",
+      amenities: [...(listing.amenities || [])],
+      source_url: listing.source_url || "",
     });
+    setNewAmenity("");
     setEditing(true);
+  };
+
+  const addAmenity = () => {
+    const trimmed = newAmenity.trim();
+    if (!trimmed || editForm.amenities?.includes(trimmed)) return;
+    setEditForm(f => ({ ...f, amenities: [...(f.amenities || []), trimmed] }));
+    setNewAmenity("");
+  };
+
+  const removeAmenity = (amenity: string) => {
+    setEditForm(f => ({ ...f, amenities: (f.amenities || []).filter((a: string) => a !== amenity) }));
   };
 
   const saveEdit = () => {
     const updates: Record<string, any> = {};
-    if (editForm.address) updates.address = editForm.address.trim().slice(0, 500);
-    if (editForm.city) updates.city = editForm.city.trim().slice(0, 100);
-    if (editForm.price) updates.price = Number(editForm.price) || null;
-    if (editForm.rooms) updates.rooms = Number(editForm.rooms) || null;
-    if (editForm.sqm) updates.sqm = Number(editForm.sqm) || null;
-    if (editForm.floor !== "") updates.floor = Number(editForm.floor);
-    if (editForm.description !== undefined) updates.description = editForm.description.trim().slice(0, 5000);
-    if (editForm.contact_name !== undefined) updates.contact_name = editForm.contact_name.trim().slice(0, 200);
-    if (editForm.contact_phone !== undefined) updates.contact_phone = editForm.contact_phone.trim().slice(0, 20);
+    updates.address = editForm.address ? sanitizeText(editForm.address, 500) : null;
+    updates.city = editForm.city ? sanitizeText(editForm.city, 100) : null;
+    updates.price = editForm.price ? Number(editForm.price) || null : null;
+    updates.rooms = editForm.rooms ? Number(editForm.rooms) || null : null;
+    updates.sqm = editForm.sqm ? Number(editForm.sqm) || null : null;
+    updates.floor = editForm.floor !== "" ? Number(editForm.floor) : null;
+    updates.total_floors = editForm.total_floors !== "" ? Number(editForm.total_floors) : null;
+    updates.description = editForm.description !== undefined ? sanitizeText(editForm.description, 5000) : null;
+    updates.contact_name = editForm.contact_name !== undefined ? sanitizeText(editForm.contact_name, 200) : null;
+    updates.contact_phone = editForm.contact_phone !== undefined ? sanitizePhone(editForm.contact_phone) : null;
+    updates.amenities = (editForm.amenities || []).map((a: string) => sanitizeText(a, 100));
+    // Validate source URL before saving
+    const srcUrl = editForm.source_url?.trim();
+    updates.source_url = srcUrl && isSafeUrl(srcUrl) ? srcUrl : null;
     updateListingMutation.mutate(updates);
   };
 
@@ -389,44 +412,55 @@ Be specific, concise, and practical.`
             </Card>
             <Card className="p-3">
               <p className="text-xs text-muted-foreground mb-1">{t("common.floor")}</p>
-              <Input value={editForm.floor} onChange={(e) => setEditForm(f => ({ ...f, floor: e.target.value }))} type="number" className="h-8" />
+              <div className="flex gap-1.5">
+                <Input value={editForm.floor} onChange={(e) => setEditForm(f => ({ ...f, floor: e.target.value }))} type="number" className="h-8 flex-1" placeholder={language === "he" ? "קומה" : "Floor"} />
+                <span className="text-muted-foreground self-center text-sm">/</span>
+                <Input value={editForm.total_floors} onChange={(e) => setEditForm(f => ({ ...f, total_floors: e.target.value }))} type="number" className="h-8 flex-1" placeholder={language === "he" ? "מתוך" : "Total"} />
+              </div>
             </Card>
           </>
         ) : (
           <>
-            {listing.price && (
-              <Card className="p-3 text-center">
-                <p className="text-xs text-muted-foreground">{t("listing.price")}</p>
-                <p className="font-bold text-lg">{t("common.shekel")}{listing.price.toLocaleString()}</p>
-              </Card>
-            )}
-            {listing.rooms && (
-              <Card className="p-3 text-center">
-                <p className="text-xs text-muted-foreground">{t("listing.rooms")}</p>
-                <p className="font-bold text-lg">{listing.rooms}</p>
-              </Card>
-            )}
-            {listing.sqm && (
-              <Card className="p-3 text-center">
-                <p className="text-xs text-muted-foreground">{t("listing.size")}</p>
-                <p className="font-bold text-lg">{listing.sqm} {t("common.sqm")}</p>
-              </Card>
-            )}
-            {listing.floor != null && (
-              <Card className="p-3 text-center">
-                <p className="text-xs text-muted-foreground">{t("common.floor")}</p>
-                <p className="font-bold text-lg">
-                  {listing.floor}
-                  {listing.total_floors ? `/${listing.total_floors}` : ""}
-                </p>
-              </Card>
-            )}
+            <Card className="p-3 text-center group/stat hover:border-primary/30 transition-colors">
+              <p className="text-xs text-muted-foreground">{t("listing.price")}</p>
+              <p className="font-bold text-lg">{listing.price ? `${t("common.shekel")}${listing.price.toLocaleString()}` : "—"}</p>
+            </Card>
+            <Card className="p-3 text-center group/stat hover:border-primary/30 transition-colors">
+              <p className="text-xs text-muted-foreground">{t("listing.rooms")}</p>
+              <p className="font-bold text-lg">{listing.rooms ?? "—"}</p>
+            </Card>
+            <Card className="p-3 text-center group/stat hover:border-primary/30 transition-colors">
+              <p className="text-xs text-muted-foreground">{t("listing.size")}</p>
+              <p className="font-bold text-lg">{listing.sqm ? `${listing.sqm} ${t("common.sqm")}` : "—"}</p>
+            </Card>
+            <Card className="p-3 text-center group/stat hover:border-primary/30 transition-colors">
+              <p className="text-xs text-muted-foreground">{t("common.floor")}</p>
+              <p className="font-bold text-lg">
+                {listing.floor != null
+                  ? `${listing.floor}${listing.total_floors ? `/${listing.total_floors}` : ""}`
+                  : "—"}
+              </p>
+            </Card>
           </>
         )}
       </div>
 
       {/* Source URL */}
-      {listing.source_url && (
+      {editing ? (
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">{t("listing.source")}</p>
+          <div className="relative">
+            <Link2 className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={editForm.source_url}
+              onChange={(e) => setEditForm(f => ({ ...f, source_url: e.target.value }))}
+              placeholder={language === "he" ? "קישור לדירה..." : "Listing URL..."}
+              className="ps-9"
+              dir="ltr"
+            />
+          </div>
+        </div>
+      ) : listing.source_url ? (
         <a
           href={listing.source_url}
           target="_blank"
@@ -435,7 +469,7 @@ Be specific, concise, and practical.`
         >
           <ExternalLink className="h-4 w-4" /> {t("listing.viewOriginal")}
         </a>
-      )}
+      ) : null}
 
       {/* Score Breakdown with Legend */}
       {breakdown && Object.keys(breakdown).length > 0 && (
@@ -507,16 +541,56 @@ Be specific, concise, and practical.`
       ) : null}
 
       {/* Amenities */}
-      {listing.amenities?.length > 0 && (
+      {editing ? (
         <Card className="p-4">
-          <h3 className="font-semibold text-sm mb-2">{t("listing.amenities")}</h3>
+          <h3 className="font-semibold text-sm mb-2 flex items-center gap-1.5">
+            <Tag className="h-4 w-4 text-primary" /> {t("listing.amenities")}
+          </h3>
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {(editForm.amenities || []).map((a: string) => (
+              <motion.span
+                key={a}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-1 rounded-full font-medium flex items-center gap-1 group/amenity"
+              >
+                {a}
+                <button
+                  type="button"
+                  onClick={() => removeAmenity(a)}
+                  className="w-3.5 h-3.5 rounded-full bg-destructive/80 text-white flex items-center justify-center hover:bg-destructive transition-colors"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </motion.span>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Input
+              value={newAmenity}
+              onChange={(e) => setNewAmenity(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addAmenity(); } }}
+              placeholder={language === "he" ? "הוסף מאפיין..." : "Add amenity..."}
+              className="h-8 text-sm flex-1"
+              maxLength={50}
+            />
+            <Button type="button" size="sm" variant="outline" onClick={addAmenity} disabled={!newAmenity.trim()} className="h-8">
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </Card>
+      ) : listing.amenities?.length > 0 ? (
+        <Card className="p-4">
+          <h3 className="font-semibold text-sm mb-2 flex items-center gap-1.5">
+            <Tag className="h-4 w-4 text-primary" /> {t("listing.amenities")}
+          </h3>
           <div className="flex flex-wrap gap-1.5">
             {listing.amenities.map((a: string) => (
-              <span key={a} className="text-xs bg-muted px-2 py-1 rounded-full">{a}</span>
+              <span key={a} className="text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-1 rounded-full font-medium">{a}</span>
             ))}
           </div>
         </Card>
-      )}
+      ) : null}
 
       {/* Contact */}
       {editing ? (

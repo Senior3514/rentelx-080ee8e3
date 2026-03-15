@@ -517,7 +517,11 @@
     "invalidSourceUrl": "Invalid URL",
     "extractSuccess": "Data extracted successfully! Review and save.",
     "extractPartial": "Extraction returned partial results. You can complete manually and save.",
-    "extractError": "Error extracting data. Please try again."
+    "extractError": "Error extracting data. Please try again.",
+    "missingFields": "Missing fields",
+    "totalFloors": "Total floors",
+    "addAmenity": "Add amenity...",
+    "editHint": "Click Edit to modify any field"
   },
   "settingsExtra": {
     "noDataToExport": "No data to export",

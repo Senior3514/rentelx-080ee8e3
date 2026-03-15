@@ -245,12 +245,12 @@ const InboxPage = () => {
           </Button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((listing, index) => (
             <motion.div
               key={listing.id}
-              initial={{ opacity: 0, x: direction === "rtl" ? 12 : -12 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, delay: Math.min(index * 0.04, 0.4), ease: "easeOut" }}
             >
               <ListingCard listing={listing} />
