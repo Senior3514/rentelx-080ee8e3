@@ -102,10 +102,10 @@ const Dashboard = () => {
   const displayName = profile?.display_name || user?.email?.split("@")[0] || "";
 
   const stats = [
-    { label: t("dashboard.totalListings"), value: totalListings, icon: Inbox },
-    { label: t("dashboard.avgScore"), value: avgScore, icon: LayoutDashboard },
-    { label: t("dashboard.inPipeline"), value: pipelineCount, icon: Columns3 },
-    { label: t("dashboard.activeProfiles"), value: profileCount, icon: UserSearch },
+    { label: t("dashboard.totalListings"), value: totalListings, icon: Inbox, path: "/inbox" },
+    { label: t("dashboard.avgScore"), value: avgScore, icon: LayoutDashboard, path: "/compare" },
+    { label: t("dashboard.inPipeline"), value: pipelineCount, icon: Columns3, path: "/pipeline" },
+    { label: t("dashboard.activeProfiles"), value: profileCount, icon: UserSearch, path: "/profiles" },
   ];
 
   // Pipeline funnel data for charts
@@ -159,7 +159,10 @@ const Dashboard = () => {
       <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4" variants={container} initial="hidden" animate="show">
         {stats.map((s) => (
           <motion.div key={s.label} variants={item}>
-            <Card className="p-4 flex flex-col items-center text-center gap-1 card-hover shine-overlay border-border/60">
+            <Card
+              className="p-4 flex flex-col items-center text-center gap-1 card-hover shine-overlay border-border/60 cursor-pointer"
+              onClick={() => navigate(s.path)}
+            >
               <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center mb-1">
                 <s.icon className="h-4 w-4 text-primary" />
               </div>
