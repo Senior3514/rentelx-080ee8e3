@@ -282,17 +282,19 @@
   },
   "watchlist": {
     "title": "Watchlist",
-    "subtitle": "Auto-scan Yad2 for new listings in Tel Aviv, Givatayim & Ramat Gan",
+    "subtitle": "General scan of Yad2 for new listings — select cities and filter by your profile",
     "scan": "Scan Now",
     "scanning": "Scanning...",
     "autoOn": "Auto-Scan ON",
     "autoOff": "Auto-Scan",
     "cities": "Cities to scan",
-    "empty": "No listings yet",
-    "emptyHint": "Click 'Scan Now' to fetch real-time listings from Yad2",
+    "empty": "General Scan — Click to Search",
+    "emptyHint": "Click 'Scan Now' for a general real-time scan of Yad2 listings based on your filters",
     "results": "listings found",
     "lastScan": "Last scan",
-    "scoringBy": "Scoring by profile"
+    "scoringBy": "Scoring by profile",
+    "generalScan": "General Scan",
+    "filterHint": "Filter by cities, price and rooms via your active profile"
   },
   "notFound": {
     "title": "404",
@@ -499,7 +501,7 @@
     "uploadPhotosDesc": "Up to {max} images · JPG, PNG, WebP",
     "sourceLabel": "Source",
     "aiWillExtract": "AI will extract data",
-    "urlHint": "Paste a link from Yad2, Facebook, or any real estate site — AI will extract all details from the actual page content",
+    "urlHint": "Paste a link from Yad2, Madlan, Facebook, or any real estate site — AI will extract all details (price, rooms, amenities, contact) from the actual page content",
     "fetchingData": "Fetching page content...",
     "fetchStep1": "Downloading page content",
     "fetchStep2": "Analyzing & extracting listing data",

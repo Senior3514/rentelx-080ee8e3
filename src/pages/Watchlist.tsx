@@ -10,7 +10,7 @@ import {
   Bell, BellOff, RefreshCw, MapPin, BedDouble, Maximize,
   Clock, ExternalLink, Sparkles, BookHeart, Zap, PlusCircle,
   Check, Radio, Filter, WifiOff, RotateCcw, TrendingUp,
-  Building2, Star, ChevronRight, ChevronLeft
+  Building2, Star, ChevronRight, ChevronLeft, Phone, User
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -82,7 +82,7 @@ const Watchlist = () => {
   const [unavailable, setUnavailable] = useState(false);
   const [saved, setSaved]         = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 5;
+  const ITEMS_PER_PAGE = 10;
 
   const { data: activeProfile } = useQuery({
     queryKey: ["active_profile", user?.id],
@@ -98,6 +98,40 @@ const Watchlist = () => {
     },
     enabled: !!user,
   });
+
+  const { data: allProfiles = [] } = useQuery({
+    queryKey: ["all_profiles_for_switch", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("search_profiles")
+        .select("id, name, is_active")
+        .eq("user_id", user!.id)
+        .order("is_active", { ascending: false })
+        .order("created_at", { ascending: false });
+      return data ?? [];
+    },
+    enabled: !!user,
+  });
+
+  const switchProfile = async (profileId: string) => {
+    if (!user) return;
+    try {
+      await supabase
+        .from("search_profiles")
+        .update({ is_active: false })
+        .eq("user_id", user.id);
+      await supabase
+        .from("search_profiles")
+        .update({ is_active: true })
+        .eq("id", profileId);
+      qc.invalidateQueries({ queryKey: ["active_profile"] });
+      qc.invalidateQueries({ queryKey: ["all_profiles_for_switch"] });
+      qc.invalidateQueries({ queryKey: ["search_profiles"] });
+      toast.success(language === "he" ? "הפרופיל הוחלף" : "Profile switched");
+    } catch {
+      toast.error(language === "he" ? "שגיאה בהחלפת פרופיל" : "Failed to switch profile");
+    }
+  };
 
   const doScan = useCallback(async () => {
     if (selectedCities.length === 0) {
@@ -346,35 +380,48 @@ const Watchlist = () => {
           })}
         </div>
 
-        {activeProfile && (
-          <div className="mt-3 pt-3 border-t border-border/40 flex flex-wrap gap-2 items-center text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-primary" />
-              <span>{t("watchlist.scoringBy")}:</span>
-              <strong className="text-foreground font-semibold">{activeProfile.name}</strong>
+        {/* Profile display & quick switcher */}
+        <div className="mt-3 pt-3 border-t border-border/40 flex flex-wrap gap-2 items-center text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            <span>{t("watchlist.scoringBy")}:</span>
+          </span>
+          {allProfiles.length > 1 ? (
+            <div className="flex flex-wrap gap-1">
+              {allProfiles.map((p: any) => (
+                <motion.button
+                  key={p.id}
+                  onClick={() => !p.is_active && switchProfile(p.id)}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.96 }}
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+                    p.is_active
+                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                      : "bg-muted/60 text-muted-foreground border-border/60 hover:border-primary/40 hover:text-foreground cursor-pointer"
+                  }`}
+                >
+                  {p.name || (language === "he" ? "ללא שם" : "Untitled")}
+                </motion.button>
+              ))}
+            </div>
+          ) : activeProfile ? (
+            <strong className="text-foreground font-semibold">{activeProfile.name}</strong>
+          ) : (
+            <span className="text-muted-foreground italic">
+              {language === "he" ? "אין פרופיל פעיל" : "No active profile"}
             </span>
-            {activeProfile.max_price && (
-              <Badge variant="outline" className="text-xs">
-                ≤ ₪{activeProfile.max_price.toLocaleString()}
-              </Badge>
-            )}
-            {activeProfile.min_rooms && (
-              <Badge variant="outline" className="text-xs">
-                {activeProfile.min_rooms}+ {t("common.rooms")}
-              </Badge>
-            )}
-            {activeProfile.workplace_address && (
-              <Badge variant="outline" className="text-xs">
-                🏢 {activeProfile.workplace_address}
-              </Badge>
-            )}
-            {activeProfile.desired_area && (
-              <Badge variant="outline" className="text-xs">
-                📍 {activeProfile.desired_area}
-              </Badge>
-            )}
-          </div>
-        )}
+          )}
+          {activeProfile?.max_price && (
+            <Badge variant="outline" className="text-xs">
+              ≤ ₪{activeProfile.max_price.toLocaleString()}
+            </Badge>
+          )}
+          {activeProfile?.min_rooms && (
+            <Badge variant="outline" className="text-xs">
+              {activeProfile.min_rooms}+ {t("common.rooms")}
+            </Badge>
+          )}
+        </div>
       </Card>
 
       {/* ── Status bar ── */}
@@ -678,6 +725,28 @@ const Watchlist = () => {
                               <span className="text-[10px] bg-muted/80 border border-border/50 px-2 py-0.5 rounded-full text-muted-foreground">
                                 +{listing.amenities.length - 5}
                               </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Contact info */}
+                        {(listing.contact_name || listing.contact_phone) && (
+                          <div className="flex items-center gap-3 text-[11px] text-muted-foreground pt-1 border-t border-border/30">
+                            {listing.contact_name && (
+                              <span className="flex items-center gap-1">
+                                <User className="h-3 w-3 shrink-0" />
+                                <span className="truncate max-w-[120px]">{listing.contact_name}</span>
+                              </span>
+                            )}
+                            {listing.contact_phone && (
+                              <a
+                                href={`tel:${listing.contact_phone}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center gap-1 text-primary hover:underline"
+                              >
+                                <Phone className="h-3 w-3 shrink-0" />
+                                <span dir="ltr">{listing.contact_phone}</span>
+                              </a>
                             )}
                           </div>
                         )}

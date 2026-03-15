@@ -72,6 +72,13 @@ interface Yad2Item {
   price_text?: string;
 }
 
+/** Sanitize phone numbers - only allow digits, spaces, dashes, parens, plus sign */
+function sanitizePhone(phone: string | null | undefined): string | null {
+  if (!phone) return null;
+  const cleaned = String(phone).replace(/[^\d\s+\-()]/g, "").trim();
+  return cleaned.length >= 7 && cleaned.length <= 20 ? cleaned : null;
+}
+
 function normalizeItem(item: Yad2Item, cityLabel: string) {
   const street    = item.address?.street?.text ?? item.street ?? "";
   const houseNum  = item.address?.house?.text  ?? (item.house_number != null ? String(item.house_number) : "");
@@ -191,8 +198,8 @@ function normalizeItem(item: Yad2Item, cityLabel: string) {
     },
     cover_image: coverImage,
     image_urls: allImages.slice(0, 10),
-    contact_name: item.contact_name ?? null,
-    contact_phone: item.contact_phone ?? null,
+    contact_name: item.contact_name ? String(item.contact_name).slice(0, 200) : null,
+    contact_phone: sanitizePhone(item.contact_phone),
     listed_at: item.updated_at ?? item.created_at ?? item.date ?? item.date_added ?? new Date().toISOString(),
   };
 }
@@ -301,18 +308,25 @@ async function fetchCityListings(
   const { id, topArea, area } = city;
 
   const attempts: Array<{ url: string; headers: Record<string, string> }> = [
+    // Primary endpoints (known working patterns)
+    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&topArea=${topArea}&area=${area}&${qs}`, headers: DESKTOP_HEADERS },
     { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
-    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?topArea=${topArea}&area=${area}&city=${id}&${qs}`, headers: DESKTOP_HEADERS },
     { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&propertyGroup=apartments&${qs}`, headers: DESKTOP_V2_HEADERS },
-    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&rows=40&${qs}`, headers: DESKTOP_V2_HEADERS },
+    // Alternative API versions
     { url: `https://gw.yad2.co.il/search/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
-    { url: `https://gw.yad2.co.il/realestate-feed/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
+    { url: `https://gw.yad2.co.il/realestate-feed/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_V2_HEADERS },
+    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&deal_type=rent&${qs}`, headers: DESKTOP_HEADERS },
+    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&rows=40&${qs}`, headers: DESKTOP_V2_HEADERS },
+    // Newer API versions
     { url: `https://gw.yad2.co.il/api/feed/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
     { url: `https://gw.yad2.co.il/api/v3/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_HEADERS },
     { url: `https://gw.yad2.co.il/api/v2/realestate/rent?city=${id}&${qs}`, headers: DESKTOP_V2_HEADERS },
-    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&deal_type=rent&${qs}`, headers: DESKTOP_HEADERS },
+    // Mobile API endpoints
     { url: `https://mobile-api.yad2.co.il/api/2/feed/realestate/rent?city=${id}&${qs}`, headers: MOBILE_HEADERS },
     { url: `https://mobile-api.yad2.co.il/api/3/realestate/rent?city=${id}&${qs}`, headers: MOBILE_HEADERS },
+    // Fallback with page parameter
+    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&page=1&${qs}`, headers: DESKTOP_HEADERS },
+    { url: `https://gw.yad2.co.il/feed-search-legacy/realestate/rent?city=${id}&topArea=${topArea}&page=1&${qs}`, headers: DESKTOP_V2_HEADERS },
   ];
 
   for (let i = 0; i < attempts.length; i++) {

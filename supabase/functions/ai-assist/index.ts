@@ -63,9 +63,11 @@ Return ONLY valid JSON in this exact format:
 CRITICAL RULES:
 - Extract ONLY data that exists in the provided text. NEVER guess or invent data.
 - If a field is not found in the text, use null.
+- For amenities: ONLY include amenities that are explicitly mentioned as present.
+- Do NOT fabricate amenities or default to common ones. If the page does not mention מיזוג (AC), do NOT include it.
+- An empty amenities array [] is correct if no amenities are mentioned.
 
-AMENITIES — Extract ALL of these when mentioned (in Hebrew or English).
-  This is CRITICAL — the user needs to know exactly what the apartment has/doesn't have:
+AMENITIES — Extract ALL of these ONLY when explicitly mentioned (in Hebrew or English):
   סורגים (window bars), מזגן/מיזוג/מזגן מרכזי (AC/central AC), ממ"ד/ממד (safe room), מעלית (elevator),
   מרפסת (balcony), חניה (parking), מחסן (storage), גינה (garden),
   דוד שמש (solar water heater), גישה לנכים (disabled access),
@@ -77,8 +79,11 @@ AMENITIES — Extract ALL of these when mentioned (in Hebrew or English).
   מכונת כביסה (washing machine), מייבש כביסה (dryer),
   מערכת אזעקה (alarm system), אינטרקום (intercom),
   דלתות פנדור (pandoor doors), משופצת חדש (newly renovated),
-  ריצוף חדש (new flooring), אמבטיה (bathtub), מקלחון (shower stall)
+  ריצוף חדש (new flooring), אמבטיה (bathtub), מקלחון (shower stall),
+  מתאים לשותפים (suitable for roommates), דלתות רב בריח (multi-lock doors),
+  משופצת (renovated/refurbished)
   Keep the original Hebrew terms as they appear. If the listing says "יש/אין" (has/doesn't have), extract accordingly.
+  Look for Yad2/Madlan amenity sections like "מה יש בנכס?" or "what's in the property" — extract all items listed there.
 
 FACEBOOK-SPECIFIC RULES:
 - Facebook posts often have listing data in free text form within the description or title.
@@ -94,6 +99,14 @@ FACEBOOK-SPECIFIC RULES:
 YAD2 RULES:
 - Extract all structured data fields including exact amenities list.
 - Floor format is often "קומה X מתוך Y" — extract both floor and total_floors.
+
+MADLAN-SPECIFIC RULES:
+- Madlan pages show property details in structured sections.
+- Look for "מה יש בנכס?" (What's in the property) section and extract ALL listed amenities with their icons/labels.
+- Look for structured info: rooms (חדרים), floor (קומה), area/size (שטח/מ"ר), price (מחיר/₪).
+- Extract address from the page title or header sections.
+- Contact info might be behind "הצגת מספר טלפון" or "שליחת הודעה" buttons — extract any visible contact details.
+- Madlan may have "היסטוריית שווי נכס" (property value history) — ignore this, focus on rental data.
 
 GENERAL:
 - Extract image URLs when found (og:image meta tags, img src attributes).
@@ -259,8 +272,32 @@ async function fetchSingleUrl(url: string, headers: Record<string, string>): Pro
   }
 }
 
+/* ── Validate URL is not targeting internal/private networks ── */
+function isPublicUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase();
+    // Block private/internal hostnames
+    if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0") return false;
+    if (hostname.endsWith(".local") || hostname.endsWith(".internal")) return false;
+    if (hostname.startsWith("10.") || hostname.startsWith("192.168.")) return false;
+    if (hostname.startsWith("172.") && /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)) return false;
+    // Block metadata endpoints (cloud providers)
+    if (hostname === "169.254.169.254" || hostname === "metadata.google.internal") return false;
+    // Must use http or https
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /* ── Fetch actual web page content from URL ── */
 async function fetchUrlContent(url: string): Promise<{ text: string; images: string[] } | null> {
+  if (!isPublicUrl(url)) {
+    console.warn(`[fetch-url] Blocked non-public URL: ${url}`);
+    return null;
+  }
   const BROWSER_HEADERS: Record<string, string> = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7",
@@ -279,10 +316,16 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
 
   const isFacebook = url.includes("facebook.com") || url.includes("fb.com");
   const isYad2 = url.includes("yad2.co.il");
+  const isMadlan = url.includes("madlan.co.il");
 
   if (isYad2) {
     BROWSER_HEADERS["Origin"] = "https://www.yad2.co.il";
     BROWSER_HEADERS["Referer"] = "https://www.yad2.co.il/";
+  }
+
+  if (isMadlan) {
+    BROWSER_HEADERS["Origin"] = "https://www.madlan.co.il";
+    BROWSER_HEADERS["Referer"] = "https://www.madlan.co.il/";
   }
 
   // ── Facebook: try multiple URL variants (mbasic, mobile, original) ──
@@ -344,11 +387,81 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
     return null;
   }
 
-  // ── Non-Facebook: standard fetch with retries ──
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const html = await fetchSingleUrl(url, BROWSER_HEADERS);
+  // ── Madlan: try multiple user agents and URL variants ──
+  if (isMadlan) {
+    const madlanUserAgents = [
+      BROWSER_HEADERS["User-Agent"],
+      "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+      "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+    ];
+
+    // Try mobile version first (simpler HTML, easier to parse)
+    const madlanUrls = [url];
+    try {
+      const parsed = new URL(url);
+      const mobileUrl = `https://m.madlan.co.il${parsed.pathname}${parsed.search}`;
+      if (!madlanUrls.includes(mobileUrl)) madlanUrls.unshift(mobileUrl);
+    } catch { /* skip */ }
+
+    let bestResult: { text: string; images: string[] } | null = null;
+
+    for (const madlanUrl of madlanUrls) {
+      for (const ua of madlanUserAgents) {
+        const madlanHeaders = { ...BROWSER_HEADERS, "User-Agent": ua };
+        console.log(`[fetch-url] Trying Madlan URL: ${madlanUrl} with UA: ${ua.slice(0, 30)}...`);
+        const html = await fetchSingleUrl(madlanUrl, madlanHeaders);
+        if (!html) {
+          await new Promise(r => setTimeout(r, 500));
+          continue;
+        }
+
+        const images = extractImagesFromHtml(html);
+        const ogMeta = extractOgMeta(html);
+        const text = htmlToText(html);
+
+        // Check for meaningful content
+        if (text.length > 200) {
+          console.log(`[fetch-url] Got ${text.length} chars from ${madlanUrl}`);
+          return { text: text.slice(0, 15000), images: images.slice(0, 15) };
+        }
+
+        // Fallback to OG meta data
+        if (ogMeta.description || ogMeta.title) {
+          const parts: string[] = [];
+          if (ogMeta.title) parts.push(`LISTING TITLE: ${ogMeta.title}`);
+          if (ogMeta.description) parts.push(`LISTING DESCRIPTION: ${ogMeta.description}`);
+          if (ogMeta["site_name"]) parts.push(`SOURCE: ${ogMeta["site_name"]}`);
+          parts.push(`\nPAGE CONTENT:\n${text}`);
+          const metaText = parts.join("\n");
+          if (!bestResult || metaText.length > bestResult.text.length) {
+            bestResult = { text: metaText, images };
+          }
+        }
+
+        await new Promise(r => setTimeout(r, 500));
+        if (bestResult && bestResult.text.length > 200) break;
+      }
+    }
+
+    if (bestResult) {
+      console.log(`[fetch-url] Using Madlan fallback data (${bestResult.text.length} chars)`);
+      return { text: bestResult.text.slice(0, 15000), images: bestResult.images.slice(0, 15) };
+    }
+  }
+
+  // ── Non-Facebook/Madlan: standard fetch with retries ──
+  for (let attempt = 0; attempt < 3; attempt++) {
+    // Try different user agents on retries
+    const headers = { ...BROWSER_HEADERS };
+    if (attempt === 1) {
+      headers["User-Agent"] = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36";
+    } else if (attempt === 2) {
+      headers["User-Agent"] = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
+    }
+
+    const html = await fetchSingleUrl(url, headers);
     if (!html) {
-      if (attempt === 0) await new Promise(r => setTimeout(r, 1000));
+      if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
       continue;
     }
 
@@ -356,7 +469,7 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
     const text = htmlToText(html);
     if (text.length < 30) {
       console.warn(`[fetch-url] Very short content (${text.length} chars) from ${url}`);
-      if (attempt === 0) {
+      if (attempt < 2) {
         await new Promise(r => setTimeout(r, 1500));
         continue;
       }
