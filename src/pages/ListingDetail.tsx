@@ -18,6 +18,7 @@ import { ImageGallery } from "@/components/listings/ImageGallery";
 import { motion, AnimatePresence } from "framer-motion";
 import { AiSectionHelper } from "@/components/ui/ai-section-helper";
 import { sanitizeText, sanitizePhone, isSafeUrl } from "@/lib/sanitize";
+import { cityDisplayName, amenityDisplayName } from "@/lib/cityMap";
 
 /* ─── Score Legend ─── */
 const SCORE_LEGEND = {
@@ -365,10 +366,10 @@ Be specific, concise, and practical.`
             </div>
           ) : (
             <>
-              <h1 className="text-2xl font-display font-bold">{listing.address || listing.city || t("listing.details")}</h1>
+              <h1 className="text-2xl font-display font-bold">{listing.address || (listing.city ? cityDisplayName(listing.city, language) : t("listing.details"))}</h1>
               {listing.city && (
                 <p className="text-muted-foreground flex items-center gap-1 mt-1">
-                  <MapPin className="h-4 w-4" /> {listing.city}
+                  <MapPin className="h-4 w-4" /> {cityDisplayName(listing.city, language)}
                 </p>
               )}
             </>
@@ -586,7 +587,7 @@ Be specific, concise, and practical.`
           </h3>
           <div className="flex flex-wrap gap-1.5">
             {listing.amenities.map((a: string) => (
-              <span key={a} className="text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-1 rounded-full font-medium">{a}</span>
+              <span key={a} className="text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-1 rounded-full font-medium">{amenityDisplayName(a, language)}</span>
             ))}
           </div>
         </Card>

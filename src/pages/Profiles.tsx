@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { OnboardingWizard, SearchProfileDraft } from "@/components/onboarding/OnboardingWizard";
 import { Plus, Trash2, MapPin, Pencil, Search, Briefcase, Sparkles, Navigation, Home, CheckCircle2, Circle } from "lucide-react";
+import { cityDisplayName, amenityDisplayName } from "@/lib/cityMap";
 import { toast } from "sonner";
 import { scoreListing } from "@/lib/scoring";
 import { motion, AnimatePresence } from "framer-motion";
@@ -303,7 +304,7 @@ const Profiles = () => {
                     </div>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1 ms-7">
                       <MapPin className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">{p.cities?.join(", ") || "—"}</span>
+                      <span className="truncate">{p.cities?.map((c: string) => cityDisplayName(c, language)).join(", ") || "—"}</span>
                     </div>
                     <p className="text-sm text-muted-foreground mt-1 ms-7">
                       ₪{p.min_price?.toLocaleString()}–₪{p.max_price?.toLocaleString()} · {p.min_rooms}–{p.max_rooms} {t("common.rooms")}
@@ -329,14 +330,14 @@ const Profiles = () => {
                     {p.must_haves?.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2 ms-7">
                         {p.must_haves.map((mh: string) => (
-                          <span key={mh} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{mh}</span>
+                          <span key={mh} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{amenityDisplayName(mh, language)}</span>
                         ))}
                       </div>
                     )}
                     {p.nice_to_haves?.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1 ms-7">
                         {p.nice_to_haves.map((nh: string) => (
-                          <span key={nh} className="text-xs bg-accent/10 text-accent-foreground px-2 py-0.5 rounded-full">{nh}</span>
+                          <span key={nh} className="text-xs bg-accent/10 text-accent-foreground px-2 py-0.5 rounded-full">{amenityDisplayName(nh, language)}</span>
                         ))}
                       </div>
                     )}

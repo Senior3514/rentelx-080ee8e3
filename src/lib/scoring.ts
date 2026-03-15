@@ -1,3 +1,5 @@
+import { cityInList, countAmenityMatches, cityToHebrew } from "./cityMap";
+
 interface ScoringListing {
   city?: string | null;
   price?: number | null;
@@ -173,7 +175,8 @@ function getCommuteScore(listingCity: string | null, workplaceAddress: string): 
   const workCity = extractCityFromAddress(workplaceAddress);
   if (!workCity) return 50; // Can't determine workplace city
 
-  const cityNorm = listingCity.trim();
+  // Normalize to Hebrew for COMMUTE_MATRIX lookup (handles slugs like "tel-aviv")
+  const cityNorm = cityToHebrew(listingCity.trim());
   const matrix = COMMUTE_MATRIX[cityNorm];
   if (!matrix) return 50;
 
@@ -196,7 +199,9 @@ function getLocationScore(listing: ScoringListing, profile: ScoringProfile): num
 
   let features = neighborhood ? NEIGHBORHOOD_FEATURES[neighborhood] : null;
   if (!features && city) {
-    features = CITY_FEATURES[city] || null;
+    // Normalize to Hebrew for CITY_FEATURES lookup (handles slugs)
+    const cityHe = cityToHebrew(city);
+    features = CITY_FEATURES[city] || CITY_FEATURES[cityHe] || null;
   }
 
   if (!features) return 50; // neutral if unknown
@@ -231,8 +236,8 @@ function getLocationScore(listing: ScoringListing, profile: ScoringProfile): num
 }
 
 export function scoreListing(listing: ScoringListing, profile: ScoringProfile): ScoreBreakdown {
-  // City match (0 or 100)
-  const cityScore = listing.city && profile.cities.includes(listing.city) ? 100 : 0;
+  // City match (0 or 100) — handles slug ("tel-aviv") vs Hebrew ("תל אביב") comparison
+  const cityScore = listing.city && cityInList(listing.city, profile.cities) ? 100 : 0;
 
   // Price match
   let priceScore = 0;
@@ -261,12 +266,12 @@ export function scoreListing(listing: ScoringListing, profile: ScoringProfile): 
     }
   }
 
-  // Amenity match
+  // Amenity match — handles English IDs ("parking") vs Hebrew ("חניה") comparison
   let amenitiesScore = 0;
   const allWanted = [...profile.must_haves, ...profile.nice_to_haves];
   if (allWanted.length > 0 && listing.amenities) {
-    const mustHits = profile.must_haves.filter((a) => listing.amenities!.includes(a)).length;
-    const niceHits = profile.nice_to_haves.filter((a) => listing.amenities!.includes(a)).length;
+    const mustHits = countAmenityMatches(listing.amenities, profile.must_haves);
+    const niceHits = countAmenityMatches(listing.amenities, profile.nice_to_haves);
     const mustWeight = profile.must_haves.length * 2;
     const niceWeight = profile.nice_to_haves.length;
     const totalWeight = mustWeight + niceWeight || 1;

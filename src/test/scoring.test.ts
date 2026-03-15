@@ -48,6 +48,23 @@ describe("scoreListing", () => {
     expect(result.total).toBeGreaterThanOrEqual(90);
   });
 
+  it("matches city when profile uses slug and listing uses Hebrew", () => {
+    const result = scoreListing(
+      { city: "תל אביב", price: 6000, rooms: 2.5, amenities: [] },
+      { ...baseProfile, cities: ["tel-aviv"], must_haves: [], nice_to_haves: [] }
+    );
+    expect(result.city).toBe(100);
+  });
+
+  it("matches amenities when listing uses Hebrew and profile uses English IDs", () => {
+    const result = scoreListing(
+      { city: "תל אביב", price: 6000, rooms: 2.5, amenities: ["חניה", "מעלית", "מרפסת", "מיזוג"] },
+      { ...baseProfile, cities: ["tel-aviv"], must_haves: ["parking", "elevator"], nice_to_haves: ["balcony", "ac"] }
+    );
+    expect(result.city).toBe(100);
+    expect(result.amenities).toBe(100);
+  });
+
   it("penalises city miss heavily (city weight = 25%)", () => {
     const result = scoreListing(
       {
