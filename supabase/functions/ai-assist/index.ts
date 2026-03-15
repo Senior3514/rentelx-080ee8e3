@@ -423,7 +423,7 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
 
     for (const fbUrl of fbUrls) {
       for (const ua of fbUserAgents) {
-        const fbHeaders = { ...BROWSER_HEADERS, "User-Agent": ua };
+        const fbHeaders: Record<string, string> = { ...BROWSER_HEADERS, "User-Agent": ua };
         // Remove browser-specific headers for bots
         if (ua.includes("externalhit") || ua.includes("Googlebot") || ua.includes("WhatsApp") || ua.includes("TelegramBot")) {
           delete fbHeaders["sec-ch-ua"];
@@ -523,7 +523,7 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
 
     for (const madlanUrl of madlanUrls) {
       for (const ua of madlanUserAgents) {
-        const madlanHeaders = { ...BROWSER_HEADERS, "User-Agent": ua };
+        const madlanHeaders: Record<string, string> = { ...BROWSER_HEADERS, "User-Agent": ua };
         // For API endpoint, accept JSON
         if (madlanUrl.includes("/api/")) {
           madlanHeaders["Accept"] = "application/json";
