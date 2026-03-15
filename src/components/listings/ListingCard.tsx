@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { MapPin, BedDouble, Maximize, Building2, Clock, ExternalLink, Phone, User } from "lucide-react";
+import { MapPin, BedDouble, Maximize, Building2, Clock, ExternalLink, Phone, User, Image as ImageIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
@@ -45,24 +45,34 @@ export const ListingCard = ({ listing }: ListingCardProps) => {
     >
       {/* Cover image */}
       {coverImage && (
-        <div className={`relative w-full h-36 bg-muted ${imgError ? "hidden" : ""}`}>
+        <div className={`relative w-full h-40 bg-muted overflow-hidden ${imgError ? "hidden" : ""}`}>
           <img
             src={coverImage}
             alt=""
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             onError={() => setImgError(true)}
             loading="lazy"
           />
+          {/* Gradient overlay for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
           {/* Score badge overlay on image */}
           {topScore > 0 && (
-            <div className={`absolute top-2 end-2 px-2.5 py-1.5 rounded-full text-xs font-bold ${scoreColor} ${topScore >= 80 ? "animate-glow" : ""} stat-number shadow-lg`}>
+            <div className={`absolute top-2.5 end-2.5 px-2.5 py-1.5 rounded-xl text-xs font-bold ${scoreColor} ${topScore >= 80 ? "animate-glow" : ""} stat-number shadow-lg backdrop-blur-sm`}>
               {topScore}
             </div>
           )}
           {/* Image count badge */}
           {listing.image_urls?.length > 1 && (
-            <div className="absolute bottom-2 end-2 px-2 py-0.5 rounded-full text-[10px] font-medium bg-black/60 text-white backdrop-blur-sm">
-              {listing.image_urls.length} 📷
+            <div className="absolute bottom-2.5 end-2.5 px-2 py-0.5 rounded-lg text-[10px] font-medium bg-black/50 text-white backdrop-blur-sm flex items-center gap-1">
+              <ImageIcon className="h-3 w-3" />
+              {listing.image_urls.length}
+            </div>
+          )}
+          {/* Price overlay on image */}
+          {listing.price && (
+            <div className="absolute bottom-2.5 start-2.5 px-2.5 py-1 rounded-lg bg-black/50 backdrop-blur-sm text-white">
+              <span className="font-bold text-sm">{t("common.shekel")}{listing.price.toLocaleString()}</span>
+              <span className="text-[10px] opacity-80">{t("common.perMonth")}</span>
             </div>
           )}
         </div>
@@ -87,7 +97,7 @@ export const ListingCard = ({ listing }: ListingCardProps) => {
             </div>
 
             <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
-              {listing.price && (
+              {listing.price && !hasImages && (
                 <span className="font-bold text-primary text-base">
                   {t("common.shekel")}{listing.price.toLocaleString()}
                   <span className="text-xs font-normal text-muted-foreground">{t("common.perMonth")}</span>

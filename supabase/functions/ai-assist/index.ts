@@ -117,6 +117,7 @@ GENERAL:
 const MODELS = [
   "anthropic/claude-3-5-haiku",
   "anthropic/claude-3-haiku",
+  "google/gemini-flash-1.5-8b",
   "google/gemini-flash-1.5",
   "meta-llama/llama-3.1-8b-instruct:free",
 ];
@@ -175,27 +176,84 @@ async function callOpenRouter(
 /* ── Extract images from HTML ── */
 function extractImagesFromHtml(html: string): string[] {
   const images: string[] = [];
+  const seen = new Set<string>();
+  const addImage = (url: string) => {
+    if (!url || seen.has(url)) return;
+    // Filter out non-listing images
+    const lower = url.toLowerCase();
+    if (lower.includes("placeholder") || lower.includes("logo") || lower.includes("icon") ||
+        lower.includes("avatar") || lower.includes("emoji") || lower.includes("static") ||
+        lower.includes("rsrc.php") || lower.includes("pixel") || lower.includes("tracking") ||
+        lower.includes("blank.gif") || lower.includes("spinner") || lower.includes("badge") ||
+        lower.includes("flag") || lower.length < 20) return;
+    seen.add(url);
+    images.push(url);
+  };
+
   // og:image — support both attribute orders
   const ogImagePatterns = [
     /(?:property|name)=["']og:image(?::url)?["'][^>]*content=["']([^"']+)["']/gi,
     /content=["']([^"']+)["'][^>]*(?:property|name)=["']og:image(?::url)?["']/gi,
   ];
   for (const pattern of ogImagePatterns) {
-    for (const m of html.matchAll(pattern)) {
-      if (m[1] && !m[1].includes("placeholder") && !images.includes(m[1])) images.push(m[1]);
-    }
+    for (const m of html.matchAll(pattern)) addImage(m[1]);
   }
-  const imgSrcMatches = html.matchAll(/<img[^>]+(?:src|data-src)=["']([^"']+)["']/gi);
+
+  // Twitter card images
+  const twitterImgPatterns = [
+    /(?:property|name)=["']twitter:image["'][^>]*content=["']([^"']+)["']/gi,
+    /content=["']([^"']+)["'][^>]*(?:property|name)=["']twitter:image["']/gi,
+  ];
+  for (const pattern of twitterImgPatterns) {
+    for (const m of html.matchAll(pattern)) addImage(m[1]);
+  }
+
+  // JSON-LD images
+  const jsonLdMatches = html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
+  for (const m of jsonLdMatches) {
+    try {
+      const data = JSON.parse(m[1]);
+      const extractJsonLdImages = (obj: any) => {
+        if (!obj) return;
+        if (typeof obj === "string" && obj.startsWith("http") && /\.(jpg|jpeg|png|webp|avif)/i.test(obj)) addImage(obj);
+        if (Array.isArray(obj)) obj.forEach(extractJsonLdImages);
+        if (typeof obj === "object") {
+          for (const key of ["image", "photo", "thumbnail", "images", "photos"]) {
+            if (obj[key]) {
+              if (typeof obj[key] === "string") addImage(obj[key]);
+              else if (Array.isArray(obj[key])) obj[key].forEach((u: any) => { if (typeof u === "string") addImage(u); else if (u?.url) addImage(u.url); });
+              else if (obj[key]?.url) addImage(obj[key].url);
+            }
+          }
+        }
+      };
+      extractJsonLdImages(data);
+    } catch { /* skip */ }
+  }
+
+  // img src/data-src
+  const imgSrcMatches = html.matchAll(/<img[^>]+(?:src|data-src|data-lazy-src|data-original)=["']([^"']+)["']/gi);
   for (const m of imgSrcMatches) {
-    if (m[1] && m[1].startsWith("http") && !m[1].includes("logo") && !m[1].includes("icon") && !m[1].includes("avatar") && !m[1].includes("emoji") && !m[1].includes("static") && !m[1].includes("rsrc.php") && !images.includes(m[1])) {
-      images.push(m[1]);
-    }
+    if (m[1] && m[1].startsWith("http")) addImage(m[1]);
   }
+
+  // srcset — extract the largest image
+  const srcsetMatches = html.matchAll(/srcset=["']([^"']+)["']/gi);
+  for (const m of srcsetMatches) {
+    const parts = m[1].split(",").map(s => s.trim().split(/\s+/));
+    // Get the largest (last) source
+    const last = parts[parts.length - 1];
+    if (last?.[0]?.startsWith("http")) addImage(last[0]);
+  }
+
   // background-image patterns
   const bgImageMatches = html.matchAll(/background-image:\s*url\(['"]?(https?:\/\/[^'")\s]+)['"]?\)/gi);
-  for (const m of bgImageMatches) {
-    if (m[1] && !images.includes(m[1])) images.push(m[1]);
-  }
+  for (const m of bgImageMatches) addImage(m[1]);
+
+  // data-image attributes (common on Yad2/Madlan)
+  const dataImgMatches = html.matchAll(/data-(?:image|img|photo|src)=["'](https?:\/\/[^"']+)["']/gi);
+  for (const m of dataImgMatches) addImage(m[1]);
+
   return images;
 }
 
@@ -390,17 +448,23 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
   // ── Madlan: try multiple user agents and URL variants ──
   if (isMadlan) {
     const madlanUserAgents = [
+      // Googlebot gets the full server-rendered page from Next.js sites
+      "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
       BROWSER_HEADERS["User-Agent"],
       "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
-      "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
     ];
 
-    // Try mobile version first (simpler HTML, easier to parse)
+    // Try mobile version first (simpler HTML, easier to parse), plus API endpoint
     const madlanUrls = [url];
     try {
       const parsed = new URL(url);
       const mobileUrl = `https://m.madlan.co.il${parsed.pathname}${parsed.search}`;
       if (!madlanUrls.includes(mobileUrl)) madlanUrls.unshift(mobileUrl);
+      // Try the API endpoint if it's a listing page
+      const listingIdMatch = parsed.pathname.match(/\/listings\/([^/?]+)/);
+      if (listingIdMatch) {
+        madlanUrls.push(`https://www.madlan.co.il/api/listings/${listingIdMatch[1]}`);
+      }
     } catch { /* skip */ }
 
     let bestResult: { text: string; images: string[] } | null = null;
@@ -408,11 +472,24 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
     for (const madlanUrl of madlanUrls) {
       for (const ua of madlanUserAgents) {
         const madlanHeaders = { ...BROWSER_HEADERS, "User-Agent": ua };
+        // For API endpoint, accept JSON
+        if (madlanUrl.includes("/api/")) {
+          madlanHeaders["Accept"] = "application/json";
+        }
         console.log(`[fetch-url] Trying Madlan URL: ${madlanUrl} with UA: ${ua.slice(0, 30)}...`);
         const html = await fetchSingleUrl(madlanUrl, madlanHeaders);
         if (!html) {
           await new Promise(r => setTimeout(r, 500));
           continue;
+        }
+
+        // Check if we got JSON response (API endpoint or __NEXT_DATA__)
+        if (html.trim().startsWith("{")) {
+          try {
+            const data = JSON.parse(html);
+            const jsonText = `STRUCTURED DATA (API): ${JSON.stringify(data, null, 0).slice(0, 8000)}`;
+            return { text: jsonText, images: extractImagesFromHtml(html).slice(0, 15) };
+          } catch { /* not JSON, continue */ }
         }
 
         const images = extractImagesFromHtml(html);
@@ -422,7 +499,7 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
         // Check for meaningful content
         if (text.length > 200) {
           console.log(`[fetch-url] Got ${text.length} chars from ${madlanUrl}`);
-          return { text: text.slice(0, 15000), images: images.slice(0, 15) };
+          return { text: text.slice(0, 18000), images: images.slice(0, 15) };
         }
 
         // Fallback to OG meta data
@@ -445,7 +522,7 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
 
     if (bestResult) {
       console.log(`[fetch-url] Using Madlan fallback data (${bestResult.text.length} chars)`);
-      return { text: bestResult.text.slice(0, 15000), images: bestResult.images.slice(0, 15) };
+      return { text: bestResult.text.slice(0, 18000), images: bestResult.images.slice(0, 15) };
     }
   }
 
@@ -513,9 +590,15 @@ function htmlToText(html: string): string {
   const metaDescMatch = html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i);
   const metaDesc = metaDescMatch ? metaDescMatch[1].trim() : "";
 
-  // Extract og:description
-  const ogDescMatch = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i);
+  // Extract og:description (both attribute orders)
+  const ogDescMatch = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i)
+    || html.match(/content=["']([^"']+)["'][^>]*property=["']og:description["']/i);
   const ogDesc = ogDescMatch ? ogDescMatch[1].trim() : "";
+
+  // Extract og:title
+  const ogTitleMatch = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)
+    || html.match(/content=["']([^"']+)["'][^>]*property=["']og:title["']/i);
+  const ogTitle = ogTitleMatch ? ogTitleMatch[1].trim() : "";
 
   // Extract JSON-LD structured data (common on listing sites)
   const jsonLdMatches = html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
@@ -527,6 +610,38 @@ function htmlToText(html: string): string {
     } catch { /* skip malformed JSON-LD */ }
   }
 
+  // Extract __NEXT_DATA__ (common on Next.js sites like Madlan)
+  let nextDataText = "";
+  const nextDataMatch = html.match(/<script[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
+  if (nextDataMatch) {
+    try {
+      const data = JSON.parse(nextDataMatch[1]);
+      // Extract page props which contain listing data
+      const props = data?.props?.pageProps;
+      if (props) {
+        nextDataText = JSON.stringify(props, null, 0).slice(0, 5000);
+      }
+    } catch { /* skip */ }
+  }
+
+  // Extract data from window.__data or similar globals
+  const windowDataPatterns = [
+    /window\.__data\s*=\s*({[\s\S]*?});/i,
+    /window\.__PRELOADED_STATE__\s*=\s*({[\s\S]*?});/i,
+    /window\.listing\s*=\s*({[\s\S]*?});/i,
+    /window\.pageData\s*=\s*({[\s\S]*?});/i,
+  ];
+  let windowDataText = "";
+  for (const pattern of windowDataPatterns) {
+    const m = html.match(pattern);
+    if (m) {
+      try {
+        const data = JSON.parse(m[1]);
+        windowDataText += JSON.stringify(data, null, 0).slice(0, 3000);
+      } catch { /* skip */ }
+    }
+  }
+
   // Remove scripts, styles, and irrelevant elements
   const text = html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
@@ -535,8 +650,12 @@ function htmlToText(html: string): string {
     .replace(/<footer[\s\S]*?<\/footer>/gi, " ")
     .replace(/<header[\s\S]*?<\/header>/gi, " ")
     .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, " ")
     // Convert block elements to newlines
-    .replace(/<\/?(div|p|br|h[1-6]|li|tr|td|section|article)[^>]*>/gi, "\n")
+    .replace(/<\/?(div|p|br|h[1-6]|li|tr|td|th|section|article|dt|dd|figcaption)[^>]*>/gi, "\n")
+    // Extract aria-label content (often contains useful data)
+    .replace(/aria-label=["']([^"']+)["']/gi, " $1 ")
     // Remove remaining tags
     .replace(/<[^>]+>/g, " ")
     // Decode common HTML entities
@@ -546,6 +665,8 @@ function htmlToText(html: string): string {
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&nbsp;/g, " ")
+    .replace(/&lrm;/g, "")
+    .replace(/&rlm;/g, "")
     .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
     .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec)))
     // Collapse whitespace
@@ -553,12 +674,15 @@ function htmlToText(html: string): string {
     .replace(/\n\s*\n/g, "\n")
     .trim();
 
-  // Build final content with metadata first
+  // Build final content with metadata first (structured data is most reliable)
   const parts: string[] = [];
   if (title) parts.push(`PAGE TITLE: ${title}`);
+  if (ogTitle && ogTitle !== title) parts.push(`OG TITLE: ${ogTitle}`);
   if (metaDesc) parts.push(`META DESCRIPTION: ${metaDesc}`);
   if (ogDesc && ogDesc !== metaDesc) parts.push(`OG DESCRIPTION: ${ogDesc}`);
-  if (jsonLdText) parts.push(`STRUCTURED DATA: ${jsonLdText.slice(0, 3000)}`);
+  if (jsonLdText) parts.push(`STRUCTURED DATA (JSON-LD): ${jsonLdText.slice(0, 4000)}`);
+  if (nextDataText) parts.push(`STRUCTURED DATA (NEXT): ${nextDataText.slice(0, 4000)}`);
+  if (windowDataText) parts.push(`STRUCTURED DATA (WINDOW): ${windowDataText.slice(0, 3000)}`);
   parts.push(`\nPAGE CONTENT:\n${text}`);
 
   return parts.join("\n");
@@ -620,20 +744,44 @@ serve(async (req) => {
             : url.includes("yad2") ? "Yad2"
             : url.includes("madlan") ? "Madlan"
             : url.includes("homeless") ? "Homeless"
+            : url.includes("winwin") ? "WinWin"
+            : url.includes("onmap") ? "OnMap"
+            : url.includes("komo") ? "Komo"
             : "rental listing website";
           const isFbSource = sourceHint === "Facebook";
+          const isMadlanSource = sourceHint === "Madlan";
+          const isYad2Source = sourceHint === "Yad2";
+
+          const sourceNotes: string[] = [];
+          if (isFbSource) {
+            sourceNotes.push(`FACEBOOK NOTE: The content may be from OG meta tags or mbasic view. Extract ALL available data including: contact name/phone from the post, amenities mentioned (סורגים, מזגן, ממ"ד, מעלית, מרפסת, חניה, מחסן, דוד שמש, etc.), and any address/location details. Look carefully in the description text for all details. Facebook marketplace posts often contain all listing info in a single text block.`);
+          }
+          if (isMadlanSource) {
+            sourceNotes.push(`MADLAN NOTE: Look for STRUCTURED DATA sections (JSON-LD, NEXT, API) which contain the most reliable data. Extract ALL amenities from "מה יש בנכס" section. If you see JSON data with property fields, prioritize those over HTML text. Madlan often includes neighborhood (שכונה) data — extract it.`);
+          }
+          if (isYad2Source) {
+            sourceNotes.push(`YAD2 NOTE: Extract all structured fields. Floor format is often "קומה X מתוך Y" or "X/Y". Look for the amenities section with all available features. Contact phone may be partially hidden — extract whatever is visible.`);
+          }
+
           enrichedMessages = [{
             role: "user",
             content: [
               `Extract rental listing data from the following ${sourceHint} page content.`,
               `SOURCE URL: ${url}`,
-              fetched.images.length > 0 ? `\nIMAGES FOUND ON PAGE:\n${fetched.images.join("\n")}` : "",
+              fetched.images.length > 0 ? `\nIMAGES FOUND ON PAGE (${fetched.images.length}):\n${fetched.images.join("\n")}` : "",
               `\n--- PAGE CONTENT START ---\n${fetched.text}\n--- PAGE CONTENT END ---`,
-              `\nExtract ONLY data that appears in the content above. Return JSON only.`,
-              `IMPORTANT: For price, look for numbers near ₪, ש"ח, שקל, NIS, שכירות, rent, or להשכרה.`,
-              `For rooms, look for חדרים, חד', rooms, or X.5 patterns.`,
-              `For images, include ALL image URLs found on the page that look like listing photos.`,
-              isFbSource ? `\nFACEBOOK NOTE: The content may be from OG meta tags or mbasic view. Extract ALL available data including: contact name/phone from the post, amenities mentioned (סורגים, מזגן, ממ"ד, מעלית, מרפסת, חניה, מחסן, דוד שמש, etc.), and any address/location details. Look carefully in the description text for all details.` : "",
+              `\nINSTRUCTIONS:`,
+              `1. Extract ONLY data that appears in the content above. Return JSON only.`,
+              `2. For price: look for numbers near ₪, ש"ח, שקל, NIS, שכירות, rent, להשכרה, or "price" fields in structured data.`,
+              `3. For rooms: look for חדרים, חד', rooms, X.5 patterns, or "rooms" fields in structured data.`,
+              `4. For sqm: look for מ"ר, מטר, sqm, m², or "area"/"size" fields in structured data.`,
+              `5. For floor: look for קומה, floor, or floor/total patterns. Extract BOTH floor and total_floors.`,
+              `6. For images: include ALL image URLs found on the page that look like listing/property photos.`,
+              `7. For amenities: look for ALL Hebrew amenity terms AND structured amenity lists. Extract EVERY mentioned amenity.`,
+              `8. For contact: extract name, phone (Israeli patterns: 05X-XXXXXXX, 0X-XXXXXXX, +972).`,
+              `9. For address: extract full street + number. For city: extract city name in Hebrew.`,
+              `10. For description: clean up the text, remove HTML artifacts, provide the listing description.`,
+              ...sourceNotes,
             ].join("\n"),
           }];
         } else {
@@ -660,7 +808,7 @@ serve(async (req) => {
     }
 
     const callOpts = type === "extract"
-      ? { maxTokens: 1200, temperature: 0.1, timeoutMs: 45000 }
+      ? { maxTokens: 1500, temperature: 0.1, timeoutMs: 50000 }
       : type === "analyze"
       ? { maxTokens: 1200, temperature: 0.4 }
       : { maxTokens: 1024, temperature: 0.7 };

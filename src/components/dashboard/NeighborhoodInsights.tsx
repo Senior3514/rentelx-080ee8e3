@@ -148,7 +148,7 @@ export function NeighborhoodInsights() {
                 <p className="text-xs text-muted-foreground mb-2">
                   {language === "he" ? n.cityHe : n.city}
                 </p>
-                <p className="text-lg font-bold text-primary">
+                <p className="text-lg font-bold text-primary tabular-nums">
                   ₪{n.medianPrice.toLocaleString()}
                   <span className="text-xs font-normal text-muted-foreground">/mo</span>
                 </p>

@@ -56,7 +56,7 @@ export function detectSource(url: string): Yad2Listing["source"] {
     const { hostname } = new URL(url);
     if (hostname.includes("yad2.co.il")) return "yad2";
     if (hostname.includes("madlan.co.il")) return "madlan";
-    if (hostname.includes("facebook.com") || hostname.includes("fb.com") || hostname.includes("mbasic.facebook.com")) return "facebook";
+    if (hostname.includes("facebook.com") || hostname.includes("fb.com") || hostname.includes("mbasic.facebook.com") || hostname.includes("m.facebook.com")) return "facebook";
     return "other";
   } catch {
     return "other";
