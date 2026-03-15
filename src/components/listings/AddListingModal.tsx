@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -61,6 +61,7 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
   const [extractionPartial, setExtractionPartial] = useState(false);
   const [pastedContent, setPastedContent] = useState("");
   const [pasteExtracting, setPasteExtracting] = useState(false);
+  const autoExtractRef = useRef(false);
 
   // Image upload state
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -359,6 +360,40 @@ CRITICAL RULES — MUST FOLLOW:
     }
   };
 
+  // Auto-extract when a valid URL is pasted
+  useEffect(() => {
+    if (!autoExtractRef.current) return;
+    autoExtractRef.current = false;
+    if (!url || urlFetching || urlExtracted) return;
+    if (!urlSchema.safeParse(url).success) return;
+    // Small delay to let the UI update
+    const timer = setTimeout(() => {
+      setUrlError("");
+      setDuplicateInfo(null);
+      const extractPromise = extractFromUrl(url);
+      if (url) checkDuplicateHint(url);
+      extractPromise.catch(() => {});
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [url]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handle URL paste event - auto-clean tracking params and trigger extraction
+  const handleUrlPaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasted = e.clipboardData.getData("text").trim();
+    if (!pasted) return;
+    // Check if it looks like a URL
+    if (urlSchema.safeParse(pasted).success) {
+      e.preventDefault();
+      const cleaned = normalizeUrl(pasted);
+      setUrl(cleaned);
+      setUrlError("");
+      setUrlExtracted(null);
+      setExtractionPartial(false);
+      setDuplicateInfo(null);
+      autoExtractRef.current = true;
+    }
+  }, []);
+
   // Extract listing data from pasted text content (Facebook post copy-paste)
   const extractFromPastedContent = async () => {
     if (!pastedContent.trim()) return;
@@ -540,6 +575,7 @@ CRITICAL RULES — MUST FOLLOW:
                     placeholder={t("addListing.urlPlaceholder")}
                     value={url}
                     onChange={(e) => { setUrl(e.target.value); setUrlError(""); setUrlExtracted(null); setExtractionPartial(false); setDuplicateInfo(null); }}
+                    onPaste={handleUrlPaste}
                     className="ps-10"
                     required
                   />

@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { LogOut, Globe, Sun, Moon, Monitor, Minimize2, FileDown, Palette } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { escapeHtml, sanitizeText } from "@/lib/sanitize";
 
 const Settings = () => {
   const { user, signOut } = useAuth();
@@ -77,7 +78,7 @@ const Settings = () => {
     mutationFn: async () => {
       const { error } = await supabase
         .from("profiles")
-        .update({ display_name: displayName.trim().slice(0, 100) })
+        .update({ display_name: sanitizeText(displayName, 100) })
         .eq("id", user!.id);
       if (error) throw error;
     },
@@ -114,10 +115,10 @@ const Settings = () => {
 
       const isRtl = language === "he";
       const rows = listings.map(l => {
-        const amenities = Array.isArray(l.amenities) ? (l.amenities as string[]).join(", ") : "";
+        const amenities = Array.isArray(l.amenities) ? (l.amenities as string[]).map(a => escapeHtml(String(a))).join(", ") : "";
         return `<tr>
-          <td>${l.address ?? "—"}</td>
-          <td>${l.city ?? "—"}</td>
+          <td>${escapeHtml(String(l.address ?? "—"))}</td>
+          <td>${escapeHtml(String(l.city ?? "—"))}</td>
           <td>₪${l.price?.toLocaleString() ?? "—"}</td>
           <td>${l.rooms ?? "—"}</td>
           <td>${l.sqm ?? "—"}</td>

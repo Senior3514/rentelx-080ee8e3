@@ -28,6 +28,16 @@ export function sanitizeText(input: string, maxLen = 500): string {
   return normalizeWhitespace(stripHtml(input)).slice(0, maxLen);
 }
 
+/** Escape string for safe insertion into HTML templates (prevents XSS in document.write) */
+export function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /** Validate and sanitize a phone number — digits, +, -, (, ), space only */
 export function sanitizePhone(input: string): string {
   return input.replace(/[^\d\s+\-()]/g, '').slice(0, 20);
