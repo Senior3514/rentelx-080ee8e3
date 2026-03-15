@@ -316,7 +316,7 @@ const Landing = () => {
             {[
               { value: 7, suffix: "", label: t("landing.stats.stages") },
               { value: 100, suffix: "", label: t("landing.stats.score") },
-              { value: 3, suffix: "", label: t("landing.stats.languages") },
+              { value: 4, suffix: "", label: t("landing.stats.languages") },
             ].map((stat) => (
               <Card key={stat.label} className="p-3 text-center glass border-border/40">
                 <p className="text-2xl font-display font-bold text-primary stat-number">
