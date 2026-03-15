@@ -18,7 +18,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-const MAX_PROFILES = 6;
+const MAX_PROFILES = 3;
 
 const Profiles = () => {
   const { user } = useAuth();
@@ -233,145 +233,147 @@ const Profiles = () => {
     show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 26 } },
   };
 
+  // Slots: always show MAX_PROFILES slots
+  const profileSlots = Array.from({ length: MAX_PROFILES }, (_, i) => profiles[i] || null);
+
   return (
-    <div className="w-full space-y-6 pb-20">
+    <div className="w-full space-y-6 pb-20 animate-fade-up">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-display font-bold">{t("profiles.title")}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {profiles.length}/{MAX_PROFILES} {language === "he" ? "פרופילים" : "profiles"}
+            {profiles.length}/{MAX_PROFILES} {language === "he" ? "פרופילים" : language === "ru" ? "профилей" : language === "es" ? "perfiles" : "profiles"}
           </p>
         </div>
-        <Button
-          onClick={() => {
-            if (profiles.length >= MAX_PROFILES) {
-              toast.error(language === "he" ? `מקסימום ${MAX_PROFILES} פרופילים` : `Maximum ${MAX_PROFILES} profiles`);
-              return;
-            }
-            setShowCreate(true);
-          }}
-          className="gap-1.5"
-          disabled={profiles.length >= MAX_PROFILES || createMutation.isPending}
-        >
-          <Plus className="h-4 w-4" /> {t("profiles.create")}
-        </Button>
       </div>
 
       {isLoading ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
         </div>
-      ) : profiles.length === 0 ? (
-        <div className="text-center py-16 space-y-3">
-          <Search className="h-12 w-12 mx-auto text-muted-foreground/50" />
-          <p className="text-muted-foreground">{t("profiles.empty")}</p>
-          <p className="text-sm text-muted-foreground">{t("profiles.emptySubtitle")}</p>
-          <Button variant="outline" onClick={() => setShowCreate(true)} className="mt-3 gap-1.5">
-            <Plus className="h-4 w-4" /> {t("profiles.create")}
-          </Button>
-        </div>
       ) : (
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="show"
-          className="space-y-3"
+          className="grid grid-cols-1 md:grid-cols-3 gap-4"
         >
-          {profiles.map((p) => (
-            <motion.div key={p.id} variants={itemVariants} layout>
-              <Card className={`p-4 transition-all ${p.is_active ? "ring-2 ring-primary/50 border-primary/30" : ""}`}>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+          {profileSlots.map((p, slotIdx) => (
+            <motion.div key={p?.id || `empty-${slotIdx}`} variants={itemVariants} layout>
+              {p ? (
+                /* ── Filled Profile Card ── */
+                <Card className={`relative overflow-hidden transition-all h-full flex flex-col ${
+                  p.is_active
+                    ? "ring-2 ring-primary/50 border-primary/30 shadow-[0_0_20px_hsl(var(--primary)/0.12)]"
+                    : "border-border/60 hover:border-primary/30"
+                }`}>
+                  {/* Active indicator bar */}
+                  {p.is_active && (
+                    <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-primary to-primary/60" />
+                  )}
+
+                  <div className="p-4 flex-1 flex flex-col">
+                    {/* Top row: activate + name + badge */}
+                    <div className="flex items-center gap-2.5 mb-3">
                       <button
                         onClick={() => activateMutation.mutate(p.id)}
-                        className="shrink-0 transition-transform hover:scale-110"
+                        className="shrink-0 transition-all hover:scale-110"
                         title={language === "he" ? (p.is_active ? "פרופיל פעיל" : "הפעל פרופיל") : (p.is_active ? "Active profile" : "Set as active")}
                         disabled={activateMutation.isPending}
                       >
                         {p.is_active ? (
                           <CheckCircle2 className="h-5 w-5 text-primary" />
                         ) : (
-                          <Circle className="h-5 w-5 text-muted-foreground/50 hover:text-primary/60" />
+                          <Circle className="h-5 w-5 text-muted-foreground/40 hover:text-primary/60" />
                         )}
                       </button>
-                      <h3 className="font-semibold">{p.name || (language === "he" ? "ללא שם" : "Untitled")}</h3>
+                      <h3 className="font-semibold text-base truncate flex-1">{p.name || (language === "he" ? "ללא שם" : "Untitled")}</h3>
                       {p.is_active && (
-                        <span className="text-[10px] bg-primary/15 text-primary px-2 py-0.5 rounded-full font-medium">
-                          {language === "he" ? "פעיל" : "Active"}
+                        <span className="text-[10px] bg-primary/15 text-primary px-2 py-0.5 rounded-full font-semibold shrink-0">
+                          {language === "he" ? "פעיל" : language === "ru" ? "Актив" : "Active"}
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1 ms-7">
-                      <MapPin className="h-3.5 w-3.5 shrink-0" />
+
+                    {/* Cities */}
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-2">
+                      <MapPin className="h-3.5 w-3.5 shrink-0 text-primary/60" />
                       <span className="truncate">{p.cities?.map((c: string) => cityDisplayName(c, language)).join(", ") || "—"}</span>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1 ms-7">
-                      ₪{p.min_price?.toLocaleString()}–₪{p.max_price?.toLocaleString()} · {p.min_rooms}–{p.max_rooms} {t("common.rooms")}
-                    </p>
-                    {(p as any).current_address && (
-                      <p className="text-sm text-muted-foreground mt-1 ms-7 flex items-center gap-1">
-                        <Home className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">{(p as any).current_address}</span>
-                      </p>
-                    )}
-                    {(p as any).desired_area && (
-                      <p className="text-sm text-muted-foreground mt-1 ms-7 flex items-center gap-1">
-                        <Navigation className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">{(p as any).desired_area}</span>
-                      </p>
-                    )}
-                    {(p as any).workplace_address && (
-                      <p className="text-sm text-muted-foreground mt-1 ms-7 flex items-center gap-1">
-                        <Briefcase className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">{(p as any).workplace_address}</span>
-                      </p>
-                    )}
-                    {p.must_haves?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2 ms-7">
-                        {p.must_haves.map((mh: string) => (
-                          <span key={mh} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{amenityDisplayName(mh, language)}</span>
+
+                    {/* Budget + Rooms as compact badges */}
+                    <div className="flex items-center gap-2 flex-wrap mb-3">
+                      <span className="text-xs bg-muted/80 px-2 py-1 rounded-md font-medium">
+                        ₪{p.min_price?.toLocaleString()}–₪{p.max_price?.toLocaleString()}
+                      </span>
+                      <span className="text-xs bg-muted/80 px-2 py-1 rounded-md font-medium">
+                        {p.min_rooms}–{p.max_rooms} {t("common.rooms")}
+                      </span>
+                    </div>
+
+                    {/* Address info (compact) */}
+                    <div className="space-y-1 mb-3">
+                      {p.current_address && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 truncate">
+                          <Home className="h-3 w-3 shrink-0 text-muted-foreground/60" />
+                          {p.current_address}
+                        </p>
+                      )}
+                      {p.desired_area && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 truncate">
+                          <Navigation className="h-3 w-3 shrink-0 text-muted-foreground/60" />
+                          {p.desired_area}
+                        </p>
+                      )}
+                      {p.workplace_address && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 truncate">
+                          <Briefcase className="h-3 w-3 shrink-0 text-muted-foreground/60" />
+                          {p.workplace_address}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Amenities */}
+                    {(p.must_haves?.length > 0 || p.nice_to_haves?.length > 0) && (
+                      <div className="flex flex-wrap gap-1 mt-auto pt-2 border-t border-border/30">
+                        {p.must_haves?.map((mh: string) => (
+                          <span key={mh} className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">{amenityDisplayName(mh, language)}</span>
                         ))}
-                      </div>
-                    )}
-                    {p.nice_to_haves?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1 ms-7">
-                        {p.nice_to_haves.map((nh: string) => (
-                          <span key={nh} className="text-xs bg-accent/10 text-accent-foreground px-2 py-0.5 rounded-full">{amenityDisplayName(nh, language)}</span>
+                        {p.nice_to_haves?.map((nh: string) => (
+                          <span key={nh} className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">{amenityDisplayName(nh, language)}</span>
                         ))}
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
+
+                  {/* Action bar */}
+                  <div className="flex items-center justify-end gap-0.5 px-3 py-2 border-t border-border/30 bg-muted/20">
                     <Button
                       variant="ghost"
-                      size="icon"
+                      size="sm"
                       onClick={() => rescoreMutation.mutate({
-                        id: p.id,
-                        cities: p.cities,
-                        min_price: p.min_price,
-                        max_price: p.max_price,
-                        min_rooms: p.min_rooms,
-                        max_rooms: p.max_rooms,
-                        must_haves: p.must_haves,
-                        nice_to_haves: p.nice_to_haves,
-                        workplace_address: (p as any).workplace_address,
-                        current_address: (p as any).current_address,
-                        desired_area: (p as any).desired_area,
+                        id: p.id, cities: p.cities,
+                        min_price: p.min_price, max_price: p.max_price,
+                        min_rooms: p.min_rooms, max_rooms: p.max_rooms,
+                        must_haves: p.must_haves, nice_to_haves: p.nice_to_haves,
+                        workplace_address: p.workplace_address,
+                        current_address: p.current_address,
+                        desired_area: p.desired_area,
                       })}
-                      title={language === "he" ? "חשב ציונים מחדש" : "Re-score listings"}
-                      className="text-primary"
+                      className="h-7 text-xs gap-1 text-primary hover:text-primary"
                       disabled={rescoreMutation.isPending}
                     >
-                      <Sparkles className="h-4 w-4" />
+                      <Sparkles className="h-3 w-3" />
+                      {language === "he" ? "ציון מחדש" : "Re-score"}
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setEditingProfile(p)}>
-                      <Pencil className="h-4 w-4" />
+                    <Button variant="ghost" size="sm" onClick={() => setEditingProfile(p)} className="h-7 text-xs gap-1">
+                      <Pencil className="h-3 w-3" /> {t("common.edit")}
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="text-destructive">
-                          <Trash2 className="h-4 w-4" />
+                        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-destructive hover:text-destructive">
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
@@ -386,8 +388,26 @@ const Profiles = () => {
                       </AlertDialogContent>
                     </AlertDialog>
                   </div>
-                </div>
-              </Card>
+                </Card>
+              ) : (
+                /* ── Empty Slot Card ── */
+                <Card
+                  className="border-dashed border-border/50 h-full min-h-[200px] flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-all group"
+                  onClick={() => setShowCreate(true)}
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-muted/60 group-hover:bg-primary/10 flex items-center justify-center transition-colors">
+                    <Plus className="h-5 w-5 text-muted-foreground/50 group-hover:text-primary transition-colors" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                      {t("profiles.create")}
+                    </p>
+                    <p className="text-xs text-muted-foreground/60 mt-0.5">
+                      {language === "he" ? `משבצת ${slotIdx + 1} מתוך ${MAX_PROFILES}` : `Slot ${slotIdx + 1} of ${MAX_PROFILES}`}
+                    </p>
+                  </div>
+                </Card>
+              )}
             </motion.div>
           ))}
         </motion.div>

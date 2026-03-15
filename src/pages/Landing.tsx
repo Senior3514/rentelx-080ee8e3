@@ -182,11 +182,12 @@ const Landing = () => {
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce-subtle" />
                   Facebook
                 </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-violet-500/10 text-violet-500 border border-violet-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-bounce-subtle" />
+                  Madlan
+                </span>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-accent/10 text-accent border border-accent/20">
                   AI Scoring
-                </span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20">
-                  Auto-Scan
                 </span>
               </motion.div>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">

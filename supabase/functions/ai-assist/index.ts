@@ -973,7 +973,7 @@ serve(async (req) => {
 1. LISTING DESCRIPTION: This is the MAIN source of data. Scan every word carefully.
 2. Look for PRICE: any number near ₪/ש"ח/שקל/NIS/שכירות/rent/להשכרה/לחודש. Format: "4500 ש״ח", "₪4,500", "4500 שקל לחודש".
 3. Look for ROOMS: number near חדרים/חד'/rooms. Also X.5 patterns like "3.5 חד'".
-4. Look for SQM: number near מ"ר/מטר/sqm/m²/meters. Format: "60 מ\"ר", "60 sqm".
+4. Look for SQM: number near מ"ר/מטר/sqm/m²/meters. Format: "60 מ׳׳ר", "60 sqm".
 5. Look for FLOOR: number near קומה/floor. Format: "קומה 3", "קומה 3 מתוך 5", "floor 3/5".
 6. Look for ADDRESS: any street name (רחוב/רח') + number, or neighborhood + city name.
 7. Look for PHONE: Israeli phone numbers 05X-XXXXXXX, 0X-XXXXXXX, +972. May appear anywhere in text.

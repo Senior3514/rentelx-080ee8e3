@@ -256,25 +256,18 @@ const Settings = () => {
       {/* Language */}
       <Card className="p-4 space-y-3">
         <h3 className="font-semibold flex items-center gap-1.5"><Globe className="h-4 w-4" /> {t("settings.language")}</h3>
-        <div className="flex gap-2 flex-wrap">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {languages.map((lang) => (
             <button
               key={lang.code}
               onClick={() => setLanguage(lang.code)}
-              className={`relative px-3 py-1.5 text-sm rounded-md border transition-colors ${
+              className={`relative px-3 py-2 text-sm rounded-lg border transition-all text-center ${
                 language === lang.code
-                  ? "border-primary text-foreground font-medium"
-                  : "border-border text-muted-foreground hover:border-primary/40"
+                  ? "border-primary bg-primary/10 text-foreground font-medium shadow-sm"
+                  : "border-border text-muted-foreground hover:border-primary/40 hover:bg-muted/50"
               }`}
             >
-              {language === lang.code && (
-                <motion.div
-                  layoutId="lang-indicator"
-                  className="absolute inset-0 bg-primary/10 rounded-md"
-                  transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-                />
-              )}
-              <span className="relative z-10">{lang.flag} {lang.label}</span>
+              <span className="relative z-10 whitespace-nowrap">{lang.flag} {lang.label}</span>
             </button>
           ))}
         </div>
@@ -283,26 +276,19 @@ const Settings = () => {
       {/* Theme */}
       <Card className="p-4 space-y-3">
         <h3 className="font-semibold">{t("settings.theme")}</h3>
-        <div className="flex gap-2 flex-wrap">
+        <div className="grid grid-cols-3 gap-2">
           {themeOptions.map(({ value, icon: Icon, label }) => (
             <button
               key={value}
               onClick={() => setTheme(value)}
-              className={`relative flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border transition-colors ${
+              className={`flex items-center justify-center gap-1.5 px-3 py-2 text-sm rounded-lg border transition-all ${
                 theme === value
-                  ? "border-primary text-foreground font-medium"
-                  : "border-border text-muted-foreground hover:border-primary/40"
+                  ? "border-primary bg-primary/10 text-foreground font-medium shadow-sm"
+                  : "border-border text-muted-foreground hover:border-primary/40 hover:bg-muted/50"
               }`}
             >
-              {theme === value && (
-                <motion.div
-                  layoutId="theme-indicator"
-                  className="absolute inset-0 bg-primary/10 rounded-md"
-                  transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-                />
-              )}
-              <Icon className="relative z-10 h-4 w-4" />
-              <span className="relative z-10">{label}</span>
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="whitespace-nowrap">{label}</span>
             </button>
           ))}
         </div>
@@ -348,12 +334,12 @@ const Settings = () => {
         <h3 className="font-semibold flex items-center gap-1.5">
           <Minimize2 className="h-4 w-4" /> {t("settings.display")}
         </h3>
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-sm">{t("settings.compactMode")}</span>
+        <div className="flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <span className="text-sm font-medium">{t("settings.compactMode")}</span>
             <p className="text-xs text-muted-foreground">{t("settings.compactModeDesc")}</p>
           </div>
-          <Switch checked={compactMode} onCheckedChange={setCompactMode} />
+          <Switch checked={compactMode} onCheckedChange={setCompactMode} className="shrink-0" />
         </div>
       </Card>
 
@@ -364,9 +350,9 @@ const Settings = () => {
           <p className="text-sm mb-2">{t("settings.minScoreThreshold")}: {scoreThreshold}</p>
           <Slider value={[scoreThreshold]} min={0} max={100} step={5} onValueChange={([v]) => setScoreThreshold(v)} />
         </div>
-        <div className="flex items-center justify-between">
-          <span className="text-sm">{t("settings.emailNotifications")}</span>
-          <Switch checked={emailEnabled} onCheckedChange={setEmailEnabled} />
+        <div className="flex items-center gap-3">
+          <span className="text-sm flex-1">{t("settings.emailNotifications")}</span>
+          <Switch checked={emailEnabled} onCheckedChange={setEmailEnabled} className="shrink-0" />
         </div>
         <Button onClick={() => savePrefsMutation.mutate()} size="sm">{t("common.save")}</Button>
       </Card>
