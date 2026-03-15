@@ -7,12 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Plus, Search, Inbox as InboxIcon, Download, Scale, FileText } from "lucide-react";
+import { Plus, Search, Inbox as InboxIcon, Download, Scale, FileText, SlidersHorizontal, ChevronDown } from "lucide-react";
 import { ViewToggle } from "@/components/ui/view-toggle";
 import { useNavigate } from "react-router-dom";
 import { ListingCard } from "@/components/listings/ListingCard";
 import { AddListingModal } from "@/components/listings/AddListingModal";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { AiSectionHelper } from "@/components/ui/ai-section-helper";
 
 type SortOption = "newest" | "score_desc" | "price_asc" | "price_desc";
@@ -27,6 +27,7 @@ const InboxPage = () => {
   const [minScore, setMinScore] = useState(0);
   const [cityFilter, setCityFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [showFilters, setShowFilters] = useState(true);
 
   const { data: listings = [], isLoading } = useQuery({
     queryKey: ["listings", user?.id],
@@ -193,45 +194,70 @@ const InboxPage = () => {
         </div>
       </div>
 
-      {/* Search + Sort + Filter controls */}
+      {/* Search + Collapsible Filters */}
       <div className="space-y-3 mb-4">
-        <div className="relative">
-          <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("inbox.filter") + "..."} className="ps-9" />
-        </div>
-
-        <div className="flex flex-wrap gap-3 items-center">
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder={t("inbox.sort")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest">{t("inbox.sortNewest")}</SelectItem>
-              <SelectItem value="score_desc">{t("inbox.sortScoreDesc")}</SelectItem>
-              <SelectItem value="price_asc">{t("inbox.sortPriceAsc")}</SelectItem>
-              <SelectItem value="price_desc">{t("inbox.sortPriceDesc")}</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {cities.length > 0 && (
-            <Select value={cityFilter} onValueChange={setCityFilter}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder={t("inbox.allCities")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("inbox.allCities")}</SelectItem>
-                {cities.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
-          <div className="flex items-center gap-2 min-w-[200px]">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">{t("inbox.minScore")}: {minScore}</span>
-            <Slider value={[minScore]} min={0} max={100} step={5} onValueChange={([v]) => setMinScore(v)} className="flex-1" />
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("inbox.filter") + "..."} className="ps-9" />
           </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setShowFilters(!showFilters)}
+            className="shrink-0 relative"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            {(sortBy !== "newest" || cityFilter !== "all" || minScore > 0) && (
+              <span className="absolute -top-1 -end-1 w-2 h-2 rounded-full bg-primary" />
+            )}
+          </Button>
         </div>
+
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="overflow-hidden"
+            >
+              <div className="flex flex-wrap gap-3 items-center rounded-lg border border-border/60 bg-card/50 p-3">
+                <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder={t("inbox.sort")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">{t("inbox.sortNewest")}</SelectItem>
+                    <SelectItem value="score_desc">{t("inbox.sortScoreDesc")}</SelectItem>
+                    <SelectItem value="price_asc">{t("inbox.sortPriceAsc")}</SelectItem>
+                    <SelectItem value="price_desc">{t("inbox.sortPriceDesc")}</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {cities.length > 0 && (
+                  <Select value={cityFilter} onValueChange={setCityFilter}>
+                    <SelectTrigger className="w-[160px]">
+                      <SelectValue placeholder={t("inbox.allCities")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("inbox.allCities")}</SelectItem>
+                      {cities.map((c) => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                <div className="flex items-center gap-2 min-w-[200px]">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">{t("inbox.minScore")}: {minScore}</span>
+                  <Slider value={[minScore]} min={0} max={100} step={5} onValueChange={([v]) => setMinScore(v)} className="flex-1" />
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {isLoading ? (

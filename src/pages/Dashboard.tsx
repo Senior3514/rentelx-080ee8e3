@@ -6,10 +6,10 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Plus, Inbox, UserSearch, Columns3, LayoutDashboard, MapPin, TrendingUp, Sparkles, ArrowRight } from "lucide-react";
+import { Plus, Inbox, UserSearch, Columns3, LayoutDashboard, MapPin, TrendingUp, Sparkles, ArrowRight, ChevronDown } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { he } from "date-fns/locale";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { AddListingModal } from "@/components/listings/AddListingModal";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
@@ -61,6 +61,7 @@ const Dashboard = () => {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [showAdd, setShowAdd] = useState(false);
+  const [sections, setSections] = useState({ charts: true, quickActions: true, recent: true, reminders: true, neighborhood: true });
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
@@ -215,118 +216,152 @@ const Dashboard = () => {
 
       {/* Charts */}
       <div>
-        <div className="flex items-center justify-between mb-3">
+        <button
+          onClick={() => setSections(s => ({ ...s, charts: !s.charts }))}
+          className="flex items-center justify-between w-full mb-3 group"
+        >
           <h2 className="text-lg font-display font-semibold flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-primary" />
             {t("dashboard.analytics")}
           </h2>
-        </div>
-        <DashboardCharts
-          listings={listings}
-          pipelineData={pipelineChartData}
-          weeklyActivity={weeklyActivity}
-        />
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${sections.charts ? "rotate-0" : "-rotate-90"}`} />
+        </button>
+        <AnimatePresence initial={false}>
+          {sections.charts && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
+              <DashboardCharts
+                listings={listings}
+                pipelineData={pipelineChartData}
+                weeklyActivity={weeklyActivity}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Quick Actions */}
       <div>
-        <h2 className="text-lg font-display font-semibold mb-3">{t("dashboard.quickActions")}</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: t("nav.inbox"), icon: Inbox, action: () => navigate("/inbox"), variant: "outline" as const },
-            { label: t("nav.profiles"), icon: UserSearch, action: () => navigate("/profiles"), variant: "outline" as const },
-            { label: t("nav.pipeline"), icon: Columns3, action: () => navigate("/pipeline"), variant: "outline" as const },
-            { label: t("nav.settings"), icon: Sparkles, action: () => navigate("/settings"), variant: "outline" as const },
-          ].map((qItem, i) => (
-            <motion.div
-              key={qItem.label}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2 + i * 0.05 }}
-            >
-              <Button
-                variant={qItem.variant}
-                onClick={qItem.action}
-                className="w-full gap-1.5 h-12 card-hover border-border/60"
-              >
-                <qItem.icon className="h-4 w-4" />
-                <span className="text-sm">{qItem.label}</span>
-              </Button>
+        <button
+          onClick={() => setSections(s => ({ ...s, quickActions: !s.quickActions }))}
+          className="flex items-center justify-between w-full mb-3 group"
+        >
+          <h2 className="text-lg font-display font-semibold">{t("dashboard.quickActions")}</h2>
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${sections.quickActions ? "rotate-0" : "-rotate-90"}`} />
+        </button>
+        <AnimatePresence initial={false}>
+          {sections.quickActions && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { label: t("nav.inbox"), icon: Inbox, action: () => navigate("/inbox"), variant: "outline" as const },
+                  { label: t("nav.profiles"), icon: UserSearch, action: () => navigate("/profiles"), variant: "outline" as const },
+                  { label: t("nav.pipeline"), icon: Columns3, action: () => navigate("/pipeline"), variant: "outline" as const },
+                  { label: t("nav.settings"), icon: Sparkles, action: () => navigate("/settings"), variant: "outline" as const },
+                ].map((qItem, i) => (
+                  <motion.div
+                    key={qItem.label}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.2 + i * 0.05 }}
+                  >
+                    <Button
+                      variant={qItem.variant}
+                      onClick={qItem.action}
+                      className="w-full gap-1.5 h-12 card-hover border-border/60"
+                    >
+                      <qItem.icon className="h-4 w-4" />
+                      <span className="text-sm">{qItem.label}</span>
+                    </Button>
+                  </motion.div>
+                ))}
+              </div>
             </motion.div>
-          ))}
-        </div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Recent Listings */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-display font-semibold">{t("dashboard.recentListings")}</h2>
+          <button
+            onClick={() => setSections(s => ({ ...s, recent: !s.recent }))}
+            className="flex items-center gap-2"
+          >
+            <h2 className="text-lg font-display font-semibold">{t("dashboard.recentListings")}</h2>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${sections.recent ? "rotate-0" : "-rotate-90"}`} />
+          </button>
           {recentListings.length > 0 && (
             <Button variant="ghost" size="sm" onClick={() => navigate("/inbox")} className="gap-1 text-primary">
               {t("nav.inbox")} <ArrowRight className="h-3.5 w-3.5 flip-rtl" />
             </Button>
           )}
         </div>
-        {recentListings.length === 0 ? (
-          <Card className="p-8 text-center space-y-3 border-dashed border-border/60">
-            <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mx-auto">
-              <Inbox className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <p className="text-muted-foreground text-sm">{t("dashboard.noRecent")}</p>
-            <Button variant="outline" size="sm" onClick={() => setShowAdd(true)} className="gap-1.5">
-              <Plus className="h-3.5 w-3.5" /> {t("inbox.addListing")}
-            </Button>
-          </Card>
-        ) : (
-          <div className="space-y-2">
-            {recentListings.map((l, i) => {
-              const topScore = l.listing_scores?.reduce((m: number, s: any) => Math.max(m, s.score), 0) ?? 0;
-              const scoreColor =
-                topScore >= 80 ? "bg-score-high text-white" :
-                topScore >= 50 ? "bg-score-medium text-white" :
-                "bg-score-low text-white";
+        <AnimatePresence initial={false}>
+          {sections.recent && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
+              {recentListings.length === 0 ? (
+                <Card className="p-8 text-center space-y-3 border-dashed border-border/60">
+                  <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mx-auto">
+                    <Inbox className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <p className="text-muted-foreground text-sm">{t("dashboard.noRecent")}</p>
+                  <Button variant="outline" size="sm" onClick={() => setShowAdd(true)} className="gap-1.5">
+                    <Plus className="h-3.5 w-3.5" /> {t("inbox.addListing")}
+                  </Button>
+                </Card>
+              ) : (
+                <div className="space-y-2">
+                  {recentListings.map((l, i) => {
+                    const topScore = l.listing_scores?.reduce((m: number, s: any) => Math.max(m, s.score), 0) ?? 0;
+                    const scoreColor =
+                      topScore >= 80 ? "bg-score-high text-white" :
+                      topScore >= 50 ? "bg-score-medium text-white" :
+                      "bg-score-low text-white";
 
-              return (
-                <motion.div
-                  key={l.id}
-                  initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.06 }}
-                >
-                  <Card
-                    className="p-3 cursor-pointer card-hover border-border/60 group"
-                    onClick={() => navigate(`/listings/${l.id}`)}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
-                          <MapPin className="h-3.5 w-3.5 text-primary" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <span className="font-medium truncate block">{l.address || l.city || "—"}</span>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            {l.price && <span>{t("common.shekel")}{l.price.toLocaleString()}</span>}
-                            <span>
-                              {formatDistanceToNow(new Date(l.created_at), {
-                                addSuffix: true,
-                                locale: language === "he" ? he : undefined,
-                              })}
-                            </span>
+                    return (
+                      <motion.div
+                        key={l.id}
+                        initial={{ opacity: 0, x: -12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.06 }}
+                      >
+                        <Card
+                          className="p-3 cursor-pointer card-hover border-border/60 group"
+                          onClick={() => navigate(`/listings/${l.id}`)}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                                <MapPin className="h-3.5 w-3.5 text-primary" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <span className="font-medium truncate block">{l.address || l.city || "—"}</span>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  {l.price && <span>{t("common.shekel")}{l.price.toLocaleString()}</span>}
+                                  <span>
+                                    {formatDistanceToNow(new Date(l.created_at), {
+                                      addSuffix: true,
+                                      locale: language === "he" ? he : undefined,
+                                    })}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            {topScore > 0 && (
+                              <span className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${scoreColor} ${topScore >= 80 ? "animate-glow" : ""}`}>
+                                {topScore}
+                              </span>
+                            )}
                           </div>
-                        </div>
-                      </div>
-                      {topScore > 0 && (
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${scoreColor} ${topScore >= 80 ? "animate-glow" : ""}`}>
-                          {topScore}
-                        </span>
-                      )}
-                    </div>
-                  </Card>
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Reminders */}

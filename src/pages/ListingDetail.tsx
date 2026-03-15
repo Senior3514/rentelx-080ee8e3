@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import {
   MapPin, BedDouble, Maximize, Building2, ArrowLeft, Plus, StickyNote,
   Columns3, Sparkles, Ban, ExternalLink, Phone, User, Pencil, Save,
-  X, FileDown, Info, Layers, Tag, Link2
+  X, FileDown, Info, Layers, Tag, Link2, ChevronDown
 } from "lucide-react";
 import { ImageGallery } from "@/components/listings/ImageGallery";
 import { motion, AnimatePresence } from "framer-motion";
@@ -37,6 +37,7 @@ const ListingDetail = () => {
   const [aiResult, setAiResult] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [detailSections, setDetailSections] = useState({ score: true, ai: true, notes: true });
   const [editForm, setEditForm] = useState<Record<string, any>>({});
 
   const { data: listing, isLoading, error } = useQuery({
@@ -475,15 +476,24 @@ Be specific, concise, and practical.`
       {/* Score Breakdown with Legend */}
       {breakdown && Object.keys(breakdown).length > 0 && (
         <Card className="p-4 space-y-3">
-          <div className="flex items-center justify-between">
+          <button
+            onClick={() => setDetailSections(s => ({ ...s, score: !s.score }))}
+            className="flex items-center justify-between w-full"
+          >
             <h3 className="font-semibold text-sm">{t("listing.scoreBreakdown")}</h3>
-            {/* Score Legend */}
-            <div className="flex items-center gap-3 text-[10px]">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-score-high" />{legend.high}</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-score-medium" />{legend.medium}</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-score-low" />{legend.low}</span>
+            <div className="flex items-center gap-3">
+              {detailSections.score && (
+                <div className="flex items-center gap-3 text-[10px]">
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-score-high" />{legend.high}</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-score-medium" />{legend.medium}</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-score-low" />{legend.low}</span>
+                </div>
+              )}
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${detailSections.score ? "rotate-0" : "-rotate-90"}`} />
             </div>
-          </div>
+          </button>
+          <AnimatePresence initial={false}>
+            {!detailSections.score ? null : <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden space-y-3">
           {Object.entries(breakdown).filter(([k]) => k !== "total").map(([key, value], idx) => {
             const numVal = typeof value === "number" ? value : 0;
             const labelKey = key as keyof typeof legend;
@@ -525,6 +535,8 @@ Be specific, concise, and practical.`
               </motion.span>
             </div>
           </div>
+          </motion.div>}
+          </AnimatePresence>
         </Card>
       )}
 
@@ -683,36 +695,49 @@ Be specific, concise, and practical.`
 
       {/* Notes */}
       <div>
-        <h3 className="font-semibold mb-3 flex items-center gap-1.5">
+        <button
+          onClick={() => setDetailSections(s => ({ ...s, notes: !s.notes }))}
+          className="font-semibold mb-3 flex items-center gap-1.5 w-full"
+        >
           <StickyNote className="h-4 w-4" /> {t("listing.notes")}
-        </h3>
-        <div className="space-y-2 mb-3">
-          {listing.listing_notes?.map((note: any) => (
-            <Card key={note.id} className="p-3">
-              <p className="text-sm">{note.content}</p>
-              <p className="text-xs text-muted-foreground mt-1">{new Date(note.created_at).toLocaleDateString()}</p>
-            </Card>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <div className="flex-1 relative">
-            <Textarea
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value.slice(0, 2000))}
-              placeholder={t("listing.addNote")}
-              rows={2}
-              maxLength={2000}
-            />
-            {noteText.length > 1800 && (
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {noteText.length}/2000
-              </p>
-            )}
-          </div>
-          <Button size="sm" onClick={() => noteText.trim() && addNoteMutation.mutate(noteText)} disabled={!noteText.trim()}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
+          {listing.listing_notes?.length > 0 && (
+            <span className="text-xs bg-muted rounded-full px-1.5 py-0.5 font-normal">{listing.listing_notes.length}</span>
+          )}
+          <ChevronDown className={`h-4 w-4 text-muted-foreground ms-auto transition-transform duration-200 ${detailSections.notes ? "rotate-0" : "-rotate-90"}`} />
+        </button>
+        <AnimatePresence initial={false}>
+          {detailSections.notes && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+              <div className="space-y-2 mb-3">
+                {listing.listing_notes?.map((note: any) => (
+                  <Card key={note.id} className="p-3">
+                    <p className="text-sm">{note.content}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{new Date(note.created_at).toLocaleDateString()}</p>
+                  </Card>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <div className="flex-1 relative">
+                  <Textarea
+                    value={noteText}
+                    onChange={(e) => setNoteText(e.target.value.slice(0, 2000))}
+                    placeholder={t("listing.addNote")}
+                    rows={2}
+                    maxLength={2000}
+                  />
+                  {noteText.length > 1800 && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {noteText.length}/2000
+                    </p>
+                  )}
+                </div>
+                <Button size="sm" onClick={() => noteText.trim() && addNoteMutation.mutate(noteText)} disabled={!noteText.trim()}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );
