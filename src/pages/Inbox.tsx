@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Plus, Search, Inbox as InboxIcon, Download, Scale, FileText } from "lucide-react";
+import { ViewToggle } from "@/components/ui/view-toggle";
 import { useNavigate } from "react-router-dom";
 import { ListingCard } from "@/components/listings/ListingCard";
 import { AddListingModal } from "@/components/listings/AddListingModal";
@@ -25,6 +26,7 @@ const InboxPage = () => {
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [minScore, setMinScore] = useState(0);
   const [cityFilter, setCityFilter] = useState("all");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const { data: listings = [], isLoading } = useQuery({
     queryKey: ["listings", user?.id],
@@ -167,6 +169,7 @@ const InboxPage = () => {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-display font-bold">{t("inbox.title")}</h1>
         <div className="flex items-center gap-2">
+          <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
           <Button variant="outline" size="sm" onClick={() => navigate("/compare")} className="gap-1.5 hidden sm:flex">
             <Scale className="h-4 w-4" />
             {language === "he" ? "השוואה" : "Compare"}
@@ -245,7 +248,10 @@ const InboxPage = () => {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className={viewMode === "grid"
+          ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+          : "space-y-3"
+        }>
           {filtered.map((listing, index) => (
             <motion.div
               key={listing.id}
@@ -253,7 +259,7 @@ const InboxPage = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, delay: Math.min(index * 0.04, 0.4), ease: "easeOut" }}
             >
-              <ListingCard listing={listing} />
+              <ListingCard listing={listing} variant={viewMode} />
             </motion.div>
           ))}
         </div>

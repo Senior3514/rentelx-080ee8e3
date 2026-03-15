@@ -12,12 +12,13 @@ import {
   Clock, ExternalLink, Sparkles, BookHeart, Zap, PlusCircle,
   Check, Radio, Filter, WifiOff, RotateCcw, TrendingUp,
   Building2, Star, ChevronRight, ChevronLeft, Phone, User,
-  LayoutGrid, List, Radar, Settings2
+  Radar, Settings2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { scanYad2, scoreScannedListing, SCAN_KEY, ScannedListing, ScanCity } from "@/lib/scanService";
 import { AiSectionHelper } from "@/components/ui/ai-section-helper";
+import { ViewToggle } from "@/components/ui/view-toggle";
 import { formatDistanceToNow } from "date-fns";
 import { he } from "date-fns/locale";
 
@@ -664,23 +665,7 @@ const Watchlist = () => {
                 : (language === "he" ? "סריקה אוטומטית" : "Auto-scan")}
             </span>
           </div>
-          {/* View toggle */}
-          <div className="flex items-center bg-muted/50 border border-border/60 rounded-lg p-0.5">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`p-1.5 rounded-md transition-all ${viewMode === "grid" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}
-              title={language === "he" ? "תצוגת כרטיסים" : "Grid view"}
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={`p-1.5 rounded-md transition-all ${viewMode === "list" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}
-              title={language === "he" ? "תצוגת רשימה" : "List view"}
-            >
-              <List className="h-4 w-4" />
-            </button>
-          </div>
+          <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
           {/* Scan button */}
           <Button
             size="sm"
@@ -932,8 +917,8 @@ const Watchlist = () => {
                   </p>
                   <p className="text-sm text-muted-foreground mt-1 max-w-sm">
                     {language === "he"
-                      ? "הסריקה לא מצאה דירות תואמות כרגע. נסו שוב בעוד מספר דקות או שנו את הפילטרים."
-                      : "Scan found no matching listings right now. Try again shortly or adjust your filters."}
+                      ? "יד2 חוסם בקשות אוטומטיות כרגע. נסו שוב בעוד 1-2 דקות — בדרך כלל זה נפתר מהר."
+                      : "Yad2 is temporarily blocking automated requests. Try again in 1-2 minutes — this usually resolves quickly."}
                   </p>
                 </div>
                 <Button onClick={doScan} variant="outline" className="gap-2">
