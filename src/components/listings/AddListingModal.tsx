@@ -263,8 +263,8 @@ export const AddListingModal = ({ open, onOpenChange }: AddListingModalProps) =>
               type: "extract",
               messages: [{
                 role: "user",
-                content: attempt === 0
-                  ? `Extract rental listing data from this ${source} listing URL: ${inputUrl}
+                content: `Extract rental listing data from this ${source} listing URL: ${inputUrl}
+${attempt > 0 ? `\nThis is attempt ${attempt + 1}. Previous attempt returned incomplete data. Try HARDER to extract ALL fields. Look more carefully at structured data (JSON-LD, __NEXT_DATA__), OG meta tags, aria-labels, and free text.` : ""}
 
 Return a JSON object with these exact fields (use null if not found):
 {
@@ -284,11 +284,12 @@ Return a JSON object with these exact fields (use null if not found):
 }
 
 CRITICAL RULES — MUST FOLLOW:
-1. Extract ONLY data that ACTUALLY appears on the page content. Do NOT invent, guess, or assume any data.
-2. For amenities: ONLY include amenities that are EXPLICITLY LISTED on the page. If the page does NOT mention a specific amenity, do NOT include it. An empty array [] is the correct answer if no amenities are listed. Do NOT default to common amenities like AC/מיזוג, ממ"ד, דוד שמש, ריהוט — these must be EXPLICITLY mentioned on the page.
-3. If the page content cannot be read or is empty, return all null values. Do NOT fabricate data.
-4. Keep original Hebrew terms as they appear on the page.`
-                  : `Please try again to extract rental listing data from this ${source} listing URL: ${inputUrl}. This is attempt ${attempt + 1}. Make sure to fetch the actual page content and extract every available field. Return a JSON object with: address, neighborhood, city, price, rooms, sqm, floor, total_floors, description, amenities, contact_name, contact_phone, image_urls.`,
+1. Extract ONLY data that ACTUALLY appears in the fetched page content. Do NOT invent, guess, or assume any data.
+2. For amenities: ONLY include amenities that are EXPLICITLY LISTED on the page. An empty array [] is correct if none found.
+3. IMPORTANT: Check ALL data sources in the content — JSON structured data, OG meta tags, page title, description text, aria labels.
+4. For Madlan: the OG title often contains the full address. NEXT_DATA JSON contains rooms/price/sqm/floor/amenities.
+5. For Facebook: parse the description text carefully for price (₪/ש"ח), rooms (חדרים), sqm (מ"ר), floor (קומה), phone numbers.
+6. Keep original Hebrew terms. Return ONLY valid JSON.`,
               }],
             },
           });

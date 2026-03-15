@@ -1,9 +1,9 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, TrendingDown, MapPin, RefreshCw, Sparkles, Loader2, BarChart3 } from "lucide-react";
+import { TrendingUp, TrendingDown, MapPin, RefreshCw, Sparkles, Loader2, BarChart3, Wifi } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -13,32 +13,43 @@ interface NeighborhoodStat {
   city: string;
   cityHe: string;
   medianPrice: number;
-  trend: number; // % change
+  listingCount: number;
   avgRooms: number;
   topAmenity: string;
   topAmenityHe: string;
   color: string;
   demandLevel: "high" | "medium" | "low";
+  isLive: boolean;
 }
 
-/*
- * Real market rental prices for Gush Dan — Q1 2026
- * Sources: Yad2 median listings, CBS (Israel Central Bureau of Statistics),
- * Madlan market reports, Bank of Israel housing index.
- * Median prices are for 3-room apartments unless otherwise noted.
- * Trend = year-over-year rental price change (%).
- */
-const NEIGHBORHOODS: NeighborhoodStat[] = [
-  { name: "Lev Ha'Ir / Rothschild", nameHe: "לב העיר / רוטשילד", city: "Tel Aviv", cityHe: "תל אביב", medianPrice: 9800, trend: 4.5, avgRooms: 3, topAmenity: "Balcony", topAmenityHe: "מרפסת", color: "from-blue-500 to-blue-600", demandLevel: "high" },
-  { name: "Florentin", nameHe: "פלורנטין", city: "Tel Aviv", cityHe: "תל אביב", medianPrice: 7200, trend: 3.8, avgRooms: 2.5, topAmenity: "A/C", topAmenityHe: "מיזוג", color: "from-violet-500 to-violet-600", demandLevel: "high" },
-  { name: "Old North / Basel", nameHe: "הצפון הישן / בזל", city: "Tel Aviv", cityHe: "תל אביב", medianPrice: 11500, trend: 2.9, avgRooms: 3.5, topAmenity: "Elevator", topAmenityHe: "מעלית", color: "from-pink-500 to-rose-500", demandLevel: "high" },
-  { name: "Neve Sha'anan", nameHe: "נווה שאנן", city: "Givatayim", cityHe: "גבעתיים", medianPrice: 6400, trend: 5.2, avgRooms: 3, topAmenity: "Parking", topAmenityHe: "חניה", color: "from-teal-500 to-teal-600", demandLevel: "medium" },
-  { name: "Diamond District", nameHe: "רמת הבורסה", city: "Ramat Gan", cityHe: "רמת גן", medianPrice: 6800, trend: 3.1, avgRooms: 3, topAmenity: "Safe Room", topAmenityHe: "ממ\"ד", color: "from-orange-500 to-amber-500", demandLevel: "medium" },
-  { name: "Borochov / City Center", nameHe: "בורוכוב / מרכז העיר", city: "Givatayim", cityHe: "גבעתיים", medianPrice: 6900, trend: 4.7, avgRooms: 3, topAmenity: "Elevator", topAmenityHe: "מעלית", color: "from-emerald-500 to-green-600", demandLevel: "high" },
-  { name: "Neve Ofer", nameHe: "נווה עופר", city: "Ramat Gan", cityHe: "רמת גן", medianPrice: 5900, trend: 3.6, avgRooms: 3, topAmenity: "Parking", topAmenityHe: "חניה", color: "from-cyan-500 to-cyan-600", demandLevel: "medium" },
-  { name: "Jaffa / Ajami", nameHe: "יפו / עג'מי", city: "Tel Aviv", cityHe: "תל אביב", medianPrice: 7800, trend: 6.1, avgRooms: 3, topAmenity: "Balcony", topAmenityHe: "מרפסת", color: "from-amber-500 to-yellow-600", demandLevel: "high" },
-  { name: "Ramat Hen", nameHe: "רמת חן", city: "Ramat Gan", cityHe: "רמת גן", medianPrice: 7500, trend: 2.4, avgRooms: 3.5, topAmenity: "Safe Room", topAmenityHe: "ממ\"ד", color: "from-indigo-500 to-indigo-600", demandLevel: "medium" },
+/* City config for live scan */
+const CITY_CONFIGS: { key: string; name: string; nameHe: string; color: string }[] = [
+  { key: "tel-aviv", name: "Tel Aviv", nameHe: "תל אביב", color: "from-blue-500 to-blue-600" },
+  { key: "givatayim", name: "Givatayim", nameHe: "גבעתיים", color: "from-teal-500 to-teal-600" },
+  { key: "ramat-gan", name: "Ramat Gan", nameHe: "רמת גן", color: "from-orange-500 to-amber-500" },
+  { key: "holon", name: "Holon", nameHe: "חולון", color: "from-violet-500 to-violet-600" },
+  { key: "herzliya", name: "Herzliya", nameHe: "הרצליה", color: "from-pink-500 to-rose-500" },
+  { key: "rishon", name: "Rishon LeZion", nameHe: "ראשון לציון", color: "from-emerald-500 to-green-600" },
 ];
+
+const CACHE_KEY = "rentelx_market_data_v2";
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
+function getCachedData(): { data: NeighborhoodStat[]; ts: number } | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Date.now() - parsed.ts < CACHE_TTL) return parsed;
+  } catch { /* ignore */ }
+  return null;
+}
+
+function setCachedData(data: NeighborhoodStat[]) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
+  } catch { /* ignore */ }
+}
 
 const DEMAND_COLORS = {
   high: "bg-red-500/10 text-red-500 border-red-500/30",
@@ -57,18 +68,136 @@ export function NeighborhoodInsights() {
   const navigate = useNavigate();
   const [aiInsight, setAiInsight] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [liveData, setLiveData] = useState<NeighborhoodStat[]>([]);
+  const [scanning, setScanning] = useState(false);
+  const [lastScanTime, setLastScanTime] = useState<Date | null>(null);
 
-  const handleRefresh = () => {
-    setLastRefresh(new Date());
-  };
+  // Load cached data on mount
+  useEffect(() => {
+    const cached = getCachedData();
+    if (cached) {
+      setLiveData(cached.data);
+      setLastScanTime(new Date(cached.ts));
+    } else {
+      // Auto-scan on first load
+      fetchLiveData();
+    }
+  }, []);
+
+  const fetchLiveData = useCallback(async () => {
+    setScanning(true);
+    try {
+      const cities = CITY_CONFIGS.map(c => c.key);
+      const res = await supabase.functions.invoke("scan-yad2", {
+        body: { cities, minRooms: 2, maxRooms: 4 },
+      });
+
+      if (res.error) throw res.error;
+      const listings: any[] = res.data?.listings ?? [];
+
+      if (listings.length === 0) {
+        setScanning(false);
+        return;
+      }
+
+      // Group listings by city and compute stats
+      const cityGroups: Record<string, any[]> = {};
+      for (const l of listings) {
+        const city = l.city || "Unknown";
+        if (!cityGroups[city]) cityGroups[city] = [];
+        cityGroups[city].push(l);
+      }
+
+      const stats: NeighborhoodStat[] = [];
+      for (const cfg of CITY_CONFIGS) {
+        // Match city by Hebrew name
+        const cityListings = cityGroups[cfg.nameHe] ?? [];
+        if (cityListings.length === 0) continue;
+
+        // Compute median price
+        const prices = cityListings
+          .map((l: any) => typeof l.price === "number" ? l.price : parseInt(l.price))
+          .filter((p: number) => p > 1000 && p < 50000)
+          .sort((a: number, b: number) => a - b);
+
+        if (prices.length === 0) continue;
+
+        const medianPrice = prices.length % 2 === 0
+          ? Math.round((prices[prices.length / 2 - 1] + prices[prices.length / 2]) / 2)
+          : prices[Math.floor(prices.length / 2)];
+
+        // Average rooms
+        const rooms = cityListings
+          .map((l: any) => typeof l.rooms === "number" ? l.rooms : parseFloat(l.rooms))
+          .filter((r: number) => r > 0 && r < 10);
+        const avgRooms = rooms.length > 0
+          ? Math.round(rooms.reduce((s: number, r: number) => s + r, 0) / rooms.length * 2) / 2
+          : 3;
+
+        // Top amenity
+        const amenityCounts: Record<string, number> = {};
+        for (const l of cityListings) {
+          if (Array.isArray(l.amenities)) {
+            for (const a of l.amenities) {
+              amenityCounts[a] = (amenityCounts[a] || 0) + 1;
+            }
+          }
+        }
+        const sortedAmenities = Object.entries(amenityCounts).sort(([, a], [, b]) => b - a);
+        const topAmenityHe = sortedAmenities[0]?.[0] || "—";
+        const amenityMap: Record<string, string> = {
+          "מעלית": "Elevator", "חניה": "Parking", "מרפסת": "Balcony",
+          "מיזוג": "A/C", 'ממ"ד': "Safe Room", "מחסן": "Storage",
+          "דוד שמש": "Solar Heater", "מרוהטת": "Furnished",
+          "סורגים": "Window Bars",
+        };
+        const topAmenity = amenityMap[topAmenityHe] || topAmenityHe;
+
+        // Demand level based on listing count
+        const demandLevel: "high" | "medium" | "low" =
+          cityListings.length >= 15 ? "high" :
+          cityListings.length >= 5 ? "medium" : "low";
+
+        stats.push({
+          name: cfg.name,
+          nameHe: cfg.nameHe,
+          city: cfg.name,
+          cityHe: cfg.nameHe,
+          medianPrice,
+          listingCount: cityListings.length,
+          avgRooms,
+          topAmenity,
+          topAmenityHe,
+          color: cfg.color,
+          demandLevel,
+          isLive: true,
+        });
+      }
+
+      // Sort by median price descending
+      stats.sort((a, b) => b.medianPrice - a.medianPrice);
+
+      if (stats.length > 0) {
+        setLiveData(stats);
+        setCachedData(stats);
+        setLastScanTime(new Date());
+      }
+    } catch (err) {
+      console.error("Market scan error:", err);
+    } finally {
+      setScanning(false);
+    }
+  }, []);
+
+  const neighborhoods = liveData;
 
   const getAiInsight = useCallback(async () => {
+    if (neighborhoods.length === 0) return;
     setAiLoading(true);
     setAiInsight("");
     try {
-      const neighborhoodData = NEIGHBORHOODS.map(n =>
-        `${n.name}: ₪${n.medianPrice}/mo, trend ${n.trend > 0 ? "+" : ""}${n.trend}%, avg ${n.avgRooms} rooms, demand: ${n.demandLevel}`
+      const neighborhoodData = neighborhoods.map(n =>
+        `${n.name} (${n.nameHe}): median ₪${n.medianPrice}/mo, ${n.listingCount} listings, avg ${n.avgRooms} rooms, demand: ${n.demandLevel}`
       ).join("\n");
 
       const res = await supabase.functions.invoke("ai-assist", {
@@ -76,7 +205,7 @@ export function NeighborhoodInsights() {
           type: "chat",
           messages: [{
             role: "user",
-            content: `Based on this Gush Dan rental market data:\n${neighborhoodData}\n\nProvide a brief (3-4 sentences) market insight and recommendation for apartment hunters. Respond in ${language === "he" ? "Hebrew" : "English"}.`
+            content: `Based on this LIVE Gush Dan rental market scan data (from Yad2, just fetched):\n${neighborhoodData}\n\nProvide a brief (3-4 sentences) market insight and recommendation for apartment hunters. Mention specific cities and prices. Respond in ${language === "he" ? "Hebrew" : "English"}.`
           }],
         },
       });
@@ -92,21 +221,39 @@ export function NeighborhoodInsights() {
     } finally {
       setAiLoading(false);
     }
-  }, [language]);
+  }, [language, neighborhoods]);
+
+  const lastScanLabel = useMemo(() => {
+    if (!lastScanTime) return null;
+    const mins = Math.round((Date.now() - lastScanTime.getTime()) / 60000);
+    if (mins < 1) return language === "he" ? "עכשיו" : "just now";
+    if (mins < 60) return language === "he" ? `לפני ${mins} דק'` : `${mins}m ago`;
+    const hrs = Math.round(mins / 60);
+    return language === "he" ? `לפני ${hrs} שע'` : `${hrs}h ago`;
+  }, [lastScanTime, language]);
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
           <MapPin className="h-3.5 w-3.5 text-primary" />
-          {language === "he" ? "מחירי שוק — גוש דן" : "Market Prices — Gush Dan"}
+          {language === "he" ? "מחירי שוק בזמן אמת — גוש דן" : "Live Market Prices — Gush Dan"}
+          {neighborhoods.length > 0 && neighborhoods[0].isLive && (
+            <span className="inline-flex items-center gap-1 text-[9px] text-green-500 font-normal normal-case">
+              <Wifi className="h-2.5 w-2.5" />
+              LIVE
+            </span>
+          )}
         </h3>
         <div className="flex items-center gap-1.5">
+          {lastScanLabel && (
+            <span className="text-[10px] text-muted-foreground/60">{lastScanLabel}</span>
+          )}
           <Button
             variant="ghost"
             size="sm"
             onClick={getAiInsight}
-            disabled={aiLoading}
+            disabled={aiLoading || neighborhoods.length === 0}
             className="gap-1 h-7 text-xs text-primary"
           >
             {aiLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
@@ -115,10 +262,12 @@ export function NeighborhoodInsights() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleRefresh}
+            onClick={fetchLiveData}
+            disabled={scanning}
             className="h-7 w-7 p-0"
+            title={language === "he" ? "סרוק מחירים מיד2" : "Scan live prices from Yad2"}
           >
-            <RefreshCw className="h-3 w-3" />
+            <RefreshCw className={`h-3 w-3 ${scanning ? "animate-spin" : ""}`} />
           </Button>
         </div>
       </div>
@@ -138,10 +287,19 @@ export function NeighborhoodInsights() {
         </motion.div>
       )}
 
+      {scanning && neighborhoods.length === 0 && (
+        <Card className="p-6 text-center border-border/60">
+          <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2 text-primary" />
+          <p className="text-xs text-muted-foreground">
+            {language === "he" ? "סורק מחירים מיד2..." : "Scanning live prices from Yad2..."}
+          </p>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {NEIGHBORHOODS.map((n, i) => (
+        {neighborhoods.map((n, i) => (
           <motion.div
-            key={n.name + lastRefresh.getTime()}
+            key={n.name + (lastScanTime?.getTime() ?? 0)}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.07, type: "spring", stiffness: 280, damping: 24 }}
@@ -161,20 +319,15 @@ export function NeighborhoodInsights() {
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mb-2">
-                  {language === "he" ? n.cityHe : n.city}
+                  {n.listingCount} {language === "he" ? "דירות" : "listings"}
                 </p>
                 <p className="text-lg font-bold text-primary tabular-nums">
                   ₪{n.medianPrice.toLocaleString()}
-                  <span className="text-xs font-normal text-muted-foreground">/mo</span>
+                  <span className="text-xs font-normal text-muted-foreground">
+                    /{language === "he" ? "חודש" : "mo"}
+                  </span>
                 </p>
                 <div className="flex items-center justify-between mt-1">
-                  <span className={`text-xs flex items-center gap-0.5 font-medium ${n.trend >= 0 ? "text-red-500" : "text-green-500"}`}>
-                    {n.trend >= 0
-                      ? <TrendingUp className="h-3 w-3" />
-                      : <TrendingDown className="h-3 w-3" />
-                    }
-                    {Math.abs(n.trend)}%
-                  </span>
                   <span className="text-xs text-muted-foreground flex items-center gap-1">
                     <BarChart3 className="h-2.5 w-2.5" />
                     {n.avgRooms} {language === "he" ? "חד'" : "rm"}

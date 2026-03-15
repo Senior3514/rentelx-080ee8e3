@@ -122,6 +122,14 @@ const MODELS = [
   "meta-llama/llama-3.1-8b-instruct:free",
 ];
 
+// Stronger models for extraction (more capable at parsing complex HTML/JSON)
+const EXTRACT_MODELS = [
+  "anthropic/claude-3.5-sonnet",
+  "anthropic/claude-3-5-haiku",
+  "google/gemini-flash-1.5",
+  "anthropic/claude-3-haiku",
+];
+
 async function callOpenRouter(
   apiKey: string,
   model: string,
@@ -488,9 +496,16 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
       // API endpoint for listing pages
       const listingIdMatch = parsed.pathname.match(/\/listings\/([^/?]+)/);
       if (listingIdMatch) {
-        madlanUrls.push(`https://www.madlan.co.il/api/listings/${listingIdMatch[1]}`);
-        // Also try GraphQL endpoint variant
-        madlanUrls.push(`https://www.madlan.co.il/api/v1/listings/${listingIdMatch[1]}`);
+        const lid = listingIdMatch[1];
+        madlanUrls.push(`https://www.madlan.co.il/api/listings/${lid}`);
+        madlanUrls.push(`https://www.madlan.co.il/api/v1/listings/${lid}`);
+        // Also try nadlan (property info) API endpoints
+        madlanUrls.push(`https://gw.madlan.co.il/api/listings/${lid}`);
+      }
+      // For sale/rent listing pages with different path structure
+      const altIdMatch = parsed.pathname.match(/\/(?:rent|sale|נכס|property)\/([^/?]+)/);
+      if (altIdMatch) {
+        madlanUrls.push(`https://www.madlan.co.il/api/listings/${altIdMatch[1]}`);
       }
     } catch {
       madlanUrls.push(url);
@@ -532,12 +547,25 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
 
         const images = extractImagesFromHtml(html);
         const ogMeta = extractOgMeta(html);
-        const text = htmlToText(html);
+        let text = htmlToText(html);
+
+        // Add Madlan-specific structured data extraction
+        const madlanStructured = extractMadlanStructured(html);
+        if (madlanStructured) {
+          text = madlanStructured + "\n" + text;
+        }
 
         // Check for meaningful content
         if (text.length > 200) {
           console.log(`[fetch-url] Got ${text.length} chars from ${madlanUrl}`);
-          return { text: text.slice(0, 18000), images: images.slice(0, 15) };
+          // For Madlan, always prepend OG meta for extra context
+          const ogParts: string[] = [];
+          if (ogMeta.title) ogParts.push(`LISTING TITLE: ${ogMeta.title}`);
+          if (ogMeta.description) ogParts.push(`LISTING DESCRIPTION: ${ogMeta.description}`);
+          const fullText = ogParts.length > 0
+            ? ogParts.join("\n") + "\n\n" + text
+            : text;
+          return { text: fullText.slice(0, 20000), images: images.slice(0, 15) };
         }
 
         // Fallback to OG meta data
@@ -546,6 +574,7 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
           if (ogMeta.title) parts.push(`LISTING TITLE: ${ogMeta.title}`);
           if (ogMeta.description) parts.push(`LISTING DESCRIPTION: ${ogMeta.description}`);
           if (ogMeta["site_name"]) parts.push(`SOURCE: ${ogMeta["site_name"]}`);
+          if (madlanStructured) parts.push(madlanStructured);
           parts.push(`\nPAGE CONTENT:\n${text}`);
           const metaText = parts.join("\n");
           if (!bestResult || metaText.length > bestResult.text.length) {
@@ -602,15 +631,42 @@ function buildFacebookMetaText(ogMeta: Record<string, string>, rawText: string):
   if (ogMeta.description) parts.push(`LISTING DESCRIPTION: ${ogMeta.description}`);
   if (ogMeta["site_name"]) parts.push(`SOURCE: ${ogMeta["site_name"]}`);
 
+  // Extract ALL OG meta tags (some may contain useful listing data)
+  for (const [key, val] of Object.entries(ogMeta)) {
+    if (!["title", "description", "site_name", "image", "url", "type"].includes(key) && val) {
+      parts.push(`OG:${key}: ${val}`);
+    }
+  }
+
   // Try to extract useful content from the raw text too
-  // Filter out Facebook boilerplate
+  // Filter out Facebook boilerplate more aggressively
+  const boilerplate = new Set([
+    "log in", "sign up", "create account", "facebook", "forgot password",
+    "cookie", "privacy policy", "terms of service", "accessibility",
+    "help center", "meta", "marketplace", "groups", "gaming", "watch",
+    "meta quest", "messenger", "whatsapp", "instagram", "threads",
+    "fundraisers", "pokes", "professional dashboard", "pages",
+    "advertising", "create a page", "developers", "careers", "about",
+    "english", "עברית", "see more", "like", "comment", "share",
+    "write a comment", "press enter", "most relevant",
+  ]);
+
   const filteredLines = rawText.split("\n")
     .filter(line => {
       const l = line.trim().toLowerCase();
-      return l.length > 5 &&
-        !l.includes("log in") && !l.includes("sign up") && !l.includes("create account") &&
-        !l.includes("facebook") && !l.includes("forgot password") &&
-        !l.includes("cookie") && !l.includes("privacy policy");
+      if (l.length < 3) return false;
+      // Keep lines with rental/listing keywords
+      const hasKeyword = /חדר|מ"ר|שכיר|להשכ|מחיר|₪|ש"ח|שקל|קומה|מרפסת|חני|מעלית|מיזוג|ממ"ד|rooms?|price|floor|sqm|rent/i.test(l);
+      if (hasKeyword) return true;
+      // Keep lines with phone numbers
+      if (/05\d[\d\-\s]{6,}|0[23489][\d\-\s]{6,}|\+972/.test(l)) return true;
+      // Keep lines with addresses
+      if (/רחוב|רח'|street|st\.|כתובת/.test(l)) return true;
+      // Filter out known boilerplate
+      for (const b of boilerplate) {
+        if (l.includes(b)) return false;
+      }
+      return l.length > 10;
     });
   if (filteredLines.length > 0) {
     parts.push(`\nPAGE CONTENT:\n${filteredLines.join("\n")}`);
@@ -658,7 +714,36 @@ function htmlToText(html: string): string {
       // Extract page props which contain listing data
       const props = data?.props?.pageProps;
       if (props) {
-        nextDataText = JSON.stringify(props, null, 0).slice(0, 5000);
+        // Deep extract: Madlan nests listing data in various places
+        const deepExtract = (obj: any, depth = 0): any => {
+          if (depth > 5 || !obj) return obj;
+          if (typeof obj !== "object") return obj;
+          // Look for listing-like objects with price/rooms/address fields
+          const keys = Object.keys(obj);
+          const isListing = keys.some(k =>
+            ["price", "rooms", "address", "street", "sqm", "area", "floor", "amenities",
+             "phone", "contact", "description", "neighborhood", "city",
+             "מחיר", "חדרים", "כתובת", "שכונה", "קומה"].includes(k.toLowerCase())
+          );
+          if (isListing) return obj;
+          // Recurse into nested objects
+          for (const k of keys) {
+            if (typeof obj[k] === "object" && obj[k] !== null) {
+              const found = deepExtract(obj[k], depth + 1);
+              if (found && typeof found === "object" && Object.keys(found).length > 3) {
+                return found;
+              }
+            }
+          }
+          return obj;
+        };
+        const listing = deepExtract(props);
+        // Include both the deep-extracted listing and the full props (limited)
+        const listingJson = JSON.stringify(listing, null, 0);
+        const propsJson = JSON.stringify(props, null, 0);
+        nextDataText = listingJson.length > 100
+          ? `LISTING DATA: ${listingJson.slice(0, 8000)}\nFULL PROPS: ${propsJson.slice(0, 4000)}`
+          : propsJson.slice(0, 10000);
       }
     } catch { /* skip */ }
   }
@@ -727,6 +812,59 @@ function htmlToText(html: string): string {
   return parts.join("\n");
 }
 
+/* ── Extract structured data from Madlan HTML (specific DOM patterns) ── */
+function extractMadlanStructured(html: string): string {
+  const parts: string[] = [];
+
+  // Extract data from Madlan-specific script tags and data attributes
+  const dataScripts = html.matchAll(/<script[^>]*>[\s\S]*?(?:listing|property|item)\s*[:=]\s*({[\s\S]*?})\s*[;,][\s\S]*?<\/script>/gi);
+  for (const m of dataScripts) {
+    try {
+      const data = JSON.parse(m[1]);
+      parts.push(`INLINE DATA: ${JSON.stringify(data, null, 0).slice(0, 3000)}`);
+    } catch { /* skip */ }
+  }
+
+  // Extract from data-testid or data-auto-id attributes (Madlan uses these)
+  const dataTestIds = html.matchAll(/data-(?:testid|auto-id)=["']([^"']*(?:price|room|floor|area|address|contact|phone|amenit)[^"']*)["'][^>]*>([^<]*)</gi);
+  for (const m of dataTestIds) {
+    if (m[2]?.trim()) parts.push(`${m[1]}: ${m[2].trim()}`);
+  }
+
+  // Extract from aria-label attributes that contain property data
+  const ariaLabels = html.matchAll(/aria-label=["']([^"']*(?:חדר|קומה|מ"ר|מטר|מחיר|שכירות|רחוב|כתובת)[^"']*)["']/gi);
+  for (const m of ariaLabels) {
+    parts.push(`ARIA: ${m[1]}`);
+  }
+
+  // Look for Madlan's property details section
+  const propertySection = html.match(/(?:מה יש בנכס|פרטי הנכס|מאפייני הנכס|What's in the property)([\s\S]{0,3000}?)(?:<\/(?:section|div)>|$)/i);
+  if (propertySection) {
+    const cleanSection = propertySection[1]
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (cleanSection.length > 10) parts.push(`PROPERTY FEATURES: ${cleanSection}`);
+  }
+
+  // Look for React state in HTML comments or hydration data
+  const reactState = html.match(/__APOLLO_STATE__\s*=\s*({[\s\S]*?});/);
+  if (reactState) {
+    try {
+      const data = JSON.parse(reactState[1]);
+      // Find listing-related entries
+      for (const [key, val] of Object.entries(data)) {
+        if (key.toLowerCase().includes("listing") || key.toLowerCase().includes("property")) {
+          parts.push(`APOLLO: ${JSON.stringify(val, null, 0).slice(0, 3000)}`);
+          break;
+        }
+      }
+    } catch { /* skip */ }
+  }
+
+  return parts.length > 0 ? `\nMADLAN STRUCTURED DATA:\n${parts.join("\n")}` : "";
+}
+
 /* ── Extract URL from message content ── */
 function extractUrlFromMessage(messages: Array<{ role: string; content: string }>): string | null {
   for (const msg of messages) {
@@ -793,10 +931,31 @@ serve(async (req) => {
 
           const sourceNotes: string[] = [];
           if (isFbSource) {
-            sourceNotes.push(`FACEBOOK NOTE: The content may be from OG meta tags or mbasic view. Extract ALL available data including: contact name/phone from the post, amenities mentioned (סורגים, מזגן, ממ"ד, מעלית, מרפסת, חניה, מחסן, דוד שמש, etc.), and any address/location details. Look carefully in the description text for all details. Facebook marketplace posts often contain all listing info in a single text block.`);
+            sourceNotes.push(`FACEBOOK NOTE — CRITICAL: Facebook listings often contain ALL data in a single free-text block. You MUST parse it carefully:
+1. LISTING DESCRIPTION: This is the MAIN source of data. Scan every word carefully.
+2. Look for PRICE: any number near ₪/ש"ח/שקל/NIS/שכירות/rent/להשכרה/לחודש. Format: "4500 ש״ח", "₪4,500", "4500 שקל לחודש".
+3. Look for ROOMS: number near חדרים/חד'/rooms. Also X.5 patterns like "3.5 חד'".
+4. Look for SQM: number near מ"ר/מטר/sqm/m²/meters. Format: "60 מ\"ר", "60 sqm".
+5. Look for FLOOR: number near קומה/floor. Format: "קומה 3", "קומה 3 מתוך 5", "floor 3/5".
+6. Look for ADDRESS: any street name (רחוב/רח') + number, or neighborhood + city name.
+7. Look for PHONE: Israeli phone numbers 05X-XXXXXXX, 0X-XXXXXXX, +972. May appear anywhere in text.
+8. Look for CONTACT NAME: the poster's name (usually appears at top or end of post).
+9. Look for AMENITIES: scan for Hebrew amenity keywords anywhere in the text.
+10. Even if data comes from OG meta tags only (title/description), extract EVERYTHING you can from those strings.
+If the text mentions "Marketplace" — this is a marketplace listing, look for structured fields.`);
           }
           if (isMadlanSource) {
-            sourceNotes.push(`MADLAN NOTE: Look for STRUCTURED DATA sections (JSON-LD, NEXT, API) which contain the most reliable data. Extract ALL amenities from "מה יש בנכס" section. If you see JSON data with property fields, prioritize those over HTML text. Madlan often includes neighborhood (שכונה) data — extract it.`);
+            sourceNotes.push(`MADLAN NOTE — CRITICAL: Madlan is a Next.js site. The MOST RELIABLE data is in these sections (check them ALL in order):
+1. LISTING DATA / STRUCTURED DATA (NEXT) — This contains the actual listing JSON from Madlan's database. Look for fields like "price", "rooms", "address", "street", "area", "floor", "sqm", "amenities", "phone", "description". Parse the JSON carefully.
+2. MADLAN STRUCTURED DATA — Contains data extracted from specific Madlan DOM elements.
+3. JSON-LD — Standard structured data.
+4. OG TITLE / OG DESCRIPTION — Contains address and basic info from the page title.
+5. PAGE CONTENT — Raw text from the page.
+
+For Madlan addresses: The OG title often contains the FULL ADDRESS like "רחוב X 12, עיר" — extract it!
+For Madlan amenities: Look for "מה יש בנכס" or "PROPERTY FEATURES" section and extract ALL listed items.
+For Madlan contact: Phone number is often in NEXT_DATA as "phone" or "contactPhone".
+For Madlan images: Look for image URLs in NEXT_DATA and og:image.`);
           }
           if (isYad2Source) {
             sourceNotes.push(`YAD2 NOTE: Extract all structured fields. Floor format is often "קומה X מתוך Y" or "X/Y". Look for the amenities section with all available features. Contact phone may be partially hidden — extract whatever is visible.`);
@@ -850,13 +1009,16 @@ serve(async (req) => {
     }
 
     const callOpts = type === "extract"
-      ? { maxTokens: 1500, temperature: 0.1, timeoutMs: 50000 }
+      ? { maxTokens: 2000, temperature: 0.05, timeoutMs: 60000 }
       : type === "analyze"
       ? { maxTokens: 1200, temperature: 0.4 }
       : { maxTokens: 1024, temperature: 0.7 };
 
+    // Use stronger models for extraction, standard for others
+    const modelList = type === "extract" ? EXTRACT_MODELS : MODELS;
+
     // Try each model in priority order
-    for (const model of MODELS) {
+    for (const model of modelList) {
       const content = await callOpenRouter(apiKey, model, systemPrompt, enrichedMessages, callOpts);
       if (content) {
         console.log(`ai-assist: replied via ${model} (${content.length} chars)`);
