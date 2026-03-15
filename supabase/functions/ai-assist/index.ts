@@ -407,7 +407,7 @@ async function fetchUrlContent(url: string): Promise<{ text: string; images: str
 
     for (const fbUrl of fbUrls) {
       for (const ua of fbUserAgents) {
-        const fbHeaders = { ...BROWSER_HEADERS, "User-Agent": ua };
+        const fbHeaders: Record<string, string> = { ...BROWSER_HEADERS, "User-Agent": ua };
         // Remove browser-specific headers for bots
         if (ua.includes("externalhit") || ua.includes("Googlebot") || ua.includes("WhatsApp") || ua.includes("TelegramBot")) {
           delete fbHeaders["sec-ch-ua"];
